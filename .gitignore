@@ -1,0 +1,11 @@
+morph/Debug
+morph/Release
+morph/GeneratedFiles
+ipch
+
+*.exe
+*.pdb
+*.ilk
+*.opensdf
+*.sdf
+*.suo
