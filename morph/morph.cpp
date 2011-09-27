@@ -1,47 +1,9 @@
-#include "stdafx.h"
 #include "morph.h"
 
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QMessageBox>
 
-// -------------------------------------------------------------------------
-cv::Mat QImage2cvMat(const QImage& qimage)
-{
-	cv::Mat mat = cv::Mat(
-		qimage.height(),
-		qimage.width(),
-		CV_8UC4,
-		const_cast<uchar*>(qimage.bits()),
-		qimage.bytesPerLine()); 
-
-	// Konwersja na RGB
-	cv::Mat mat2 = cv::Mat(
-		mat.rows,
-		mat.cols,
-		CV_8UC3); 
-
-	int from_to[] = { 0,0,  1,1,  2,2 }; 
-	cv::mixChannels(&mat, 1, &mat2, 1, from_to, 3); 
-	return mat2; 
-};
-// -------------------------------------------------------------------------
-QImage cvMat2QImage(const cv::Mat& image, QImage::Format format)
-{
-	QImage qimg(
-		reinterpret_cast<const quint8*>(image.data),
-		image.cols, image.rows, image.step, 
-		format);
-
-	if(format == QImage::Format_RGB888)
-	{
-		return qimg.rgbSwapped();
-	}
-	else /*if(format == QImage::Format_Indexed8)*/
-	{
-		return qimg;
-	}	
-};
 // -------------------------------------------------------------------------
 cv::Mat structuringElementDiamond(int radius)
 {
@@ -279,16 +241,24 @@ void Morph::pruneChanged(int state)
 	}
 }
 // -------------------------------------------------------------------------
-void Morph::showCvImage(const cv::Mat& image, QImage::Format format)
+void Morph::showCvImage(const cv::Mat& image)
 {
-	ui.lbImage->setPixmap(QPixmap::fromImage(cvMat2QImage(image, format)));
+	auto toQImage = [](const cv::Mat& image)
+	{
+		return QImage(
+			reinterpret_cast<const quint8*>(image.data),
+			image.cols, image.rows, image.step, 
+			QImage::Format_Indexed8);
+	};
+
+	ui.lbImage->setPixmap(QPixmap::fromImage(toQImage(image)));
 }
 // -------------------------------------------------------------------------
 void Morph::refresh()
 {
 	if(ui.rbNone->isChecked())
 	{
-		showCvImage(src, QImage::Format_RGB888);
+		showCvImage(src);
 		return;
 	}
 
@@ -314,62 +284,35 @@ void Morph::refresh()
 		ui.gbElement->setEnabled(false);
 		ui.gbElementSize->setEnabled(false);
 
-		// src1 - obraz jednokanalowy
-		cv::Mat src1(src.size(), src.type());
-		cvtColor(src, src1, CV_RGB2GRAY);
-		cv::Mat dst = src1.clone();
-
-		/*if(src1.elemSize() != sizeof(uchar))
-		{
-			QMessageBox::warning(this, 
-				"Error", "Only binary images supported.", QMessageBox::Ok);
-			return;
-		}*/
+		cv::Mat dst = src.clone();
 
 		if(ui.rbRemove->isChecked())
 		{
-			morphRemove(src1, dst);
-			showCvImage(dst, QImage::Format_Indexed8);
+			morphRemove(src, dst);
+			showCvImage(dst);
 		}
 		else if(ui.rbSkeleton->isChecked())
 		{
+			cv::Mat src1 = src.clone();
 			niters = morphologySkeleton(src1, dst);
 
 			// Szkielet - bialy
 			// tlo - szare (zmiana z bialego)
 			// obiekt - czarny
-			cv::Mat a;
-			cvtColor(src, a, CV_RGB2GRAY);
-			dst = a/2 + dst;
+			dst = src/2 + dst;
 
-			showCvImage(dst, QImage::Format_Indexed8);
+			showCvImage(dst);
 		}
 		else if(ui.rbVoronoi->isChecked())
 		{
+			cv::Mat src1 = src.clone();
 			niters = morphologyVoronoi(src1, dst);
 
-			// Strefy - czerwone
+			// Strefy - szare
 			// Reszta - niezmienione
-			cv::Mat dd;
-			cvtColor(dst, dd, CV_GRAY2BGR);
+			dst = dst/2 + src;
 
-			std::vector<cv::Mat> planes;
-			cv::split(dd, planes);
-
-			std::for_each(
-				planes[0].begin<uchar>(),
-				planes[0].end<uchar>(),
-				[](uchar& d) { d = 0; });
-
-			std::for_each(
-				planes[1].begin<uchar>(),
-				planes[1].end<uchar>(),
-				[](uchar& d) { d = 0; });
-
-			cv::merge(planes, dd);
-			dd = src + dd;
-
-			showCvImage(dd, QImage::Format_RGB888);
+			showCvImage(dst);
 		}
 	}
 	else
@@ -407,7 +350,7 @@ void Morph::refresh()
 
 		cv::Mat dst;
 		cv::morphologyEx(src, dst, op_type, element);
-		showCvImage(dst, QImage::Format_RGB888);
+		showCvImage(dst);
 	}
 
 	QString txt;
@@ -420,10 +363,21 @@ void Morph::refresh()
 void Morph::openFile(const QString& filename)
 {
 	qsrc = QImage(filename);
-	if(qsrc.format() != QImage::Format_RGB32)
-		qsrc = qsrc.convertToFormat(QImage::Format_RGB32);
+	if(qsrc.format() != QImage::Format_RGB888)
+		qsrc = qsrc.convertToFormat(QImage::Format_RGB888);
 
-	src = QImage2cvMat(qsrc);
+	auto toCvMat = [](const QImage& qimage) -> cv::Mat
+	{
+		cv::Mat mat(qimage.height(), qimage.width(), CV_8UC3,
+			const_cast<uchar*>(qimage.bits()),
+			qimage.bytesPerLine());
+
+		// Konwersja do obrazu jednokanalowego
+		cvtColor(mat, mat, CV_RGB2GRAY);
+		return mat;
+	};
+
+	src = toCvMat(qsrc);
 	this->resize(0, 0);
 }
 // -------------------------------------------------------------------------
@@ -450,13 +404,13 @@ int Morph::morphologyVoronoi(cv::Mat &src, cv::Mat &dst)
 {
 	int niters = 0;
 
+	// Diagram voronoi jest operacja dualna do szkieletowania
 	src = 255 - src;
 	dst = 255 - dst;
 
 	while(true) 
 	{
 		// iteracja
-		//morphVoronoi(src, dst);
 		morphSkeleton(src, dst);
 		++niters;
 

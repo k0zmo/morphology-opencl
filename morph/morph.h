@@ -23,7 +23,7 @@ private:
 	cv::Mat src;
 
 private:
-	void showCvImage(const cv::Mat& image, QImage::Format format);
+	void showCvImage(const cv::Mat& image);
 	void refresh();
 
 	int morphologySkeleton(cv::Mat &src, cv::Mat &dst);

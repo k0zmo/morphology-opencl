@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "morph.h"
 #include <QtGui/QApplication>
 

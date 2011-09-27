@@ -1,4 +1,8 @@
 #include <QtGui>
+#include <QtGui/QMainWindow>
+#include <QElapsedTimer>
+#include <QFileDialog>
+#include <QMessageBox>
 
 #define CV_NO_BACKWARD_COMPATIBILITY
 
