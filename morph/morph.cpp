@@ -115,6 +115,8 @@ Morph::Morph(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.cbSquare, SIGNAL(stateChanged(int)), this, SLOT(ratioChanged(int)));
 	connect(ui.hsXElementSize, SIGNAL(valueChanged(int)), this, SLOT(elementSizeXChanged(int)));
 	connect(ui.hsYElementSize, SIGNAL(valueChanged(int)), this, SLOT(elementSizeYChanged(int)));
+	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
+	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
 	openFile(filename);
 
@@ -125,6 +127,7 @@ Morph::Morph(QString filename, QWidget *parent, Qt::WFlags flags)
 
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: 3"));
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
+	ui.lbRotation->setText(QString::fromLatin1("0"));
 }
 // -------------------------------------------------------------------------
 Morph::~Morph()
@@ -231,6 +234,25 @@ void Morph::elementSizeYChanged(int value)
 
 	if(!ui.rbNone->isChecked())
 		refresh();
+}
+// -------------------------------------------------------------------------
+void Morph::rotationChanged(int value)
+{
+	int angle = ui.dialRotation->value();
+	if(angle >= 180) { angle -= 180; }
+	else { angle += 180; }
+	angle = 360 - angle;
+	angle = angle % 360;
+
+	ui.lbRotation->setText(QString::number(angle));
+
+	if(!ui.rbNone->isChecked())
+		refresh();
+}
+// -------------------------------------------------------------------------
+void Morph::rotationResetPressed()
+{
+	ui.dialRotation->setValue(180);
 }
 // -------------------------------------------------------------------------
 void Morph::pruneChanged(int state)
@@ -347,6 +369,27 @@ void Morph::refresh()
 		{
 			element = structuringElementDiamond(qMin(anchor.x, anchor.y));
 		}
+
+		// Rotacja elementu strukturalnego
+		if(ui.dialRotation->value() != 180)
+		{
+			int angle = ui.dialRotation->value();
+			if(angle >= 180) { angle -= 180; }
+			else { angle += 180; }
+			angle = 360 - angle;
+
+			auto rotateImage = [=](const cv::Mat& source, double angle) -> cv::Mat
+			{
+				cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
+				cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
+				cv::Mat dst;
+				cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_NEAREST);
+				return dst;
+			};
+
+			element = rotateImage(element, angle);
+		}
+
 
 		cv::Mat dst;
 		cv::morphologyEx(src, dst, op_type, element);

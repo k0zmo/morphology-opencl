@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>323</width>
-    <height>740</height>
+    <width>387</width>
+    <height>847</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -274,14 +274,14 @@
            <string>Element size</string>
           </property>
           <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="0">
+           <item row="0" column="0" colspan="2">
             <widget class="QCheckBox" name="cbSquare">
              <property name="text">
               <string>1:1 ratio</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item row="1" column="0" colspan="2">
             <widget class="QSlider" name="hsXElementSize">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -328,7 +328,7 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="3" column="0" colspan="2">
             <widget class="QSlider" name="hsYElementSize">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -363,6 +363,45 @@
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0" rowspan="2">
+            <widget class="QDial" name="dialRotation">
+             <property name="maximum">
+              <number>360</number>
+             </property>
+             <property name="value">
+              <number>180</number>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="wrapping">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="lbRotation">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QPushButton" name="pbResetRotation">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Reset</string>
              </property>
             </widget>
            </item>
@@ -407,7 +446,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>323</width>
+     <width>387</width>
      <height>21</height>
     </rect>
    </property>
