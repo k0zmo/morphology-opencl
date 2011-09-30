@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>387</width>
-    <height>847</height>
+    <width>259</width>
+    <height>742</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -446,7 +446,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>387</width>
+     <width>259</width>
      <height>21</height>
     </rect>
    </property>
@@ -458,7 +458,14 @@
     <addaction name="actionSave"/>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionOpenCL"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuSettings"/>
   </widget>
   <action name="actionOpen">
    <property name="text">
@@ -473,6 +480,27 @@
   <action name="actionExit">
    <property name="text">
     <string>E&amp;xit</string>
+   </property>
+  </action>
+  <action name="actionUse_OpenCL">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use OpenCL</string>
+   </property>
+  </action>
+  <action name="actionOpenCL_Settings">
+   <property name="text">
+    <string>OpenCL Settings</string>
+   </property>
+  </action>
+  <action name="actionOpenCL">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>OpenCL</string>
    </property>
   </action>
  </widget>

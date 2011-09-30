@@ -9,7 +9,69 @@ static const int OBJ = 255;
 static const int BCK = 0;
 
 // -------------------------------------------------------------------------
-void morphRemove(const cv::Mat& src, cv::Mat& dst)
+cv::Mat structuringElementDiamond(int radius)
+{
+	int a = radius;
+	int s = 2 * radius + 1;
+
+	cv::Mat element = cv::Mat(s, s, CV_8U, cv::Scalar(1));
+
+	// top-left
+	int y = a;
+	for(int j = 0; j < a; ++j)
+	{
+		for(int i = 0; i < y; ++i)
+		{
+			element.at<uchar>(j, i) = 0;
+		}
+		--y;
+	}
+
+
+	// top-right
+	y = a + 1;
+	for(int j = 0; j < a; ++j)
+	{
+		for(int i = y; i < s; ++i)
+		{
+			element.at<uchar>(j, i) = 0;
+		}
+		++y;
+	}
+
+	// bottom-left
+	y = 1;
+	for(int j = a; j < s; ++j)
+	{
+		for(int i = 0; i < y; ++i)
+		{
+			element.at<uchar>(j, i) = 0;
+		}
+		++y;
+	}
+
+	// bottom-right
+	y = s - 1;
+	for(int j = a; j < s; ++j)
+	{
+		for(int i = y; i < s; ++i)
+		{
+			element.at<uchar>(j, i) = 0;
+		}
+		--y;
+	}
+
+	return element;
+}
+// -------------------------------------------------------------------------
+int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2)
+{
+	cv::Mat diff;
+	cv::compare(src1, src2, diff, cv::CMP_NE);
+	return cv::countNonZero(diff);
+}
+// -------------------------------------------------------------------------
+void morphologyRemove(const cv::Mat& src, cv::Mat& dst)
 {
 	// TODO: border
 
@@ -42,7 +104,7 @@ void morphRemove(const cv::Mat& src, cv::Mat& dst)
 	}
 }
 // -------------------------------------------------------------------------
-void morphSkeleton(cv::Mat src, cv::Mat dst)
+void _morphologySkeleton_iter(cv::Mat src, cv::Mat dst)
 {
 	// TODO: border
 
@@ -241,7 +303,7 @@ void morphSkeleton(cv::Mat src, cv::Mat dst)
 	}
 }
 // -------------------------------------------------------------------------
-void morphPruning(cv::Mat src, cv::Mat dst)
+void _morphologyPruning_iter(cv::Mat src, cv::Mat dst)
 {
 	// TODO: border
 
@@ -439,6 +501,159 @@ void morphPruning(cv::Mat src, cv::Mat dst)
 			{
 				dst.at<uchar>(y, x) = BCK;
 			}
+		}
+	}
+}
+// -------------------------------------------------------------------------
+int morphologySkeleton(cv::Mat &src, cv::Mat &dst) 
+{
+	int niters = 0;
+
+	while(true) 
+	{
+		// iteracja
+		_morphologySkeleton_iter(src, dst);
+		++niters;
+
+		// warunek stopu
+		if(countDiffPixels(src, dst) == 0) break;
+
+		src = dst.clone();
+	}
+
+	return niters;
+}
+// -------------------------------------------------------------------------
+int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune) 
+{
+	int niters = 0;
+
+	// Diagram voronoi jest operacja dualna do szkieletowania
+	src = 255 - src;
+	dst = 255 - dst;
+
+	while(true) 
+	{
+		// iteracja
+		_morphologySkeleton_iter(src, dst);
+		++niters;
+
+		// warunek stopu
+		if(countDiffPixels(src, dst) == 0) break;
+
+		src = dst.clone();
+	}
+
+	if(prune > 0)
+	{
+		for(int i = 0; i < prune; ++i)
+		{
+			src = dst.clone();
+
+			// iteracja
+			_morphologyPruning_iter(src, dst);
+			++niters;				
+		}
+	}
+
+	return niters;
+}
+
+// HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+// Odpowiedniki funkcji opencl'a
+
+void doErode(
+	const cv::Mat& src,
+	cv::Mat& dst,
+	const cv::Mat& element)
+{
+	const uchar erodeINF = 255;
+
+	int anchorX = element.cols / 2;
+	int anchorY = element.rows / 2;
+
+	int gwidth = src.cols;
+	int gheight = src.rows;
+
+	for(int yy = 0; yy < src.rows; ++yy)
+	{
+		for(int xx = 0; xx < src.cols; ++xx)
+		{
+			uchar val = erodeINF;
+			size_t eid = 0;
+			const uchar* pelement = element.ptr<uchar>();
+
+			for(int y = -1 * anchorY; y < (anchorY + 1); ++y)
+			{
+				for(int x = -1 * anchorX; x < (anchorX + 1); ++x)
+				{
+					int xi = xx + x;
+					int yi = yy + y;
+
+					if(xi < 0 || xi >= gwidth || yi < 0 || yi >= gheight)
+					{
+						if(pelement[eid] != 0)
+							val = min(val, erodeINF);
+					}
+
+					else if(pelement[eid] != 0)
+					{
+						val = min(val, src.at<uchar>(yi, xi));
+					}
+
+					++eid;
+				}
+			}
+
+			dst.at<uchar>(yy, xx) = val;
+		}
+	}
+}
+
+void doDilate(
+	const cv::Mat& src,
+	cv::Mat& dst,
+	const cv::Mat& element)
+{
+	const uchar dilateINF = 255;
+
+	int anchorX = element.cols / 2;
+	int anchorY = element.rows / 2;
+
+	int gwidth = src.cols;
+	int gheight = src.rows;
+
+	for(int yy = 0; yy < src.rows; ++yy)
+	{
+		for(int xx = 0; xx < src.cols; ++xx)
+		{
+			uchar val = dilateINF;
+			size_t eid = 0;
+			const uchar* pelement = element.ptr<uchar>();
+
+			for(int y = -1 * anchorY; y < (anchorY + 1); ++y)
+			{
+				for(int x = -1 * anchorX; x < (anchorX + 1); ++x)
+				{
+					int xi = xx + x;
+					int yi = yy + y;
+
+					if(xi < 0 || xi >= gwidth || yi < 0 || yi >= gheight)
+					{
+						if(pelement[eid] != 0)
+							val = max(val, dilateINF);
+					}
+
+					else if(pelement[eid] != 0)
+					{
+						val = max(val, src.at<uchar>(yi, xi));
+					}
+
+					++eid;
+				}
+			}
+
+			dst.at<uchar>(yy, xx) = val;
 		}
 	}
 }
