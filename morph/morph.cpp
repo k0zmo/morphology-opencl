@@ -3,6 +3,11 @@
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTextStream>
+
+#if !defined(_WIN32)
+#include <sys/time.h>
+#endif
 
 // Zwraca element strukturalny w kszalcie diamentu o zadanym promieniu
 cv::Mat structuringElementDiamond(int radius);
@@ -14,6 +19,11 @@ void morphologyRemove(const cv::Mat& src, cv::Mat& dst);
 int morphologySkeleton(cv::Mat &src, cv::Mat &dst);
 // Operacja morfologiczna - diagram Voronoi
 int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune);
+
+void doErode(
+	const cv::Mat& src,
+	cv::Mat& dst,
+	const cv::Mat& element);
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Morph
@@ -120,11 +130,13 @@ void Morph::exitTriggered()
 // -------------------------------------------------------------------------
 void Morph::openCLTriggered(bool state)
 {
+	Q_UNUSED(state);
 	refresh();
 }
 // -------------------------------------------------------------------------
 void Morph::invertChanged(int state)
 {
+	Q_UNUSED(state);
 	cv::Mat lut(1, 256, CV_8U);
 	uchar* p = lut.ptr<uchar>();
 	for(int i = 0; i < lut.cols; ++i)
@@ -175,6 +187,7 @@ void Morph::ratioChanged(int state)
 // -------------------------------------------------------------------------
 void Morph::elementSizeXChanged(int value)
 {
+	Q_UNUSED(value);
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: ") + 
 		QString::number(2 * ui.hsXElementSize->value() + 1));
 
@@ -190,6 +203,7 @@ void Morph::elementSizeXChanged(int value)
 // -------------------------------------------------------------------------
 void Morph::elementSizeYChanged(int value)
 {
+	Q_UNUSED(value);
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: ") + 
 		QString::number(2 * ui.hsYElementSize->value() + 1));
 
@@ -205,6 +219,7 @@ void Morph::elementSizeYChanged(int value)
 // -------------------------------------------------------------------------
 void Morph::rotationChanged(int value)
 {
+	Q_UNUSED(value);
 	int angle = ui.dialRotation->value();
 	if(angle >= 180) { angle -= 180; }
 	else { angle += 180; }
@@ -224,6 +239,7 @@ void Morph::rotationResetPressed()
 // -------------------------------------------------------------------------
 void Morph::pruneChanged(int state)
 {
+	Q_UNUSED(state);
 	if(ui.rbVoronoi->isChecked() && ui.sbPruning->value() != 0)
 	{
 		refresh();
@@ -392,8 +408,14 @@ void Morph::refresh()
 // -------------------------------------------------------------------------
 void Morph::morphologyOpenCV()
 {
-	QElapsedTimer timer;
-	timer.start();
+#if defined(_WIN32)
+	LARGE_INTEGER freq, start, end;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+#else
+	timeval start, end;
+	gettimeofday(&start, NULL);
+#endif
 
 	int niters = 1;
 
@@ -445,22 +467,30 @@ void Morph::morphologyOpenCV()
 		cv::Mat element = standardStructuringElement();
 		cv::Mat dst;
 
-		//if(ui.rbErode->isChecked())
-		//{
-		//	dst = cv::Mat(src.size(), CV_8U);
-		//	doErode(src, dst, element);
-		//}
-		//else
-		//{
+		if(ui.rbErode->isChecked())
+		{			
+			doErode(src, dst, element);
+		}
+		else
+		{
 			cv::morphologyEx(src, dst, op_type, element);
-		//}
+		}
 
 		showCvImage(dst);
 	}
+#if defined(_WIN32)
+	QueryPerformanceCounter(&end);
+	double elapsed = (static_cast<double>(end.QuadPart - start.QuadPart) / 
+		static_cast<double>(freq.QuadPart)) * 1000.0f;
+#else
+	gettimeofday(&end, NULL);
+	double elapsed = (static_cast<double>(end.tv_sec - start.tv_sec) * 1000 +
+		0.001f * static_cast<double>(end.tv_usec - start.tv_usec));
+#endif
 
 	QString txt;
 	QTextStream strm(&txt);
-	strm << "Time elasped : " << timer.elapsed() << " ms, iterations: " << niters;
+	strm << "Time elasped : " << /*timer.*/elapsed/*()*/ << " ms, iterations: " << niters;
 	statusBarLabel->setText(txt);
 }
 // -------------------------------------------------------------------------
@@ -500,7 +530,7 @@ void Morph::initOpenCL()
 
 	// Tylko GPU (i tak CPU chwilo AMD uwalil)
 	cl_int err;
-	context = cl::Context(CL_DEVICE_TYPE_GPU, properties, nullptr, nullptr, &err);
+	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 
 	std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
