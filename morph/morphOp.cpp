@@ -562,13 +562,40 @@ int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune)
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Odpowiedniki funkcji opencl'a
 
-void doErode(
-	const cv::Mat& src,
-	cv::Mat& dst,
-	const cv::Mat& element)
+void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 {
 	static const uchar erodeINF = 255;
 
+	// srodek w poziomie elementu strukturalnego
+	int anchorX = (element.cols - 1) / 2;
+	// srodek w pionie elementu strukturalnego
+	int anchorY = (element.rows - 1) / 2;
+
+	// Rozmiar obramowania w poziomie i pionie
+	int borderX = anchorX;
+	int borderY = anchorY;
+
+	// rozmiar poszerzonego obrazu
+	size_t tempx = borderX * 2 + src.cols;
+	size_t tempy = borderY * 2 + src.rows;
+
+	//temp8 - obraz poszerzony o obramowanie o wartosci erodeINF
+	uchar* tempSrc = new uchar[tempx * tempy];
+	memset(tempSrc, erodeINF, tempx * tempy * sizeof(uchar));
+
+	// Skopiuj dane pikseli z obrazu zrodlowego do tymczasowego z dod. obramowaniem
+	const uchar* scanLineIn = src.ptr<uchar>();
+	uchar* scanLineOut = tempSrc + tempx*borderY;	
+
+	for (int y = 0; y < src.rows; ++y)
+	{
+		memcpy(scanLineOut + borderX, scanLineIn, src.cols * sizeof(uchar));
+
+		scanLineIn += src.cols; // kolejny scanline z obrazu zrodlowego
+		scanLineOut += tempx; // kolejny scanline z obrazu docelowego (kapke 'dluzszy')
+	}
+
+#if 0
 	// wskaznik na poczatek macierzy wejsciowej
 	const uchar* pInput = src.ptr<uchar>();
 	// szerokosc macierzy wejsciowej
@@ -582,38 +609,8 @@ void doErode(
 	// wysokosc elementu strukturalego
 	int sey = element.rows;
 
-	// srodek w poziomie elementu strukturalnego
-	int anchorX = (element.cols - 1) / 2;
-	// srodek w pionie elementu strukturalnego
-	int anchorY = (element.rows - 1) / 2;
-
-	// Rozmiar obramowania w poziomie i pionie
-	int borderX = anchorX;
-	int borderY = anchorY;
-
-	// rozmiar poszerzonego obrazu
-	size_t tempx = borderX * 2 + imx;
-	size_t tempy = borderY * 2 + imy;
-
-	//temp8 - obraz poszerzony o obramowanie o wartosci erodeINF
-	uchar* tempSrc = new uchar[tempx * tempy];
-	memset(tempSrc, erodeINF, tempx * tempy * sizeof(uchar));
-
 	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(erodeINF));
 	uchar* pOutput = dst.ptr<uchar>();
-	//memset(pOutput, erodeINF, imx * imy * sizeof(uchar));
-
-	// Skopiuj dane pikseli z obrazu zrodlowego do tymczasowego z dod. obramowaniem
-	const uchar* scanLineIn = pInput;
-	uchar* scanLineOut = tempSrc + tempx*borderY;	
-
-	for (int y = 0; y < imy; ++y)
-	{
-		memcpy(scanLineOut + borderX, scanLineIn, imx * sizeof(uchar));
-
-		scanLineIn += imx; // kolejny scanline z obrazu zrodlowego
-		scanLineOut += tempx; // kolejny scanline z obrazu docelowego (kapke 'dluzszy')
-	}
 
 	// kwintesencja funkcji - filtrowanie
 	for(int m = 0; m < sey; ++m)
@@ -626,23 +623,31 @@ void doErode(
 				int disty = m - anchorY;
 				int d = borderX + distx;
 
-				//uchar* scanLineOut = pOutput;
+				uchar* pDst = pOutput;
 
-				for(int yy = borderY, y = 0; yy < borderY + imy; ++yy, ++y)
+				for(int yy = borderY; yy < borderY + imy; ++yy)
 				{
-					const uchar* scanLineIn = tempSrc + tempx*(yy+disty) + d /*borderX + distx*/;
-					uchar* scanLineOut = pOutput + imx*y;
+					const uchar* pSrc = tempSrc + tempx*(yy+disty) + d;
 
-					for(int xx = 0; xx < imx; ++xx)
+					int xx = 0;
+					for( ; xx <= imx - 4; xx += 4)
 					{
-						if(*scanLineOut > *scanLineIn)
-							*scanLineOut = *scanLineIn;
+						pDst[0] = std::min(pDst[0], pSrc[0]);
+						pDst[1] = std::min(pDst[1], pSrc[1]);
+						pDst[2] = std::min(pDst[2], pSrc[2]);
+						pDst[3] = std::min(pDst[3], pSrc[3]);
 
-						*scanLineOut++;
-						*scanLineIn++;
+						pDst += 4;
+						pSrc += 4;
 					}
 
-					//scanLineOut += imx;
+					for( ; xx < imx; ++xx)
+					{
+						pDst[0] = std::min(pDst[0], pSrc[0]);
+
+						pSrc++;
+						pDst++;
+					}
 				}
 			}
 		}
@@ -650,182 +655,69 @@ void doErode(
 
 	// Obraz tymczasowy zwalniamu
 	delete[] tempSrc;
-
-
-#if 0
-	static const uchar erodeINF = 255;
-
-	// wskaznik na poczatek macierzy wejsciowej
-	const uchar* pInput = src.ptr<uchar>();
-	// szerokosc macierzy wejsciowej
-	int imx = src.cols;
-	// wysokosc macierzy wejsciowej
-	int imy = src.rows;
-
-	const uchar* pSe = element.ptr<uchar>();
-	// szerokosc elementu strukturalnego
-	int sex = element.cols;
-	// wysokosc elementu strukturalego
-	int sey = element.rows;
-
-	// srodek w poziomie elementu strukturalnego
-	int anchorX = (element.cols - 1) / 2;
-	// srodek w pionie elementu strukturalnego
-	int anchorY = (element.rows - 1) / 2;
-
-	int borderX = anchorX;
-	int borderY = anchorY;
-
-	uchar* pOutput = dst.ptr<uchar>();
-
-	size_t tempx = borderX * 2 + imx;
-	size_t tempy = borderY * 2 + imy;
-
-	uchar* temp8 = new uchar[tempx * tempy];
-	uchar* temp_out8 = new uchar[tempx * tempy];
-
-	memset(temp8, erodeINF, tempx * tempy * sizeof(uchar));
-	memset(temp_out8, erodeINF, tempx * tempy * sizeof(uchar));
-
+#endif
+	
+#if 1
+	// Wydobadz wspolrzedne 'aktywne' z elementu strukturalnego
+	std::vector<cv::Point> coords;
+	for(int y = 0, i = 0; y < element.rows; ++y)
 	{
-		uchar* out_scan8 = temp8 + tempx*borderY;
-		const uchar* in_scan8 = pInput;
-
-		for (int y = 0; y < imy; ++y)
+		const uchar* krow = element.data + element.step*y;
+		for(int x = 0; x < element.cols; ++x)
 		{
-			memcpy(out_scan8 + borderX, in_scan8, imx * sizeof(uchar));
+			if(krow[x] == 0)
+				continue;
 
-			in_scan8 += imx;
-			out_scan8 += tempx;
+			coords.emplace_back(cv::Point(x, y));
 		}
 	}
+	std::vector<uchar*> ptrs(coords.size());
 
+	// Wskazniki na kazdy z rzedow obrazu
+	std::vector<uchar*> rows(tempy);
+	for(size_t i = 0; i < rows.size(); ++i)
+		rows[i] = tempSrc + tempx*i;
 
-	for(int m = 0; m < sey; ++m)
+	// Obraz docelowy
+	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(erodeINF));
+	uchar* pDst = dst.ptr<uchar>();
+	size_t dstep = dst.cols;
+
+	// Filtracja
+	for(int y = 0; y < src.rows; ++y, pDst += dstep)
 	{
-		for(int n = 0; n < sex; ++n)
+		const uchar** srcs = const_cast<const uchar**>(&rows[y]);
+		const uchar** kp = const_cast<const uchar**>(&ptrs[0]);
+		int nz = static_cast<int>(coords.size());
+
+		for(int k = 0; k < nz; ++k)
+			kp[k] = srcs[coords[k].y] + coords[k].x;
+
+		int x = 0;
+		for( ; x <= src.cols - 4; x += 4 )
 		{
-			if(pSe[m * element.cols + n] != 0)
+			const uchar* sptr = kp[0] + x;
+			uchar s0 = sptr[0], s1 = sptr[1], s2 = sptr[2], s3 = sptr[3];
+
+			for(int k = 1; k < nz; k++ )
 			{
-				int distx = n - anchorX;
-				int disty = m - anchorY;
-
-				for(int yy = borderY; yy < borderY + imy; ++yy)
-				{
-					const uchar* in_scan8 = temp8 + tempx*(yy+disty) + borderX + distx;
-					uchar* out_scan8 = temp_out8 + tempx*yy + borderX;
-
-					for(int xx = 0; xx < imx; ++xx)
-					{
-						if(*out_scan8 > *in_scan8)
-							*out_scan8 = *in_scan8;
-
-						*out_scan8++;
-						*in_scan8++;
-					}
-				}
+				sptr = kp[k] + x;
+				s0 = std::min(s0, sptr[0]); s1 = std::min(s1, sptr[1]);
+				s2 = std::min(s2, sptr[2]); s3 = std::min(s3, sptr[3]);
 			}
+
+			pDst[x] = s0; pDst[x+1] = s1;
+			pDst[x+2] = s2; pDst[x+3] = s3;
+		}
+
+		for(; x < src.cols; ++x)
+		{
+			uchar s0 = kp[0][x];
+			for(int k = 1; k < nz; ++k)
+				s0 = std::min(s0, kp[k][x]);
+			pDst[x] = s0;
 		}
 	}
-
-	uchar* out8 = pOutput;
-	{
-		uchar* in_scan8 = temp_out8 + tempx * borderY;
-		uchar* out_scan8 = out8;
-
-		for (int y = 0; y < imy; ++y)
-		{   
-			memcpy(out_scan8, in_scan8 + borderX, imx * sizeof(uchar));
-
-			in_scan8 += tempx;
-			out_scan8 += imx;
-		}
-	}
-
-	delete[] temp8;
-	delete[] temp_out8;
 
 #endif
-#if 0
-	const uchar erodeINF = 255;
-
-	int anchorX = (element.cols - 1) / 2;
-	int anchorY = (element.rows - 1) / 2;
-
-	const uchar* pInput = src.ptr<uchar>();
-	const uchar* pFilter = element.ptr<uchar>();
-	uchar* pOutput = dst.ptr<uchar>();
-
-	for(int yy = anchorY; yy < src.rows - anchorY; ++yy)
-	{
-		for(int xx = anchorX; xx < src.cols - anchorX; ++xx)
-		{
-			uchar v = erodeINF;
-			const uchar* pF = pFilter;
-
-			for(int r = -1 * anchorY; r < (anchorY + 1); ++r)
-			{
-				const size_t idIn = (yy + r) * src.cols + xx;
-
-				for(int c = -1 * anchorX; c < (anchorX + 1); ++c)
-				{
-					const size_t ii = idIn + c;
-
-					if(*pF++ != 0)
-						v = min(v, pInput[ii]);
-				}
-			}
-
-			pOutput[yy * dst.cols + xx] = v;
-		}
-	}
-#endif
-}
-
-void doDilate(
-	const cv::Mat& src,
-	cv::Mat& dst,
-	const cv::Mat& element)
-{
-	const uchar dilateINF = 255;
-
-	int anchorX = (element.cols - 1) / 2;
-	int anchorY = (element.rows - 1)/ 2;
-
-	int gwidth = src.cols;
-	int gheight = src.rows;
-
-	for(int yy = 0; yy < src.rows; ++yy)
-	{
-		for(int xx = 0; xx < src.cols; ++xx)
-		{
-			uchar val = dilateINF;
-			size_t eid = 0;
-			const uchar* pelement = element.ptr<uchar>();
-
-			for(int y = -1 * anchorY; y < (anchorY + 1); ++y)
-			{
-				for(int x = -1 * anchorX; x < (anchorX + 1); ++x)
-				{
-					int xi = xx + x;
-					int yi = yy + y;
-
-					if(xi < 0 || xi >= gwidth || yi < 0 || yi >= gheight)
-					{
-						if(pelement[eid] != 0)
-							val = std::max(val, dilateINF);
-					}
-
-					else if(pelement[eid] != 0)
-					{
-						val = std::max(val, src.at<uchar>(yi, xi));
-					}
-
-					++eid;
-				}
-			}
-
-			dst.at<uchar>(yy, xx) = val;
-		}
-	}
 }

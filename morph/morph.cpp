@@ -20,10 +20,7 @@ int morphologySkeleton(cv::Mat &src, cv::Mat &dst);
 // Operacja morfologiczna - diagram Voronoi
 int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune);
 
-void doErode(
-	const cv::Mat& src,
-	cv::Mat& dst,
-	const cv::Mat& element);
+void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Morph
@@ -288,24 +285,6 @@ void Morph::openFile(const QString& filename)
 			src.rows * src.cols, // obraz 1-kanalowy
 			src.ptr<uchar>(), &err);
 		clError("Error creating source OpenCL buffer", err);
-
-		clDst = cl::Buffer(context,
-			CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
-			src.rows * src.cols, // obraz 1-kanalowy
-			nullptr, &err);
-		clError("Error creating destination OpenCL buffer", err);
-
-		clTmp = cl::Buffer(context,
-			CL_MEM_READ_WRITE, 
-			src.rows * src.cols, // obraz 1-kanalowy
-			nullptr, &err);
-		clError("Error creating temporary OpenCL buffer", err);
-
-		clTmp2 = cl::Buffer(context,
-			CL_MEM_READ_WRITE, 
-			src.rows * src.cols, // obraz 1-kanalowy
-			nullptr, &err);
-		clError("Error creating temporary OpenCL buffer", err);
 
 		//cl::Image2D clSrcImage = cl::Image2D(context, 
 		//	CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY,
@@ -601,8 +580,15 @@ void Morph::morphologyOpenCL()
 {
 	cv::Mat element = standardStructuringElement();
 
-	// Element strukturalny
+	// Bufor docelowy
 	cl_int err;
+	clDst = cl::Buffer(context,
+		CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
+		src.rows * src.cols, // obraz 1-kanalowy
+		nullptr, &err);
+	clError("Error while creating destination OpenCL buffer", err);
+
+	// Element strukturalny
 	clElement = cl::Buffer(context,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		element.size().area(), element.ptr<uchar>(), &err);
@@ -611,81 +597,61 @@ void Morph::morphologyOpenCL()
 	int niters = 1;
 	cl_ulong elapsed = 0;
 
+	// Erozja
 	if(ui.rbErode->isChecked())
 	{
 		elapsed += executeMorphologyKernel(&kernelErode, clSrc, clDst);
 	}
+	// Dylatacja
 	else if(ui.rbDilate->isChecked())
 	{
 		elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clDst);
 	}
-	else if(ui.rbOpen->isChecked())
-	{
-		// dst = dilate(erode(src))
-		elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
-		elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clDst);
-	}
-	else if(ui.rbClose->isChecked())
-	{
-		// dst = erode(dilate(src))
-		elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
-		elapsed += executeMorphologyKernel(&kernelErode, clTmp, clDst);
-	}
-	else if(ui.rbGradient->isChecked())
-	{ 
-		//dst = dilate(src) - erode(src);
-		elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
-		elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp2);
-		elapsed += executeSubtractKernel(clTmp, clTmp2, clDst);
-	}
-	else if(ui.rbTopHat->isChecked())
-	{ 
-		// dst = src - dilate(erode(src))
-		elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
-		elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clTmp2);
-		elapsed += executeSubtractKernel(clSrc, clTmp2, clDst);
-	}
-	else if(ui.rbBlackHat->isChecked())
-	{ 
-		// dst = close(src) - src
-		elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
-		elapsed += executeMorphologyKernel(&kernelErode, clTmp, clTmp2);
-		elapsed += executeSubtractKernel(clTmp2, clSrc, clDst);
-	}
 	else
 	{
-		auto copyBuffer = [this](cl::Buffer& clsrc, cl::Buffer& cldst, cl::Event& clevt) -> cl_ulong
+		// Funkcja lambda kopiujaca zawartosc jednego bufora OpenCL'a do drugiego
+		// przy okazji mierz¹c czas tej operacji
+		auto copyBuffer = [this](const cl::Buffer& clsrc, cl::Buffer& cldst,
+			cl::Event& clevt) -> cl_ulong
 		{
-			cq.enqueueCopyBuffer(clsrc, cldst, 0, 0, src.size().area(), 
+			cq.enqueueCopyBuffer(clsrc, cldst, 
+				0, 0, src.size().area(), 
 				nullptr, &clevt);
 			clevt.wait();
-
 			return elapsedEvent(clevt);
+
 		};
 
-		if(ui.rbRemove->isChecked())
+		// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+		clTmp = cl::Buffer(context,
+			CL_MEM_READ_WRITE, 
+			src.rows * src.cols, // obraz 1-kanalowy
+			nullptr, &err);
+		clError("Error while creating temporary OpenCL buffer", err);
+
+		// Otwarcie
+		if(ui.rbOpen->isChecked())
+		{
+			// dst = dilate(erode(src))
+			elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
+			elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clDst);
+		}
+		// Zamkniecie
+		else if(ui.rbClose->isChecked())
+		{
+			// dst = erode(dilate(src))
+			elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
+			elapsed += executeMorphologyKernel(&kernelErode, clTmp, clDst);
+		}
+		// Operacja wyciagania konturow
+		else if(ui.rbRemove->isChecked())
 		{
 			// Skopiuj obraz zrodlowy do docelowego
-			cl::Event evt;	
+			cl::Event evt;
 			elapsed += copyBuffer(clSrc, clDst, evt);
-
-			// Ustaw argumenty kernela
-			cl_int err;
-			err  = kernelRemove.setArg(0, clSrc);
-			err |= kernelRemove.setArg(1, clDst);
-			clError("Error while setting kernel arguments", err);
-
-			// Odpal kernela
-			cq.enqueueNDRangeKernel(kernelRemove,
-				cl::NullRange,
-				cl::NDRange(src.cols, src.rows),
-				cl::NullRange, 
-				nullptr, &evt);
-			evt.wait();
-
-			// Ile czasu to zajelo
-			elapsed += elapsedEvent(evt);
+			elapsed += executeRemoveKernel(clSrc, clDst);
 		}
+		// Operacja szkieletyzacji
 		else if(ui.rbSkeleton->isChecked())
 		{
 			// Skopiuj obraz zrodlowy do docelowego
@@ -697,22 +663,7 @@ void Morph::morphologyOpenCL()
 			{
 				for(int i = 0; i < 8; ++i)
 				{
-					// Ustaw argumenty kernela
-					cl_int err;
-					err  = kernelSkeleton_iter[i].setArg(0, clTmp);
-					err |= kernelSkeleton_iter[i].setArg(1, clDst);
-					clError("Error while setting kernel arguments", err);
-
-					// Odpal kernela
-					cq.enqueueNDRangeKernel(kernelSkeleton_iter[i],
-						cl::NullRange,
-						cl::NDRange(src.cols, src.rows),
-						cl::NullRange, 
-						nullptr, &evt);
-					evt.wait();
-
-					// Ile czasu to zajelo
-					elapsed += elapsedEvent(evt);
+					elapsed += executeSkeletonKernel(i, clTmp, clDst);
 
 					// Kopiowanie bufora
 					copyBuffer(clDst, clTmp, evt);
@@ -720,24 +671,45 @@ void Morph::morphologyOpenCL()
 				}
 			}
 
-			cl_int err;
-			err  = kernelAddHalf.setArg(0, clDst);
-			err |= kernelAddHalf.setArg(1, clSrc);
-			clError("Error while setting kernel arguments", err);
-
-			// Odpal kernela
-			cq.enqueueNDRangeKernel(kernelAddHalf,
-				cl::NullRange,
-				cl::NDRange(src.cols * src.rows),
-				cl::NullRange, 
-				nullptr, &evt);
-			evt.wait();
-
-			elapsed += elapsedEvent(evt);
+			elapsed += executeAddHalfKernel(clSrc, clDst);
 		}
 		else
 		{
-			return;
+			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+			clTmp2 = cl::Buffer(context,
+				CL_MEM_READ_WRITE, 
+				src.rows * src.cols, // obraz 1-kanalowy
+				nullptr, &err);
+			clError("Error while creating temporary OpenCL buffer", err);
+
+			// Gradient morfologiczny
+			if(ui.rbGradient->isChecked())
+			{ 
+				//dst = dilate(src) - erode(src);
+				elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
+				elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp2);
+				elapsed += executeSubtractKernel(clTmp, clTmp2, clDst);
+			}
+			// TopHat
+			else if(ui.rbTopHat->isChecked())
+			{ 
+				// dst = src - dilate(erode(src))
+				elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
+				elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clTmp2);
+				elapsed += executeSubtractKernel(clSrc, clTmp2, clDst);
+			}
+			// BlackHat
+			else if(ui.rbBlackHat->isChecked())
+			{ 
+				// dst = close(src) - src
+				elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
+				elapsed += executeMorphologyKernel(&kernelErode, clTmp, clTmp2);
+				elapsed += executeSubtractKernel(clTmp2, clSrc, clDst);
+			}
+			else
+			{
+				return;
+			}
 		}
 	}
 
@@ -763,8 +735,9 @@ void Morph::morphologyOpenCL()
 	statusBarLabel->setText(txt);
 }
 // -------------------------------------------------------------------------
-cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel, const cl::Buffer& clBufferSrc,
-	const cl::Buffer& clBufferDst)
+cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel, 
+	const cl::Buffer& clBufferSrc,
+	cl::Buffer& clBufferDst)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
@@ -783,7 +756,7 @@ cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel, const cl::Buffer& cl
 	cq.enqueueNDRangeKernel(*kernel,
 		cl::NullRange,
 		cl::NDRange(src.cols, src.rows),
-		cl::NullRange /*cl::NDRange(localSize, localSize)*/, 
+		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
 
@@ -791,8 +764,8 @@ cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel, const cl::Buffer& cl
 	return elapsedEvent(evt);
 }
 // -------------------------------------------------------------------------
-cl_ulong Morph::executeSubtractKernel(const cl::Buffer& clBufferA, const cl::Buffer& clBufferB,
-	const cl::Buffer& clBufferDst)
+cl_ulong Morph::executeSubtractKernel(const cl::Buffer& clBufferA,
+	const cl::Buffer& clBufferB, cl::Buffer& clBufferDst)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
@@ -806,6 +779,71 @@ cl_ulong Morph::executeSubtractKernel(const cl::Buffer& clBufferA, const cl::Buf
 	cq.enqueueNDRangeKernel(kernelSubtract,
 		cl::NullRange,
 		cl::NDRange(src.cols * src.rows),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong Morph::executeAddHalfKernel(const cl::Buffer& clBufferSrc,
+	cl::Buffer& clBufferDst)
+{
+	cl_int err;
+	err  = kernelAddHalf.setArg(0, clBufferDst);
+	err |= kernelAddHalf.setArg(1, clBufferSrc);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;
+	cq.enqueueNDRangeKernel(kernelAddHalf,
+		cl::NullRange,
+		cl::NDRange(src.cols * src.rows),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong Morph::executeRemoveKernel(const cl::Buffer& clBufferSrc,
+	cl::Buffer& clBufferDst)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernelRemove.setArg(0, clBufferSrc);
+	err |= kernelRemove.setArg(1, clBufferDst);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;
+	cq.enqueueNDRangeKernel(kernelRemove,
+		cl::NullRange,
+		cl::NDRange(src.cols, src.rows),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong Morph::executeSkeletonKernel(int i, const cl::Buffer& clBufferSrc,
+	cl::Buffer& clBufferDst)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernelSkeleton_iter[i].setArg(0, clBufferSrc);
+	err |= kernelSkeleton_iter[i].setArg(1, clBufferDst);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;
+	cq.enqueueNDRangeKernel(kernelSkeleton_iter[i],
+		cl::NullRange,
+		cl::NDRange(src.cols, src.rows),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
