@@ -402,6 +402,7 @@ void Morph::morphologyOpenCV()
 
 		showCvImage(dst);
 	}
+
 #if defined(_WIN32)
 	QueryPerformanceCounter(&end);
 	double elapsed = (static_cast<double>(end.QuadPart - start.QuadPart) / 
@@ -452,7 +453,7 @@ void Morph::initOpenCL()
 		0, 0
 	};
 
-        // Tylko GPU (i tak CPU chwilowo AMD uwalil)
+	// Tylko GPU (i tak CPU chwilowo AMD uwalil)
 	cl_int err;
 	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
@@ -469,7 +470,7 @@ void Morph::initOpenCL()
 	clError("Failed to create command queue!", err);
 
 	// Zaladuj Kernele
-	QFile file("./naive-kernels.cl");
+	QFile file("./kernels-uchar.cl");
 	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
 		clError("Can't read naive-kernels.cl file", -1);
 
@@ -521,20 +522,49 @@ void Morph::initOpenCL()
 // -------------------------------------------------------------------------
 void Morph::morphologyOpenCL()
 {
+	// Przetworz wstepnie element struturalny
 	cv::Mat element = standardStructuringElement();
+	std::vector<cl_int2> coords;
+	int anchorX = (element.cols - 1) / 2;
+	int anchorY = (element.rows - 1) / 2;
 
-	// Bufor docelowy
+	for(int y = 0; y < element.rows; ++y)
+	{
+		const uchar* krow = element.data + element.step*y;
+
+		for(int x = 0; x < element.cols; ++x)
+		{
+			if(krow[x] == 0)
+				continue;
+
+			cl_int2 c = {x - anchorX, y - anchorY};
+			coords.push_back(c);
+		}
+	}
+	csize = coords.size();
+
+	size_t dstSize = src.rows * src.cols;
 	cl_int err;
+	
+	// Bufor docelowy
 	clDst = cl::Buffer(context,
 		CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
-		src.rows * src.cols, // obraz 1-kanalowy
+		dstSize, // obraz 1-kanalowy
 		nullptr, &err);
 	clError("Error while creating destination OpenCL buffer", err);
 
+	auto initWithValue = [this](cl::Buffer& buf, int value, size_t size)
+	{
+		void* ptr = cq.enqueueMapBuffer(buf, CL_TRUE, CL_MAP_WRITE, 0, size);
+		memset(ptr, value, size);
+		cq.enqueueUnmapMemObject(buf, ptr);
+	};
+	initWithValue(clDst, 0, dstSize);
+
 	// Element strukturalny
-	clElement = cl::Buffer(context,
+	clSeCoords = cl::Buffer(context,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		element.size().area(), element.ptr<uchar>(), &err);
+		csize * sizeof(cl_int2), coords.data(), &err);
 	clError("Error while creating buffer for structure element!", err);
 
 	int niters = 1;
@@ -568,9 +598,10 @@ void Morph::morphologyOpenCL()
 		// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 		clTmp = cl::Buffer(context,
 			CL_MEM_READ_WRITE, 
-			src.rows * src.cols, // obraz 1-kanalowy
+			dstSize, // obraz 1-kanalowy
 			nullptr, &err);
 		clError("Error while creating temporary OpenCL buffer", err);
+		initWithValue(clTmp, 0, dstSize);
 
 		// Otwarcie
 		if(ui.rbOpen->isChecked())
@@ -621,9 +652,10 @@ void Morph::morphologyOpenCL()
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 			clTmp2 = cl::Buffer(context,
 				CL_MEM_READ_WRITE, 
-				src.rows * src.cols, // obraz 1-kanalowy
+				dstSize, // obraz 1-kanalowy
 				nullptr, &err);
 			clError("Error while creating temporary OpenCL buffer", err);
+			initWithValue(clTmp2, 0, dstSize);
 
 			// Gradient morfologiczny
 			if(ui.rbGradient->isChecked())
@@ -660,7 +692,7 @@ void Morph::morphologyOpenCL()
 	cv::Mat dst(src.size(), CV_8U);
 	cl::Event evt;
 	cq.enqueueReadBuffer(clDst, CL_FALSE, 0,
-		src.cols * src.rows, dst.ptr<uchar>(),
+		dstSize, dst.ptr<uchar>(),
 		nullptr, &evt);
 	evt.wait();
 
@@ -679,26 +711,28 @@ void Morph::morphologyOpenCL()
 }
 // -------------------------------------------------------------------------
 cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel, 
-	const cl::Buffer& clBufferSrc,
-	cl::Buffer& clBufferDst)
+	const cl::Buffer& clBufferSrc, cl::Buffer& clBufferDst)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
 	err  = kernel->setArg(0, clBufferSrc);
 	err |= kernel->setArg(1, clBufferDst);
-	err |= kernel->setArg(2, clElement);
-	err |= kernel->setArg(3, ui.hsXElementSize->value());
-	err |= kernel->setArg(4, ui.hsYElementSize->value());
+	err |= kernel->setArg(2, clSeCoords);
+	err |= kernel->setArg(3, csize);
+	err |= kernel->setArg(4, src.cols);
 	clError("Error while setting kernel arguments", err);
 
 	//size_t localSize = kernel->getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(dev, &err);
 	//clError("Error while retrieving kernel work group info!", err);
 
+	int anchorX = ui.hsXElementSize->value();
+	int anchorY = ui.hsYElementSize->value();
+
 	// Odpal kernela
 	cl::Event evt;	
 	cq.enqueueNDRangeKernel(*kernel,
-		cl::NullRange,
-		cl::NDRange(src.cols, src.rows),
+		cl::NDRange(anchorX, anchorY),
+		cl::NDRange(src.cols - anchorX*2, src.rows - anchorY*2),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
@@ -763,8 +797,8 @@ cl_ulong Morph::executeRemoveKernel(const cl::Buffer& clBufferSrc,
 	// Odpal kernela
 	cl::Event evt;
 	cq.enqueueNDRangeKernel(kernelRemove,
-		cl::NullRange,
-		cl::NDRange(src.cols, src.rows),
+		cl::NDRange(1, 1),
+		cl::NDRange(src.cols - 2, src.rows - 2),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
@@ -785,8 +819,8 @@ cl_ulong Morph::executeSkeletonKernel(int i, const cl::Buffer& clBufferSrc,
 	// Odpal kernela
 	cl::Event evt;
 	cq.enqueueNDRangeKernel(kernelSkeleton_iter[i],
-		cl::NullRange,
-		cl::NDRange(src.cols, src.rows),
+		cl::NDRange(1, 1),
+		cl::NDRange(src.cols - 2, src.rows - 2),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();

@@ -39,7 +39,8 @@ private:
 
 	cl::Buffer clSrc;
 	cl::Buffer clDst;
-	cl::Buffer clElement;
+	cl::Buffer clSeCoords;
+	size_t csize;
 
 	cl::Buffer clTmp;
 	cl::Buffer clTmp2;

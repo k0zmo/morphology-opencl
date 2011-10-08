@@ -702,6 +702,7 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 	for(int y = 0; y < element.rows; ++y)
 	{
 		const uchar* krow = element.data + element.step*y;
+
 		for(int x = 0; x < element.cols; ++x)
 		{
 			if(krow[x] == 0)
@@ -758,5 +759,44 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 		}
 	}
 
+#endif
+
+#if 0
+	std::vector<cl_int2> coords;
+	for(int y = 0; y < element.rows; ++y)
+	{
+		const uchar* krow = element.data + element.step*y;
+
+		for(int x = 0; x < element.cols; ++x)
+		{
+			if(krow[x] == 0)
+				continue;
+
+			cl_int2 c = {x - anchorX, y - anchorY};
+			coords.push_back(c);
+		}
+	}
+
+	const uchar* input = src.ptr<uchar>();
+	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(0));
+	size_t rowPitch = src.cols;
+
+	for(int y = anchorY; y < src.rows - anchorY; ++y)
+	{
+		for(int x = anchorX; x < src.cols - anchorX; ++x)
+		{
+			uchar val = erodeINF;
+
+			for(int i = 0; i < coords.size(); ++i)
+			{
+				int yy = coords[i].s[1] + y;
+				int xx = coords[i].s[0] + x;
+				val = std::min(val, input[xx + yy * rowPitch]);
+			}
+
+			uchar* pdst = dst.ptr<uchar>();
+			pdst[x + y * rowPitch] = val;
+		}
+	}
 #endif
 }
