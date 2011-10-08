@@ -1,7 +1,6 @@
 #define CV_NO_BACKWARD_COMPATIBILITY
 
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 // Obiekt - bialy
 static const int OBJ = 255;
@@ -596,41 +595,30 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 	}
 
 #if 0
-	// wskaznik na poczatek macierzy wejsciowej
-	const uchar* pInput = src.ptr<uchar>();
-	// szerokosc macierzy wejsciowej
-	int imx = src.cols;
-	// wysokosc macierzy wejsciowej
-	int imy = src.rows;
-
-	const uchar* pSe = element.ptr<uchar>();
-	// szerokosc elementu strukturalnego
-	int sex = element.cols;
-	// wysokosc elementu strukturalego
-	int sey = element.rows;
-
+	// Obraz docelowy
 	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(erodeINF));
-	uchar* pOutput = dst.ptr<uchar>();
 
 	// kwintesencja funkcji - filtrowanie
-	for(int m = 0; m < sey; ++m)
+	for(int m = 0; m < element.rows; ++m)
 	{
-		for(int n = 0; n < sex; ++n)
+		for(int n = 0; n < element.cols; ++n)
 		{
-			if(pSe[m * element.cols + n] != 0)
+			const uchar* se = element.ptr<uchar>();
+
+			if(se[m * element.cols + n] != 0)
 			{
 				int distx = n - anchorX;
 				int disty = m - anchorY;
 				int d = borderX + distx;
 
-				uchar* pDst = pOutput;
+				uchar* pDst = dst.ptr<uchar>();
 
-				for(int yy = borderY; yy < borderY + imy; ++yy)
+				for(int yy = borderY; yy < borderY + src.rows; ++yy)
 				{
 					const uchar* pSrc = tempSrc + tempx*(yy+disty) + d;
 
 					int xx = 0;
-					for( ; xx <= imx - 4; xx += 4)
+					for( ; xx <= src.cols - 4; xx += 4)
 					{
 						pDst[0] = std::min(pDst[0], pSrc[0]);
 						pDst[1] = std::min(pDst[1], pSrc[1]);
@@ -641,7 +629,7 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 						pSrc += 4;
 					}
 
-					for( ; xx < imx; ++xx)
+					for( ; xx < src.cols; ++xx)
 					{
 						pDst[0] = std::min(pDst[0], pSrc[0]);
 
@@ -660,7 +648,7 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 #if 1
 	// Wydobadz wspolrzedne 'aktywne' z elementu strukturalnego
 	std::vector<cv::Point> coords;
-	for(int y = 0, i = 0; y < element.rows; ++y)
+	for(int y = 0; y < element.rows; ++y)
 	{
 		const uchar* krow = element.data + element.step*y;
 		for(int x = 0; x < element.cols; ++x)
@@ -671,10 +659,10 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 			coords.emplace_back(cv::Point(x, y));
 		}
 	}
-	std::vector<uchar*> ptrs(coords.size());
+	std::vector<const uchar*> ptrs(coords.size());
 
 	// Wskazniki na kazdy z rzedow obrazu
-	std::vector<uchar*> rows(tempy);
+	std::vector<const uchar*> rows(tempy);
 	for(size_t i = 0; i < rows.size(); ++i)
 		rows[i] = tempSrc + tempx*i;
 
@@ -686,8 +674,8 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 	// Filtracja
 	for(int y = 0; y < src.rows; ++y, pDst += dstep)
 	{
-		const uchar** srcs = const_cast<const uchar**>(&rows[y]);
-		const uchar** kp = const_cast<const uchar**>(&ptrs[0]);
+		const uchar** srcs = &rows[y];
+		const uchar** kp = &ptrs[0];
 		int nz = static_cast<int>(coords.size());
 
 		for(int k = 0; k < nz; ++k)

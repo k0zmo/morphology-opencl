@@ -507,7 +507,7 @@ void Morph::initOpenCL()
 		0, 0
 	};
 
-	// Tylko GPU (i tak CPU chwilo AMD uwalil)
+        // Tylko GPU (i tak CPU chwilowo AMD uwalil)
 	cl_int err;
 	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
@@ -524,11 +524,9 @@ void Morph::initOpenCL()
 	clError("Failed to create command queue!", err);
 
 	// Zaladuj Kernele
-	QFile file("naive-kernels.cl");
+	QFile file("./naive-kernels.cl");
 	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
 		clError("Can't read naive-kernels.cl file", -1);
-	}
 
 	QTextStream in(&file);
 	QString contents = in.readAll();
@@ -610,7 +608,7 @@ void Morph::morphologyOpenCL()
 	else
 	{
 		// Funkcja lambda kopiujaca zawartosc jednego bufora OpenCL'a do drugiego
-		// przy okazji mierz¹c czas tej operacji
+		// przy okazji mierzac czas tej operacji
 		auto copyBuffer = [this](const cl::Buffer& clsrc, cl::Buffer& cldst,
 			cl::Event& clevt) -> cl_ulong
 		{
