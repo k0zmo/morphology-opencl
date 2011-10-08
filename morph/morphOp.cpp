@@ -1,11 +1,4 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
-#include <opencv2/imgproc/imgproc.hpp>
-
-// Obiekt - bialy
-static const int OBJ = 255;
-// Tlo - czarne
-static const int BCK = 0;
+#include "morphOp.h"
 
 // -------------------------------------------------------------------------
 cv::Mat structuringElementDiamond(int radius)
@@ -58,6 +51,64 @@ cv::Mat structuringElementDiamond(int radius)
 			element.at<uchar>(j, i) = 0;
 		}
 		--y;
+	}
+
+	return element;
+}
+// -------------------------------------------------------------------------
+cv::Mat standardStructuringElement(int xsize, int ysize,
+	EStructureElementType type, int rotation)
+{
+	cv::Point anchor(xsize, ysize);
+
+	cv::Size elem_size(
+		2 * anchor.x + 1,
+		2 * anchor.y + 1);
+
+	cv::Mat element;
+
+	if(type == SET_Rect)
+	{
+		element = cv::getStructuringElement(cv::MORPH_RECT, elem_size, anchor);
+	}
+	else if(type == SET_Ellipse)
+	{
+		element = cv::getStructuringElement(cv::MORPH_ELLIPSE, elem_size, anchor);
+	}
+	else if(type == SET_Cross)
+	{
+		element = cv::getStructuringElement(cv::MORPH_CROSS, elem_size, anchor);
+	}
+	else
+	{
+		element = structuringElementDiamond(qMin(anchor.x, anchor.y));
+	}
+
+	// Rotacja elementu strukturalnego
+	if(rotation != 180)
+	{
+		int angle = rotation;
+		if(angle >= 180) { angle -= 180; }
+		else { angle += 180; }
+		angle = 360 - angle;
+
+		auto rotateImage = [=](const cv::Mat& source, double angle) -> cv::Mat
+		{
+			cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
+			cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
+			cv::Mat dst;
+			cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_NEAREST);
+			return dst;
+		};
+
+		//cv::Mat tmp(element.size() * 2, CV_8U, cv::Scalar(0));
+		//int border = element.rows/4;
+		//cv::copyMakeBorder(element, tmp, border, border, border, border, cv::BORDER_CONSTANT);
+
+		element = rotateImage(element, angle);
+
+		//for(int i = 0; i < element.cols*element.rows; ++i)
+		//{ uchar* p = element.ptr<uchar>(); if(p[i] == 1) p[i] = 255; }
 	}
 
 	return element;
