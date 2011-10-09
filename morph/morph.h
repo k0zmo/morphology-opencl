@@ -78,16 +78,14 @@ private:
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
 	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, const cl::Buffer& clBufferSrc,
 		cl::Buffer& clBufferDst);
+	cl_ulong executeHitMissKernel(cl::Kernel* kernel, const cl::Buffer& clBufferSrc,
+		cl::Buffer& clBufferDst);
+
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Buffer& clBufferA, const cl::Buffer& clBufferB,
 		cl::Buffer& clBufferDst);
-
 	cl_ulong executeAddHalfKernel(const cl::Buffer& clBufferSrc,
 		 cl::Buffer& clBufferDst);
-	cl_ulong executeRemoveKernel(const cl::Buffer& clBufferSrc,
-		cl::Buffer& clBufferDst);
-	cl_ulong executeSkeletonKernel(int i, const cl::Buffer& clBufferSrc,
-		cl::Buffer& clBufferDst);
 
 private slots:
 	void openTriggered();

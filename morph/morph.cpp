@@ -282,12 +282,6 @@ void Morph::openFile(const QString& filename)
 			src.rows * src.cols, // obraz 1-kanalowy
 			src.ptr<uchar>(), &err);
 		clError("Error creating source OpenCL buffer", err);
-
-		//cl::Image2D clSrcImage = cl::Image2D(context, 
-		//	CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY,
-		//	cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
-		//	src.cols, src.rows, 0, src.ptr<uchar>(), &err);
-		//clError("Error creating source OpenCL image2D", err);
 	}
 
 	this->resize(0, 0);
@@ -481,7 +475,7 @@ void Morph::initOpenCL()
 	// Zaladuj Kernele
 	QFile file("./kernels-uchar.cl");
 	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-		clError("Can't read naive-kernels.cl file", -1);
+		clError("Can't read kernels-uchar.cl file", -1);
 
 	QTextStream in(&file);
 	QString contents = in.readAll();
@@ -601,7 +595,6 @@ void Morph::morphologyOpenCL()
 				nullptr, &clevt);
 			clevt.wait();
 			return elapsedEvent(clevt);
-
 		};
 
 		// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -632,7 +625,7 @@ void Morph::morphologyOpenCL()
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;
 			elapsed += copyBuffer(clSrc, clDst, evt);
-			elapsed += executeRemoveKernel(clSrc, clDst);
+			elapsed += executeHitMissKernel(&kernelRemove, clSrc, clDst);
 		}
 		// Operacja szkieletyzacji
 		else if(ui.rbSkeleton->isChecked())
@@ -646,7 +639,7 @@ void Morph::morphologyOpenCL()
 			{
 				for(int i = 0; i < 8; ++i)
 				{
-					elapsed += executeSkeletonKernel(i, clTmp, clDst);
+					elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], clTmp, clDst);
 
 					// Kopiowanie bufora
 					copyBuffer(clDst, clTmp, evt);
@@ -748,6 +741,28 @@ cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel,
 	return elapsedEvent(evt);
 }
 // -------------------------------------------------------------------------
+cl_ulong Morph::executeHitMissKernel(cl::Kernel* kernel, const cl::Buffer& clBufferSrc,
+	cl::Buffer& clBufferDst)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernel->setArg(0, clBufferSrc);
+	err |= kernel->setArg(1, clBufferDst);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;
+	cq.enqueueNDRangeKernel(*kernel,
+		cl::NDRange(1, 1),
+		cl::NDRange(src.cols - 2, src.rows - 2),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
 cl_ulong Morph::executeSubtractKernel(const cl::Buffer& clBufferA,
 	const cl::Buffer& clBufferB, cl::Buffer& clBufferDst)
 {
@@ -784,50 +799,6 @@ cl_ulong Morph::executeAddHalfKernel(const cl::Buffer& clBufferSrc,
 	cq.enqueueNDRangeKernel(kernelAddHalf,
 		cl::NullRange,
 		cl::NDRange(src.cols * src.rows),
-		cl::NullRange, 
-		nullptr, &evt);
-	evt.wait();
-
-	// Ile czasu to zajelo
-	return elapsedEvent(evt);
-}
-// -------------------------------------------------------------------------
-cl_ulong Morph::executeRemoveKernel(const cl::Buffer& clBufferSrc,
-	cl::Buffer& clBufferDst)
-{
-	// Ustaw argumenty kernela
-	cl_int err;
-	err  = kernelRemove.setArg(0, clBufferSrc);
-	err |= kernelRemove.setArg(1, clBufferDst);
-	clError("Error while setting kernel arguments", err);
-
-	// Odpal kernela
-	cl::Event evt;
-	cq.enqueueNDRangeKernel(kernelRemove,
-		cl::NDRange(1, 1),
-		cl::NDRange(src.cols - 2, src.rows - 2),
-		cl::NullRange, 
-		nullptr, &evt);
-	evt.wait();
-
-	// Ile czasu to zajelo
-	return elapsedEvent(evt);
-}
-// -------------------------------------------------------------------------
-cl_ulong Morph::executeSkeletonKernel(int i, const cl::Buffer& clBufferSrc,
-	cl::Buffer& clBufferDst)
-{
-	// Ustaw argumenty kernela
-	cl_int err;
-	err  = kernelSkeleton_iter[i].setArg(0, clBufferSrc);
-	err |= kernelSkeleton_iter[i].setArg(1, clBufferDst);
-	clError("Error while setting kernel arguments", err);
-
-	// Odpal kernela
-	cl::Event evt;
-	cq.enqueueNDRangeKernel(kernelSkeleton_iter[i],
-		cl::NDRange(1, 1),
-		cl::NDRange(src.cols - 2, src.rows - 2),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
