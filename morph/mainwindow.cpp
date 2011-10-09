@@ -57,7 +57,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
-	ocl = new MorphOpenCL();
+	ocl = new MorphOpenCLImage();
 	ocl->errorCallback = [this](const QString& message, cl_int err)
 	{
 		QMessageBox::critical(this, "OpenCL error", message,
@@ -65,7 +65,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 		exit(1);
 	};
 
-	oclSupported = ocl->initOpenCL();
+	oclSupported = ocl->initOpenCL(CL_DEVICE_TYPE_CPU);
 	if(oclSupported)
 	{
 		ui.actionOpenCL->setEnabled(true);
@@ -73,6 +73,11 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	}
 	else
 	{
+		QMessageBox::critical(nullptr,
+			"Critical error",
+			"No OpenCL Platform available therefore OpenCL processing will be disabled",
+			QMessageBox::Ok);
+
 		ui.actionOpenCL->setEnabled(false);
 		ui.actionOpenCL->setChecked(false);
 	}

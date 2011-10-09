@@ -1,117 +1,41 @@
 #include "morphocl.h"
 
-bool MorphOpenCL::initOpenCL()
+// HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+// MorphOpenCL
+bool MorphOpenCL::initOpenCL(cl_device_type dt)
 {
 	// Connect to a compute device
 	std::vector<cl::Platform> platforms;
 	cl::Platform::get(&platforms);
 
 	if (platforms.empty())
-	{
-		QMessageBox::critical(nullptr,
-			"Critical error",
-			"No OpenCL Platform available therefore OpenCL processing will be disabled",
-			QMessageBox::Ok);
 		return false;
-	}
 
-	// FIXME
+	// FIXME Wybierz platforme 
 	cl::Platform platform = platforms[0];
 	cl_context_properties properties[] = { 
 		CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(),
 		0, 0
 	};
-
-	// Tylko GPU (i tak CPU chwilowo AMD uwalil)
+	
+	// Stworz kontekst
 	cl_int err;
-	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
+	context = cl::Context(dt, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 
+	// Pobierz liste urzadzen
 	std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
-	// FIXME
+	// FIXME Wybierz pierwsze urzadzenie
 	dev = devices[0];
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
-
-	//
-	//cl_bool imageSupport = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
-	//
 
 	// Kolejka polecen
 	cq = cl::CommandQueue(context, dev, CL_QUEUE_PROFILING_ENABLE, &err);
 	clError("Failed to create command queue!", err);
 
-	// Zaladuj Kernele
-	QFile file("./kernels-uchar.cl");
-	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-		clError("Can't read kernels-uchar.cl file", -1);
-
-	QTextStream in(&file);
-	QString contents = in.readAll();
-
-	QByteArray w = contents.toLocal8Bit();
-	const char* src = w.data();
-	size_t len = contents.length();
-
-	cl::Program::Sources sources(1, std::make_pair(src, len));
-	cl::Program program = cl::Program(context, sources, &err);
-	clError("Failed to create compute program!", err);
-
-	err = program.build(devs);
-	if(err != CL_SUCCESS)
-	{
-		QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
-		clError(log, -1);
-	}
-
-	// Stworz kernele ze zbudowanego programu
-	kernelSubtract = cl::Kernel(program, "subtract", &err);
-	clError("Failed to create dilate kernel!", err);
-
-	kernelAddHalf = cl::Kernel(program, "addHalf", &err);
-	clError("Failed to create addHalf kernel!", err);
-
-	kernelErode = cl::Kernel(program, "erode", &err);
-	clError("Failed to create erode kernel!", err);
-
-	kernelDilate = cl::Kernel(program, "dilate", &err);
-	clError("Failed to create dilate kernel!", err);
-
-	kernelRemove = cl::Kernel(program, "remove", &err);
-	clError("Failed to create remove kernel!", err);
-
-	for(int i = 0; i < 8; ++i)
-	{
-		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-		kernelSkeleton_iter[i] = cl::Kernel(program, k, &err);
-		clError("Failed to create skeleton_iter kernel!", err);
-	}
-
-	return true;
-}
-// -------------------------------------------------------------------------
-void MorphOpenCL::setSourceImage(const cv::Mat* src)
-{
-	cl_int err;
-	if(!this->src || this->src->size() != src->size())
-	{
-		clSrc = cl::Buffer(context,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
-			src->rows * src->cols, // zakladamy obraz 1-kanalowy
-			const_cast<uchar*>(src->ptr<uchar>()), &err);
-		clError("Error while creating OpenCL source buffer", err);		
-	}
-	else
-	{
-		cl_int err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0,
-			src->rows * src->cols, src->ptr<uchar>());
-		clError("Error while writing new data to OpenCL buffer!", err);
-	}
-
-	this->src = src;
+	return loadKernels(devs);
 }
 // -------------------------------------------------------------------------
 void MorphOpenCL::setStructureElement(const cv::Mat& selement)
@@ -145,7 +69,418 @@ void MorphOpenCL::setStructureElement(const cv::Mat& selement)
 	clError("Error while creating buffer for structure element!", err);
 }
 // -------------------------------------------------------------------------
-double MorphOpenCL::morphology(EOperationType opType, cv::Mat& dst, int& iters)
+void MorphOpenCL::clError(const QString& message, cl_int err)
+{
+	if(err != CL_SUCCESS && errorCallback != nullptr)
+		errorCallback(message, err);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCL::elapsedEvent( const cl::Event& evt )
+{
+	cl_ulong eventstart = evt.getProfilingInfo<CL_PROFILING_COMMAND_START>();
+	cl_ulong eventend = evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
+	return (cl_ulong)(eventend - eventstart);
+}
+
+// HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+// MorphOpenCLImage
+
+void MorphOpenCLImage::setSourceImage(const cv::Mat* src)
+{
+	cl_int err;
+	if(!this->src || this->src->size() != src->size())
+	{
+		clSrcImage = cl::Image2D(context,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+			src->cols, src->rows, 0, 
+			const_cast<uchar*>(src->ptr<uchar>()), &err);
+		clError("Error while creating OpenCL source image!", err);
+	}
+	else
+	{
+		cl::size_t<3> origin;
+		origin[0] = origin[1] = origin[2] = 0;
+
+		cl::size_t<3> region;
+		region[0] = src->cols;
+		region[1] = src->rows;
+		region[2] = 1;
+
+		cl_int err = cq.enqueueWriteImage(clSrcImage, CL_TRUE, 
+			origin, region, 0, 0,
+			const_cast<uchar*>(src->ptr<uchar>()));
+		clError("Error while writing new data to OpenCL source image!", err);
+	}
+
+	this->src = src;
+}
+// -------------------------------------------------------------------------
+bool MorphOpenCLImage::loadKernels(const VECTOR_CLASS<cl::Device>& devs)
+{
+	// Zaladuj Kernele
+	QFile file("./kernels-images.cl");
+	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		clError("Can't read kernels-images.cl file", -1);
+		return true;
+	}
+
+	QTextStream in(&file);
+	QString contents = in.readAll();
+
+	QByteArray w = contents.toLocal8Bit();
+	const char* src = w.data();
+	size_t len = contents.length();
+
+	cl_int err;
+	cl::Program::Sources sources(1, std::make_pair(src, len));
+	cl::Program program = cl::Program(context, sources, &err);
+	clError("Failed to create compute program!", err);
+
+	err = program.build(devs);
+	if(err != CL_SUCCESS)
+	{
+		QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
+		clError(log, -1);
+		return false;
+	}
+
+ 	// Stworz kernele ze zbudowanego programu
+ 	kernelSubtract = cl::Kernel(program, "subtract", &err);
+ 	clError("Failed to create dilate kernel!", err);
+ 
+	kernelErode = cl::Kernel(program, "erode", &err);
+	clError("Failed to create erode kernel!", err);
+
+	kernelDilate = cl::Kernel(program, "dilate", &err);
+	clError("Failed to create dilate kernel!", err);
+
+ 	kernelRemove = cl::Kernel(program, "remove", &err);
+ 	clError("Failed to create remove kernel!", err);
+
+// 	for(int i = 0; i < 8; ++i)
+// 	{
+// 		QString kernelName = "skeleton_iter" + QString::number(i+1);
+// 		QByteArray kk = kernelName.toAscii();
+// 		const char* k = kk.data();
+// 		kernelSkeleton_iter[i] = cl::Kernel(program, k, &err);
+// 		clError("Failed to create skeleton_iter kernel!", err);
+// 	}
+
+	return true;
+}
+// -------------------------------------------------------------------------
+double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& iters)
+{
+	// Obraz docelowy
+	cl_int err;
+	clDstImage = cl::Image2D(context,
+		CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
+		cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+		src->cols, src->rows, 0, nullptr, &err); 
+	clError("Error while creating destination OpenCL image2D", err);
+
+	iters = 1;
+	cl_ulong elapsed = 0;
+
+	// Erozja
+	if(opType == OT_Erode)
+	{
+		elapsed += executeMorphologyKernel(&kernelErode, clSrcImage, clDstImage);
+	}
+	// Dylatacja
+	else if(opType == OT_Dilate)
+	{
+		elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clDstImage);
+	}
+	else
+	{
+		auto copyImage = [this](const cl::Image2D& s, cl::Image2D& d,
+			cl::Event evt) -> cl_ulong
+		{
+			cl::size_t<3> origin; origin[0] = origin[1] = origin[2] = 0;
+			cl::size_t<3> dorigin; dorigin[0] = dorigin[1] = dorigin[2] = 0;
+			cl::size_t<3> region; region[0] = src->cols; region[1] = src->rows; region[2] = 1;
+
+			cq.enqueueCopyImage(s, d, 
+				origin, dorigin, region, 
+				nullptr, &evt);
+			evt.wait();
+			return elapsedEvent(evt);
+		};
+
+		// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+		clTmpImage = cl::Image2D(context,
+			CL_MEM_READ_WRITE, 
+			cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+			src->cols, src->rows, 0, nullptr, &err); 
+		clError("Error while creating temporary OpenCL image2D", err);
+
+		// Otwarcie
+		if(opType == OT_Open)
+		{
+			// dst = dilate(erode(src))
+			elapsed += executeMorphologyKernel(&kernelErode, clSrcImage, clTmpImage);
+			elapsed += executeMorphologyKernel(&kernelDilate, clTmpImage, clDstImage);
+		}
+		// Zamkniecie
+		else if(opType == OT_Close)
+		{
+			// dst = erode(dilate(src))
+			elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clTmpImage);
+			elapsed += executeMorphologyKernel(&kernelErode, clTmpImage, clDstImage);
+		}
+		
+		// Operacja wyciagania konturow
+		else if(opType == OT_Remove)
+		{
+			// Skopiuj obraz zrodlowy do docelowego
+			cl::Event evt;
+			elapsed += copyImage(clSrcImage, clDstImage, evt);
+			elapsed += executeHitMissKernel(&kernelRemove, clSrcImage, clDstImage);
+		}
+		/*
+		// Operacja szkieletyzacji
+		else if(opType == OT_Skeleton)
+		{
+			// Skopiuj obraz zrodlowy do docelowego
+			cl::Event evt;	
+			elapsed += copyImage(clSrcImage, clTmpImage, evt);
+			elapsed += copyImage(clSrcImage, clDstImage, evt);
+
+			// FIXME
+			for(int iters = 0; iters < 111; ++iters)
+			{
+				for(int i = 0; i < 8; ++i)
+				{
+					elapsed += executeHitMissKernel(&kernelSkeleton_iter[i],
+						clTmpImage, clDstImage);
+
+					// Kopiowanie obrazu
+					copyImage(clDstImage, clTmpImage, evt);
+					elapsed += elapsedEvent(evt);
+				}
+			}
+		}
+		*/
+		else
+		{
+			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+			clTmp2Image = cl::Image2D(context,
+				CL_MEM_READ_WRITE, 
+				cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+				src->cols, src->rows, 0, nullptr, &err); 
+			clError("Error while creating temporary OpenCL image2D", err);
+
+			// Gradient morfologiczny
+			if(opType == OT_Gradient)
+			{ 
+				//dst = dilate(src) - erode(src);
+				elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clTmpImage);
+				elapsed += executeMorphologyKernel(&kernelErode, clSrcImage, clTmp2Image);
+				elapsed += executeSubtractKernel(clTmpImage, clTmp2Image, clDstImage);
+			}
+			// TopHat
+			else if(opType == OT_TopHat)
+			{ 
+				// dst = src - dilate(erode(src))
+				elapsed += executeMorphologyKernel(&kernelErode, clSrcImage, clTmpImage);
+				elapsed += executeMorphologyKernel(&kernelDilate, clTmpImage, clTmp2Image);
+				elapsed += executeSubtractKernel(clSrcImage, clTmp2Image, clDstImage);
+			}
+			// BlackHat
+			else if(opType == OT_BlackHat)
+			{ 
+				// dst = close(src) - src
+				elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clTmpImage);
+				elapsed += executeMorphologyKernel(&kernelErode, clTmpImage, clTmp2Image);
+				elapsed += executeSubtractKernel(clTmp2Image, clSrcImage, clDstImage);
+			}
+			else
+			{
+				iters = 0;
+				dst.create(src->size(), CV_8U);
+				return 0.0;		
+			}
+		}
+	}
+	
+	// Zczytaj wynik
+	cl::size_t<3> origin;
+	origin[0] = origin[1] = origin[2] = 0;
+
+	cl::size_t<3> region;
+	region[0] = src->cols; 
+	region[1] = src->rows;
+	region[2] = 1;
+
+	dst.create(src->size(), CV_8U);
+	cl::Event evt;
+	cq.enqueueReadImage(clDstImage, CL_FALSE, origin,
+		region, 0, 0, dst.ptr<uchar>(),
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu zajelo zczytanie danych z powrotem
+	elapsed += elapsedEvent(evt);
+	// Ile czasu wszystko zajelo
+	return elapsed * 0.000001;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel, 
+	const cl::Image2D& clSrcImage, cl::Image2D& clDstImage)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernel->setArg(0, clSrcImage);
+	err |= kernel->setArg(1, clDstImage);
+	err |= kernel->setArg(2, clSeCoords);
+	err |= kernel->setArg(3, csize);
+	clError("Error while setting kernel arguments", err);
+
+	//size_t localSize = kernel->getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(dev, &err);
+	//clError("Error while retrieving kernel work group info!", err);
+	//auto w = kernel->getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(dev);
+
+	// Odpal kernela
+	cl::Event evt;	
+	cq.enqueueNDRangeKernel(*kernel,
+		cl::NullRange,
+		cl::NDRange(src->cols, src->rows),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel, 
+	const cl::Image2D& clSrcImage, cl::Image2D& clDstImage)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernel->setArg(0, clSrcImage);
+	err |= kernel->setArg(1, clDstImage);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;
+	cq.enqueueNDRangeKernel(*kernel,
+		cl::NDRange(1, 1),
+		cl::NDRange(src->cols - 2, src->rows - 2),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
+	const cl::Image2D& clBImage, cl::Image2D& clDstImage)
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernelSubtract.setArg(0, clAImage);
+	err |= kernelSubtract.setArg(1, clBImage);
+	err |= kernelSubtract.setArg(2, clDstImage);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;	
+	cq.enqueueNDRangeKernel(kernelSubtract,
+		cl::NullRange,
+		cl::NDRange(src->cols, src->rows),
+		cl::NullRange, 
+		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+
+// HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+// MorphOpenCLBuffer
+
+void MorphOpenCLBuffer::setSourceImage(const cv::Mat* src)
+{
+	cl_int err;
+	if(!this->src || this->src->size() != src->size())
+	{
+		clSrc = cl::Buffer(context,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 
+			src->rows * src->cols, // zakladamy obraz 1-kanalowy
+			const_cast<uchar*>(src->ptr<uchar>()), &err);
+		clError("Error while creating OpenCL source buffer", err);		
+	}
+	else
+	{
+		cl_int err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0,
+			src->rows * src->cols, src->ptr<uchar>());
+		clError("Error while writing new data to OpenCL source buffer!", err);
+	}
+
+	this->src = src;
+}
+// -------------------------------------------------------------------------
+bool MorphOpenCLBuffer::loadKernels(const VECTOR_CLASS<cl::Device>& devs)
+{
+	// Zaladuj Kernele
+	QFile file("./kernels-uchar.cl");
+	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		clError("Can't read kernels-uchar.cl file", -1);
+		return true;
+	}
+
+	QTextStream in(&file);
+	QString contents = in.readAll();
+
+	QByteArray w = contents.toLocal8Bit();
+	const char* src = w.data();
+	size_t len = contents.length();
+
+	cl_int err;
+	cl::Program::Sources sources(1, std::make_pair(src, len));
+	cl::Program program = cl::Program(context, sources, &err);
+	clError("Failed to create compute program!", err);
+
+	err = program.build(devs);
+	if(err != CL_SUCCESS)
+	{
+		QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
+		clError(log, -1);
+		return false;
+	}
+
+	// Stworz kernele ze zbudowanego programu
+	kernelSubtract = cl::Kernel(program, "subtract", &err);
+	clError("Failed to create dilate kernel!", err);
+
+	kernelErode = cl::Kernel(program, "erode", &err);
+	clError("Failed to create erode kernel!", err);
+
+	kernelDilate = cl::Kernel(program, "dilate", &err);
+	clError("Failed to create dilate kernel!", err);
+
+	kernelRemove = cl::Kernel(program, "remove", &err);
+	clError("Failed to create remove kernel!", err);
+
+	for(int i = 0; i < 8; ++i)
+	{
+		QString kernelName = "skeleton_iter" + QString::number(i+1);
+		QByteArray kk = kernelName.toAscii();
+		const char* k = kk.data();
+		kernelSkeleton_iter[i] = cl::Kernel(program, k, &err);
+		clError("Failed to create skeleton_iter kernel!", err);
+	}
+
+	return true;
+}
+// -------------------------------------------------------------------------
+double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 {
 	size_t dstSize = src->rows * src->cols;
 
@@ -226,8 +561,8 @@ double MorphOpenCL::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 		{
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;	
-			copyBuffer(clSrc, clTmp, evt);
-			copyBuffer(clSrc, clDst, evt);
+			elapsed += copyBuffer(clSrc, clTmp, evt);
+			elapsed += copyBuffer(clSrc, clDst, evt);
 
 			for(int iters = 0; iters < 111; ++iters)
 			{
@@ -240,8 +575,6 @@ double MorphOpenCL::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 					elapsed += elapsedEvent(evt);
 				}
 			}
-
-			elapsed += executeAddHalfKernel(clSrc, clDst);
 		}
 		else
 		{
@@ -297,24 +630,16 @@ double MorphOpenCL::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 	// Ile czasu zajelo zczytanie danych z powrotem
 	elapsed += elapsedEvent(evt);
 	// Ile czasu wszystko zajelo
-	double delapsed = elapsed * 0.000001;
-
-	return delapsed;
+	return elapsed * 0.000001;
 }
 // -------------------------------------------------------------------------
-void MorphOpenCL::clError(const QString& message, cl_int err)
-{
-	if(err != CL_SUCCESS && errorCallback != nullptr)
-		errorCallback(message, err);
-}
-// -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::executeMorphologyKernel(cl::Kernel* kernel, 
-	const cl::Buffer& clBufferSrc, cl::Buffer& clBufferDst)
+cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
+	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
-	err  = kernel->setArg(0, clBufferSrc);
-	err |= kernel->setArg(1, clBufferDst);
+	err  = kernel->setArg(0, clSrcBuffer);
+	err |= kernel->setArg(1, clDstBuffer);
 	err |= kernel->setArg(2, clSeCoords);
 	err |= kernel->setArg(3, csize);
 	err |= kernel->setArg(4, src->cols);
@@ -333,13 +658,13 @@ cl_ulong MorphOpenCL::executeMorphologyKernel(cl::Kernel* kernel,
 	return elapsedEvent(evt);
 }
 // -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::executeHitMissKernel(cl::Kernel* kernel, 
-	const cl::Buffer& clBufferSrc, cl::Buffer& clBufferDst)
+cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel, 
+	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
-	err  = kernel->setArg(0, clBufferSrc);
-	err |= kernel->setArg(1, clBufferDst);
+	err  = kernel->setArg(0, clSrcBuffer);
+	err |= kernel->setArg(1, clDstBuffer);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
@@ -355,14 +680,14 @@ cl_ulong MorphOpenCL::executeHitMissKernel(cl::Kernel* kernel,
 	return elapsedEvent(evt);
 }
 // -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::executeSubtractKernel(const cl::Buffer& clBufferA,
-	const cl::Buffer& clBufferB, cl::Buffer& clBufferDst)
+cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
+	const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer)
 {
 	// Ustaw argumenty kernela
 	cl_int err;
-	err  = kernelSubtract.setArg(0, clBufferA);
-	err |= kernelSubtract.setArg(1, clBufferB);
-	err |= kernelSubtract.setArg(2, clBufferDst);
+	err  = kernelSubtract.setArg(0, clABuffer);
+	err |= kernelSubtract.setArg(1, clBBuffer);
+	err |= kernelSubtract.setArg(2, clDstBuffer);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
@@ -376,32 +701,4 @@ cl_ulong MorphOpenCL::executeSubtractKernel(const cl::Buffer& clBufferA,
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
-}
-// -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::executeAddHalfKernel(const cl::Buffer& clBufferSrc,
-	cl::Buffer& clBufferDst)
-{
-	cl_int err;
-	err  = kernelAddHalf.setArg(0, clBufferDst);
-	err |= kernelAddHalf.setArg(1, clBufferSrc);
-	clError("Error while setting kernel arguments", err);
-
-	// Odpal kernela
-	cl::Event evt;
-	cq.enqueueNDRangeKernel(kernelAddHalf,
-		cl::NullRange,
-		cl::NDRange(src->cols * src->rows),
-		cl::NullRange, 
-		nullptr, &evt);
-	evt.wait();
-
-	// Ile czasu to zajelo
-	return elapsedEvent(evt);
-}
-// -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::elapsedEvent( const cl::Event& evt )
-{
-	cl_ulong eventstart = evt.getProfilingInfo<CL_PROFILING_COMMAND_START>();
-	cl_ulong eventend = evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
-	return (cl_ulong)(eventend - eventstart);
 }

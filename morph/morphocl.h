@@ -16,28 +16,105 @@ public:
 		errorCallback(nullptr)
 	{ }
 
-	// Inicjalizuje OpenCL'a
-	bool initOpenCL();
-	// Ustawia obraz zrodlowy
-	void setSourceImage(const cv::Mat* src);
-	// Ustawia element strukturalny
-	void setStructureElement(const cv::Mat& selement);
-	// Wykonanie operacji morfologicznej, zwraca czas trwania
-	double morphology(EOperationType opType, cv::Mat& dst, int& iters);
-
 	std::function<void(const QString&, cl_int)> errorCallback;
 
-private:
+	// Inicjalizuje OpenCL'a
+	/*virtual*/ bool initOpenCL(cl_device_type dt);
+	// Ustawia obraz zrodlowy
+	virtual void setSourceImage(const cv::Mat* src) = 0;
+	// Ustawia element strukturalny
+	void setStructureElement(const cv::Mat& selement);
+
+	// Wykonanie operacji morfologicznej, zwraca czas trwania
+	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
+
+protected:
 	cl::Context context;
 	cl::Device dev;
 	cl::CommandQueue cq;
 
+	// Bufor ze wspolrzednymi elementu strukturalnego
+	cl::Buffer clSeCoords;
+	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
+	size_t csize;
+
+	const cv::Mat* src;
+	int kradiusx, kradiusy;
+
+protected:
+	// Laduje odpowiednie kernele
+	virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs) = 0;
+
+	// Pomocznicza funkcja do zglaszania bledow OpenCL'a
+	void clError(const QString& message, cl_int err);
+
+	// Zwraca czas trwania zdarzenia w nanosekundach 
+	cl_ulong elapsedEvent(const cl::Event& evt);
+};
+
+class MorphOpenCLImage : public MorphOpenCL
+{
+public:
+	MorphOpenCLImage()
+		: MorphOpenCL()
+	{ }
+
+	//*override*/ virtual bool initOpenCL(cl_device_type dt);
+	/*override*/ virtual void setSourceImage(const cv::Mat* src);
+	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+
+private:
 	cl::Kernel kernelSubtract;
-	cl::Kernel kernelAddHalf;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
 	cl::Kernel kernelDilate;
+
+	// Hit-miss
+	cl::Kernel kernelRemove;
+	cl::Kernel kernelSkeleton_iter[8];
+
+	// Obraz wejsciowy
+	cl::Image2D clSrcImage;
+	// Obraz wyjsciowy
+	cl::Image2D clDstImage;
+	// Tymczasowe obrazy (ping-pong)
+	cl::Image2D clTmpImage;
+	cl::Image2D clTmp2Image;
+
+private:
+	/*override*/ virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs);
+
+	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
+	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
+		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage);
+
+	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
+	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
+		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage);
+
+	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
+	cl_ulong executeSubtractKernel(const cl::Image2D& clAImage, 
+		const cl::Image2D& clBImage, cl::Image2D& clDstImage);
+};
+
+class MorphOpenCLBuffer : public MorphOpenCL
+{
+public:
+	MorphOpenCLBuffer()
+		: MorphOpenCL()
+	{ }
+
+	/*override*/ virtual void setSourceImage(const cv::Mat* src);
+	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+
+private:
+	cl::Kernel kernelSubtract;
+
+	// Standardowe ('cegielki') operacje morfologiczne
+	cl::Kernel kernelErode;
+	cl::Kernel kernelDilate;
+
 	// Hit-miss
 	cl::Kernel kernelRemove;
 	cl::Kernel kernelSkeleton_iter[8];
@@ -46,38 +123,23 @@ private:
 	cl::Buffer clSrc;
 	// Bufor z danymi wyjsciowymi
 	cl::Buffer clDst;
-	// Bufor ze wspolrzednymi elementu strukturalnego
-	cl::Buffer clSeCoords;
-	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
-	size_t csize;
 
 	// Tymczasowe bufory (ping-pong)
 	cl::Buffer clTmp;
-	cl::Buffer clTmp2;
-
-	const cv::Mat* src;
-	int kradiusx, kradiusy;
+	cl::Buffer clTmp2;	
 
 private:
-	// Pomocznicza funkcja do zglaszania bledow OpenCL'a
-	void clError(const QString& message, cl_int err);
+	/*override*/ virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs);
 
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
 	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
-		const cl::Buffer& clBufferSrc, cl::Buffer& clBufferDst);
+		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer);
 
 	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
-	cl_ulong executeHitMissKernel(cl::Kernel* kernel, const cl::Buffer& clBufferSrc,
-		cl::Buffer& clBufferDst);
+	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
+		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer);
 
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
-	cl_ulong executeSubtractKernel(const cl::Buffer& clBufferA, const cl::Buffer& clBufferB,
-		cl::Buffer& clBufferDst);
-
-	// Pomocnicza funkcja do odpalania kernela do nalozenia na siebie dwoch obrazow (do prezentacji szkieletyzacji)
-	cl_ulong executeAddHalfKernel(const cl::Buffer& clBufferSrc,
-		cl::Buffer& clBufferDst);
-
-	// Zwraca czas trwania zdarzenia w nanosekundach 
-	cl_ulong elapsedEvent(const cl::Event& evt);
+	cl_ulong executeSubtractKernel(const cl::Buffer& clABuffer,
+		const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer);
 };
