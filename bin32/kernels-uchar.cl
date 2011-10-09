@@ -21,11 +21,8 @@ __kernel void addHalf(
 {
 	size_t gid = get_global_id(0);
 	
-	uchar v = skeleton[gid];
-	if(v == 0)
-	{
+	if(skeleton[gid] == 0)
 		skeleton[gid] = src[gid] / 2;
-	}
 }
 
 __kernel void erode(
