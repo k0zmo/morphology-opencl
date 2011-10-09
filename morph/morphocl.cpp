@@ -304,12 +304,8 @@ double MorphOpenCL::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 // -------------------------------------------------------------------------
 void MorphOpenCL::clError(const QString& message, cl_int err)
 {
-	/*if(err != CL_SUCCESS)
-	{
-		QMessageBox::critical(this, "OpenCL error", message,
-			QMessageBox::Ok);
-		exit(1);
-	}*/
+	if(err != CL_SUCCESS && errorCallback != nullptr)
+		errorCallback(message, err);
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCL::executeMorphologyKernel(cl::Kernel* kernel, 

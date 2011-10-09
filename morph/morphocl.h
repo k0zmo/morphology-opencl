@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <CL/cl.hpp>
 #include <QString>
 
@@ -11,7 +12,8 @@ public:
 	MorphOpenCL()
 		: src(nullptr), 
 		kradiusx(0),
-		kradiusy(0)
+		kradiusy(0),
+		errorCallback(nullptr)
 	{ }
 
 	// Inicjalizuje OpenCL'a
@@ -22,6 +24,8 @@ public:
 	void setStructureElement(const cv::Mat& selement);
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
 	double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+
+	std::function<void(const QString&, cl_int)> errorCallback;
 
 private:
 	cl::Context context;

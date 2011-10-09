@@ -58,6 +58,13 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
 	ocl = new MorphOpenCL();
+	ocl->errorCallback = [this](const QString& message, cl_int err)
+	{
+		QMessageBox::critical(this, "OpenCL error", message,
+			QMessageBox::Ok);
+		exit(1);
+	};
+
 	oclSupported = ocl->initOpenCL();
 	if(oclSupported)
 	{
