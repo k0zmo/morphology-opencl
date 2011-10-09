@@ -1,4 +1,4 @@
-#include "morph.h"
+#include "mainwindow.h"
 #include <QtGui/QApplication>
 
 int main(int argc, char *argv[])
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 #endif
 
 
-	Morph w(filename);
+	MainWindow w(filename);
 	w.show();
 	return a.exec();
 }

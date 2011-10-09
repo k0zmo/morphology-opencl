@@ -1,5 +1,8 @@
 #include "morphOp.h"
 
+const int OBJ = 255;
+const int BCK = 0;
+
 // -------------------------------------------------------------------------
 cv::Mat structuringElementDiamond(int radius)
 {
@@ -609,7 +612,7 @@ int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune)
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Odpowiedniki funkcji opencl'a
 
-void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
+void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 {
 	static const uchar erodeINF = 255;
 

@@ -11,13 +11,16 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-	morph.cpp \
-	morphOp.cpp
+	mainwindow.cpp \
+	morphop.cpp \
+	morphocl.cpp
 
-HEADERS  += morph.h \
+HEADERS  += mainwindow.h \
+	morphocl.h \
+	morphop.h \
 	precompiled.h
 
-FORMS    += morph.ui
+FORMS    += mainwindow.ui
 
 PRECOMPILED_HEADER = precompiled.h
 

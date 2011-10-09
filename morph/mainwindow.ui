@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <author>Kajetan Śwerik</author>
- <class>morphClass</class>
- <widget class="QMainWindow" name="morphClass">
+ <class>mainWindowClass</class>
+ <widget class="QMainWindow" name="mainWindowClass">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -18,7 +18,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Morph</string>
+   <string>Morph OpenCL</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="maximumSize">

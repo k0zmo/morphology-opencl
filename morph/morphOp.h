@@ -1,11 +1,12 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
+#pragma once
 
+#define CV_NO_BACKWARD_COMPATIBILITY
 #include <opencv2/imgproc/imgproc.hpp>
 
 // Obiekt - bialy
-static const int OBJ = 255;
+extern const int OBJ;
 // Tlo - czarne
-static const int BCK = 0;
+extern const int BCK;
 
 enum EOperationType
 {
@@ -33,14 +34,15 @@ enum EStructureElementType
 cv::Mat standardStructuringElement(int xsize, int ysize, 
 	EStructureElementType type, int rotation = 0);
 
-// Zwraca liczbe roznych pikseli pomiedzy dwoma podanymi obrazami
-int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2);
+// Operacja morfologiczna - erozja
+void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
 
 // Operacja morfologiczna - scienienie
+
 void morphologyRemove(const cv::Mat& src, cv::Mat& dst);
+
 // Operacja morfologiczna - szkieletyzacja
 int morphologySkeleton(cv::Mat &src, cv::Mat &dst);
+
 // Operacja morfologiczna - diagram Voronoi
 int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune);
-
-void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
