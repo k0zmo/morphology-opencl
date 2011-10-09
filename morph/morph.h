@@ -45,6 +45,10 @@ private:
 	cl::Buffer clTmp;
 	cl::Buffer clTmp2;
 
+	int kradiusx;
+	int kradiusy;
+	int krotation;
+
 private:
 	// Ustawia podany obraz w oknie podgladu
 	void showCvImage(const cv::Mat& image);

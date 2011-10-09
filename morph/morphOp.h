@@ -31,7 +31,7 @@ enum EStructureElementType
 
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xsize, int ysize, 
-	EStructureElementType type, int rotation = 180);
+	EStructureElementType type, int rotation = 0);
 
 // Zwraca liczbe roznych pikseli pomiedzy dwoma podanymi obrazami
 int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2);

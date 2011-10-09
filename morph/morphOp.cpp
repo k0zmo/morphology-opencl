@@ -85,12 +85,9 @@ cv::Mat standardStructuringElement(int xsize, int ysize,
 	}
 
 	// Rotacja elementu strukturalnego
-	if(rotation != 180)
+	if(rotation != 0)
 	{
-		int angle = rotation;
-		if(angle >= 180) { angle -= 180; }
-		else { angle += 180; }
-		angle = 360 - angle;
+		rotation %= 360;
 
 		auto rotateImage = [=](const cv::Mat& source, double angle) -> cv::Mat
 		{
@@ -105,7 +102,7 @@ cv::Mat standardStructuringElement(int xsize, int ysize,
 		//int border = element.rows/4;
 		//cv::copyMakeBorder(element, tmp, border, border, border, border, cv::BORDER_CONSTANT);
 
-		element = rotateImage(element, angle);
+		element = rotateImage(element, rotation);
 
 		//for(int i = 0; i < element.cols*element.rows; ++i)
 		//{ uchar* p = element.ptr<uchar>(); if(p[i] == 1) p[i] = 255; }
@@ -719,7 +716,7 @@ void doErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 		rows[i] = tempSrc + tempx*i;
 
 	// Obraz docelowy
-	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(erodeINF));
+	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(0));
 	uchar* pDst = dst.ptr<uchar>();
 	size_t dstep = dst.cols;
 

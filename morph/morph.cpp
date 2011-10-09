@@ -68,6 +68,10 @@ Morph::Morph(QString filename, QWidget *parent, Qt::WFlags flags)
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
 	ui.lbRotation->setText(QString::fromLatin1("0"));
 
+	kradiusx = 3;
+	kradiusy = 3;
+	krotation = 0;
+
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
 
@@ -182,6 +186,8 @@ void Morph::elementSizeXChanged(int value)
 			ui.hsYElementSize->setValue(ui.hsXElementSize->value());
 	}
 
+	kradiusx = ui.hsXElementSize->value();
+
 	if(!ui.rbNone->isChecked())
 		refresh();
 }
@@ -198,6 +204,8 @@ void Morph::elementSizeYChanged(int value)
 			ui.hsXElementSize->setValue(ui.hsYElementSize->value());
 	}
 
+	kradiusy = ui.hsYElementSize->value();
+
 	if(!ui.rbNone->isChecked())
 		refresh();
 }
@@ -212,6 +220,7 @@ void Morph::rotationChanged(int value)
 	angle = angle % 360;
 
 	ui.lbRotation->setText(QString::number(angle));
+	krotation = angle;
 
 	if(!ui.rbNone->isChecked())
 		refresh();
@@ -294,10 +303,8 @@ cv::Mat Morph::standardStructuringElement()
 	else type = SET_Diamond;
 
 	return ::standardStructuringElement(
-		ui.hsXElementSize->value(), 
-		ui.hsYElementSize->value(),
-		type,
-		ui.dialRotation->value());
+		kradiusx, kradiusy,
+		type, krotation);
 }
 // -------------------------------------------------------------------------
 void Morph::refresh()
@@ -464,6 +471,8 @@ void Morph::initOpenCL()
 	dev = devices[0];
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
+
+	cl_bool imageSupport = dev.getInfo<CL_DEVICE_IMAGE_SUPPORT>();
 
 	// Kolejka polecen
 	cq = cl::CommandQueue(context, dev, CL_QUEUE_PROFILING_ENABLE, &err);
@@ -724,15 +733,13 @@ cl_ulong Morph::executeMorphologyKernel(cl::Kernel* kernel,
 
 	//size_t localSize = kernel->getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(dev, &err);
 	//clError("Error while retrieving kernel work group info!", err);
-
-	int anchorX = ui.hsXElementSize->value();
-	int anchorY = ui.hsYElementSize->value();
+	//auto w = kernel->getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(dev);
 
 	// Odpal kernela
 	cl::Event evt;	
 	cq.enqueueNDRangeKernel(*kernel,
-		cl::NDRange(anchorX, anchorY),
-		cl::NDRange(src.cols - anchorX*2, src.rows - anchorY*2),
+		cl::NDRange(kradiusx, kradiusy),
+		cl::NDRange(src.cols - kradiusx*2, src.rows - kradiusy*2),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
