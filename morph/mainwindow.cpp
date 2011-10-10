@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "morphOp.h"
+#include "morphop.h"
 #include "morphocl.h"
 
 #include <QElapsedTimer>
@@ -57,9 +57,10 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
-	ocl = new MorphOpenCLImage();
+	ocl = new MorphOpenCLBuffer();
 	ocl->errorCallback = [this](const QString& message, cl_int err)
 	{
+		Q_UNUSED(err);
 		QMessageBox::critical(this, "OpenCL error", message,
 			QMessageBox::Ok);
 		exit(1);

@@ -1,5 +1,8 @@
 #include "morphocl.h"
 
+#include <QFile>
+#include <QTextStream>
+
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCL
 bool MorphOpenCL::initOpenCL(cl_device_type dt)

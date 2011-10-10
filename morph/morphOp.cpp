@@ -1,4 +1,4 @@
-#include "morphOp.h"
+#include "morphop.h"
 
 const int OBJ = 255;
 const int BCK = 0;
@@ -84,7 +84,7 @@ cv::Mat standardStructuringElement(int xsize, int ysize,
 	}
 	else
 	{
-		element = structuringElementDiamond(qMin(anchor.x, anchor.y));
+		element = structuringElementDiamond(std::min(anchor.x, anchor.y));
 	}
 
 	// Rotacja elementu strukturalnego
