@@ -38,7 +38,7 @@ bool MorphOpenCL::initOpenCL(cl_device_type dt)
 	cq = cl::CommandQueue(context, dev, CL_QUEUE_PROFILING_ENABLE, &err);
 	clError("Failed to create command queue!", err);
 
-	return loadKernels(devs);
+	return true;
 }
 // -------------------------------------------------------------------------
 void MorphOpenCL::setStructureElement(const cv::Mat& selement)
@@ -84,10 +84,83 @@ cl_ulong MorphOpenCL::elapsedEvent( const cl::Event& evt )
 	cl_ulong eventend = evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
 	return (cl_ulong)(eventend - eventstart);
 }
+// -------------------------------------------------------------------------
+cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
+{
+	auto it = programs.find(progFile);
+
+	if(it == programs.end())
+	{
+		QFile file(progFile);
+		if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			clError("Can't read " + 
+				QString(progFile) + 
+				" file!", -1);
+		}
+
+		QTextStream in(&file);
+		QString contents = in.readAll();
+
+		QByteArray w = contents.toLocal8Bit();
+		const char* src = w.data();
+		size_t len = contents.length();
+
+		cl_int err;
+		cl::Program::Sources sources(1, std::make_pair(src, len));
+		cl::Program program = cl::Program(context, sources, &err);
+		clError("Failed to create compute program from" + QString(progFile), err);
+
+		std::vector<cl::Device> devs(1);
+		devs[0] = (dev);
+
+		err = program.build(devs, options);
+		if(err != CL_SUCCESS)
+		{
+			QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
+			clError(log, -1);
+		}
+
+		programs[progFile] = program;
+		return program;
+	}
+	else
+	{
+		return it->second;
+	}	
+}
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCLImage
 
+bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
+{
+	MorphOpenCL::initOpenCL(dt);
+
+	cl::Program perode = createProgram("kernels-images/erode.cl");
+	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
+	cl::Program pthinning = createProgram("kernels-images/thinning.cl");
+	cl::Program putils = createProgram("kernels-images/utils.cl");
+
+	auto createKernel = [this](const cl::Program& prog,
+		const char* kernelName) -> cl::Kernel
+	{
+		cl_int err;
+		cl::Kernel k(prog, kernelName, &err);
+		clError("Failed to create " + 
+			QString(kernelName) + 
+			" kernel!", err);
+		return k;
+	};
+
+	kernelErode = createKernel(perode, "erode_c4");
+	kernelDilate = createKernel(pdilate, "dilate_c4");
+	kernelThinning = createKernel(pthinning, "thinning");
+	kernelSubtract = createKernel(putils, "subtract");
+
+	return true;
+}
+// -------------------------------------------------------------------------
 void MorphOpenCLImage::setSourceImage(const cv::Mat* src)
 {
 	cl_int err;
@@ -119,67 +192,12 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* src)
 	this->src = src;
 }
 // -------------------------------------------------------------------------
-bool MorphOpenCLImage::loadKernels(const VECTOR_CLASS<cl::Device>& devs)
-{
-	// Zaladuj Kernele
-	QFile file("./kernels-images.cl");
-	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		clError("Can't read kernels-images.cl file", -1);
-		return true;
-	}
-
-	QTextStream in(&file);
-	QString contents = in.readAll();
-
-	QByteArray w = contents.toLocal8Bit();
-	const char* src = w.data();
-	size_t len = contents.length();
-
-	cl_int err;
-	cl::Program::Sources sources(1, std::make_pair(src, len));
-	cl::Program program = cl::Program(context, sources, &err);
-	clError("Failed to create compute program!", err);
-
-	err = program.build(devs);
-	if(err != CL_SUCCESS)
-	{
-		QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
-		clError(log, -1);
-		return false;
-	}
-
- 	// Stworz kernele ze zbudowanego programu
- 	kernelSubtract = cl::Kernel(program, "subtract", &err);
- 	clError("Failed to create dilate kernel!", err);
- 
-	kernelErode = cl::Kernel(program, "erode", &err);
-	clError("Failed to create erode kernel!", err);
-
-	kernelDilate = cl::Kernel(program, "dilate", &err);
-	clError("Failed to create dilate kernel!", err);
-
- 	kernelRemove = cl::Kernel(program, "remove", &err);
- 	clError("Failed to create remove kernel!", err);
-
-// 	for(int i = 0; i < 8; ++i)
-// 	{
-// 		QString kernelName = "skeleton_iter" + QString::number(i+1);
-// 		QByteArray kk = kernelName.toAscii();
-// 		const char* k = kk.data();
-// 		kernelSkeleton_iter[i] = cl::Kernel(program, k, &err);
-// 		clError("Failed to create skeleton_iter kernel!", err);
-// 	}
-
-	return true;
-}
-// -------------------------------------------------------------------------
 double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 {
 	// Obraz docelowy
 	cl_int err;
 	clDstImage = cl::Image2D(context,
-		CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
+		/*CL_MEM_ALLOC_HOST_PTR | */CL_MEM_WRITE_ONLY, 
 		cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
 		src->cols, src->rows, 0, nullptr, &err); 
 	clError("Error while creating destination OpenCL image2D", err);
@@ -236,12 +254,12 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 		}
 		
 		// Operacja wyciagania konturow
-		else if(opType == OT_Remove)
+		else if(opType == OT_Thinning)
 		{
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;
 			elapsed += copyImage(clSrcImage, clDstImage, evt);
-			elapsed += executeHitMissKernel(&kernelRemove, clSrcImage, clDstImage);
+			elapsed += executeHitMissKernel(&kernelThinning, clSrcImage, clDstImage);
 		}
 		/*
 		// Operacja szkieletyzacji
@@ -407,6 +425,44 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCLBuffer
 
+// -------------------------------------------------------------------------
+bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
+{
+	MorphOpenCL::initOpenCL(dt);
+
+	cl::Program perode = createProgram("kernels-buffers/erode.cl");
+	cl::Program pdilate = createProgram("kernels-buffers/dilate.cl");
+	cl::Program pthinning = createProgram("kernels-buffers/thinning.cl");
+	cl::Program putils = createProgram("kernels-buffers/utils.cl");
+	cl::Program pskeleton = createProgram("kernels-buffers/skeleton.cl");
+
+	auto createKernel = [this](const cl::Program& prog,
+		const char* kernelName) -> cl::Kernel
+	{
+		cl_int err;
+		cl::Kernel k(prog, kernelName, &err);
+		clError("Failed to create " + 
+			QString(kernelName) + " kernel!", err);
+		return k;
+	};
+
+	kernelErode = createKernel(perode, "erode");
+	kernelDilate = createKernel(pdilate, "dilate");
+	kernelThinning = createKernel(pthinning, "thinning");
+	kernelSubtract = createKernel(putils, "subtract");
+
+	for(int i = 0; i < 8; ++i)
+	{
+		QString kernelName = "skeleton_iter" + QString::number(i+1);
+		QByteArray kk = kernelName.toAscii();
+		const char* k = kk.data();
+
+		kernelSkeleton_iter[i] = createKernel(pskeleton, kk);
+	}
+
+	return true;
+}
+// -------------------------------------------------------------------------
 void MorphOpenCLBuffer::setSourceImage(const cv::Mat* src)
 {
 	cl_int err;
@@ -428,61 +484,6 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* src)
 	this->src = src;
 }
 // -------------------------------------------------------------------------
-bool MorphOpenCLBuffer::loadKernels(const VECTOR_CLASS<cl::Device>& devs)
-{
-	// Zaladuj Kernele
-	QFile file("./kernels-uchar.cl");
-	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		clError("Can't read kernels-uchar.cl file", -1);
-		return true;
-	}
-
-	QTextStream in(&file);
-	QString contents = in.readAll();
-
-	QByteArray w = contents.toLocal8Bit();
-	const char* src = w.data();
-	size_t len = contents.length();
-
-	cl_int err;
-	cl::Program::Sources sources(1, std::make_pair(src, len));
-	cl::Program program = cl::Program(context, sources, &err);
-	clError("Failed to create compute program!", err);
-
-	err = program.build(devs);
-	if(err != CL_SUCCESS)
-	{
-		QString log(QString::fromStdString(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
-		clError(log, -1);
-		return false;
-	}
-
-	// Stworz kernele ze zbudowanego programu
-	kernelSubtract = cl::Kernel(program, "subtract", &err);
-	clError("Failed to create dilate kernel!", err);
-
-	kernelErode = cl::Kernel(program, "erode", &err);
-	clError("Failed to create erode kernel!", err);
-
-	kernelDilate = cl::Kernel(program, "dilate", &err);
-	clError("Failed to create dilate kernel!", err);
-
-	kernelRemove = cl::Kernel(program, "remove", &err);
-	clError("Failed to create remove kernel!", err);
-
-	for(int i = 0; i < 8; ++i)
-	{
-		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-		kernelSkeleton_iter[i] = cl::Kernel(program, k, &err);
-		clError("Failed to create skeleton_iter kernel!", err);
-	}
-
-	return true;
-}
-// -------------------------------------------------------------------------
 double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 {
 	size_t dstSize = src->rows * src->cols;
@@ -490,7 +491,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	// Bufor docelowy
 	cl_int err;
 	clDst = cl::Buffer(context,
-		CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, 
+		/*CL_MEM_ALLOC_HOST_PTR | */ CL_MEM_WRITE_ONLY, 
 		dstSize, // obraz 1-kanalowy
 		nullptr, &err);
 	clError("Error while creating destination OpenCL buffer", err);
@@ -552,12 +553,12 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 			elapsed += executeMorphologyKernel(&kernelErode, clTmp, clDst);
 		}
 		// Operacja wyciagania konturow
-		else if(opType == OT_Remove)
+		else if(opType == OT_Thinning)
 		{
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;
 			elapsed += copyBuffer(clSrc, clDst, evt);
-			elapsed += executeHitMissKernel(&kernelRemove, clSrc, clDst);
+			elapsed += executeHitMissKernel(&kernelThinning, clSrc, clDst);
 		}
 		// Operacja szkieletyzacji
 		else if(opType == OT_Skeleton)

@@ -17,7 +17,7 @@ enum EOperationType
 	OT_Gradient,
 	OT_TopHat,
 	OT_BlackHat,
-	OT_Remove,
+	OT_Thinning,
 	OT_Skeleton,
 	OT_Voronoi
 };
@@ -39,7 +39,7 @@ void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
 
 // Operacja morfologiczna - scienienie
 
-void morphologyRemove(const cv::Mat& src, cv::Mat& dst);
+void morphologyThinning(const cv::Mat& src, cv::Mat& dst);
 
 // Operacja morfologiczna - szkieletyzacja
 int morphologySkeleton(cv::Mat &src, cv::Mat &dst);

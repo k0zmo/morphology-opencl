@@ -3,6 +3,7 @@
 #include <functional>
 #include <CL/cl.hpp>
 #include <QString>
+#include <unordered_map>
 
 #include "morphop.h"
 
@@ -19,7 +20,7 @@ public:
 	std::function<void(const QString&, cl_int)> errorCallback;
 
 	// Inicjalizuje OpenCL'a
-	/*virtual*/ bool initOpenCL(cl_device_type dt);
+	virtual bool initOpenCL(cl_device_type dt);
 	// Ustawia obraz zrodlowy
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 	// Ustawia element strukturalny
@@ -33,6 +34,8 @@ protected:
 	cl::Device dev;
 	cl::CommandQueue cq;
 
+	std::unordered_map<std::string, cl::Program> programs;
+
 	// Bufor ze wspolrzednymi elementu strukturalnego
 	cl::Buffer clSeCoords;
 	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
@@ -42,14 +45,13 @@ protected:
 	int kradiusx, kradiusy;
 
 protected:
-	// Laduje odpowiednie kernele
-	virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs) = 0;
-
 	// Pomocznicza funkcja do zglaszania bledow OpenCL'a
 	void clError(const QString& message, cl_int err);
 
 	// Zwraca czas trwania zdarzenia w nanosekundach 
 	cl_ulong elapsedEvent(const cl::Event& evt);
+
+	cl::Program createProgram(const char* progFile, const char* options = nullptr);
 };
 
 class MorphOpenCLImage : public MorphOpenCL
@@ -59,7 +61,7 @@ public:
 		: MorphOpenCL()
 	{ }
 
-	//*override*/ virtual bool initOpenCL(cl_device_type dt);
+	/*override*/ virtual bool initOpenCL(cl_device_type dt);
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
@@ -71,7 +73,7 @@ private:
 	cl::Kernel kernelDilate;
 
 	// Hit-miss
-	cl::Kernel kernelRemove;
+	cl::Kernel kernelThinning;
 	cl::Kernel kernelSkeleton_iter[8];
 
 	// Obraz wejsciowy
@@ -83,8 +85,6 @@ private:
 	cl::Image2D clTmp2Image;
 
 private:
-	/*override*/ virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs);
-
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
 	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
 		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage);
@@ -105,6 +105,7 @@ public:
 		: MorphOpenCL()
 	{ }
 
+	/*override*/ virtual bool initOpenCL(cl_device_type dt);
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
@@ -116,7 +117,7 @@ private:
 	cl::Kernel kernelDilate;
 
 	// Hit-miss
-	cl::Kernel kernelRemove;
+	cl::Kernel kernelThinning;
 	cl::Kernel kernelSkeleton_iter[8];
 
 	// Bufor z danymi wejsciowymi
@@ -129,8 +130,6 @@ private:
 	cl::Buffer clTmp2;	
 
 private:
-	/*override*/ virtual bool loadKernels(const VECTOR_CLASS<cl::Device>& devs);
-
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
 	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
 		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer);

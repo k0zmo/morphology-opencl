@@ -166,9 +166,9 @@
             </widget>
            </item>
            <item row="12" column="0" colspan="2">
-            <widget class="QRadioButton" name="rbRemove">
+            <widget class="QRadioButton" name="rbThinning">
              <property name="text">
-              <string>Remove</string>
+              <string>Thinning</string>
              </property>
             </widget>
            </item>
@@ -514,7 +514,7 @@
   <tabstop>rbClose</tabstop>
   <tabstop>rbTopHat</tabstop>
   <tabstop>rbBlackHat</tabstop>
-  <tabstop>rbRemove</tabstop>
+  <tabstop>rbThinning</tabstop>
   <tabstop>rbSkeleton</tabstop>
   <tabstop>rbVoronoi</tabstop>
   <tabstop>sbPruning</tabstop>

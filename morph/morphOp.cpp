@@ -121,7 +121,7 @@ int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2)
 	return cv::countNonZero(diff);
 }
 // -------------------------------------------------------------------------
-void morphologyRemove(const cv::Mat& src, cv::Mat& dst)
+void morphologyThinning(const cv::Mat& src, cv::Mat& dst)
 {
 	// TODO: border
 

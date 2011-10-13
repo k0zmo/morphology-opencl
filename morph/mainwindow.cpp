@@ -36,7 +36,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.rbGradient, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbTopHat, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbBlackHat, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
-	connect(ui.rbRemove, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
+	connect(ui.rbThinning, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbSkeleton, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbVoronoi, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 
@@ -57,7 +57,12 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
+#if 1
+	ocl = new MorphOpenCLImage();
+#else
 	ocl = new MorphOpenCLBuffer();
+#endif
+
 	ocl->errorCallback = [this](const QString& message, cl_int err)
 	{
 		Q_UNUSED(err);
@@ -66,7 +71,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 		exit(1);
 	};
 
-	oclSupported = ocl->initOpenCL(CL_DEVICE_TYPE_CPU);
+	oclSupported = ocl->initOpenCL(CL_DEVICE_TYPE_GPU);
 	if(oclSupported)
 	{
 		ui.actionOpenCL->setEnabled(true);
@@ -94,8 +99,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
 	ui.lbRotation->setText(QString::fromLatin1("0"));
 
-	kradiusx = 3;
-	kradiusy = 3;
+	kradiusx = 1;
+	kradiusy = 1;
 	krotation = 0;
 
 	statusBarLabel = new QLabel();
@@ -311,7 +316,7 @@ void MainWindow::refresh()
 	}
 
 	// Operacje hit-miss
-	if (ui.rbRemove->isChecked() ||
+	if (ui.rbThinning->isChecked() ||
 		ui.rbSkeleton->isChecked() || 
 		ui.rbVoronoi->isChecked())
 	{
@@ -348,7 +353,7 @@ void MainWindow::morphologyOpenCV()
 	cv::Mat dst;
 
 	// Operacje hit-miss
-	if (opType == OT_Remove ||
+	if (opType == OT_Thinning ||
 		opType == OT_Skeleton || 
 		opType == OT_Voronoi)
 	{
@@ -356,9 +361,9 @@ void MainWindow::morphologyOpenCV()
 
 		switch (opType)
 		{
-		case OT_Remove:
+		case OT_Thinning:
 			{
-				morphologyRemove(src, dst);
+				morphologyThinning(src, dst);
 				break;
 			}
 
@@ -404,11 +409,11 @@ void MainWindow::morphologyOpenCV()
 
 		cv::Mat element = standardStructuringElement();
 
-		if(opType == OT_Erode)
-		{			
-			morphologyErode(src, dst, element);
-		}
-		else
+		//if(opType == OT_Erode)
+		//{			
+		//	morphologyErode(src, dst, element);
+		//}
+		//else
 		{
 			cv::morphologyEx(src, dst, op_type, element);
 		}
@@ -474,7 +479,7 @@ EOperationType MainWindow::operationType()
 	else if(ui.rbGradient->isChecked()) { return OT_Gradient; }
 	else if(ui.rbTopHat->isChecked()) { return OT_TopHat; }
 	else if(ui.rbBlackHat->isChecked()) { return OT_BlackHat; }
-	else if(ui.rbRemove->isChecked()) { return OT_Remove; }
+	else if(ui.rbThinning->isChecked()) { return OT_Thinning; }
 	else if(ui.rbSkeleton->isChecked()) { return OT_Skeleton; }
 	else if(ui.rbVoronoi->isChecked()) { return OT_Voronoi; }
 	else { return OT_Erode; }
