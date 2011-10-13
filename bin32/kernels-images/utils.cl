@@ -29,3 +29,24 @@ __kernel void subtract(
 	uchar pix = (pixb > pixa) ? (0) : (pixa - pixb);
 	write_imageui(dst, coords, pix);
 }
+
+#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
+
+__kernel void diffPixels(
+	__read_only image2d_t a,
+	__read_only image2d_t b,
+	counter32_t counter)
+{
+	const sampler_t smp = 
+		CLK_NORMALIZED_COORDS_FALSE | 
+		CLK_FILTER_NEAREST | 
+		CLK_ADDRESS_CLAMP_TO_EDGE;
+		
+	int2 coords = (int2)(get_global_id(0), get_global_id(1));
+		
+	uchar pixa = read_imageui(a, smp, coords).x;
+	uchar pixb = read_imageui(b, smp, coords).x;
+	
+	if(pixa != pixb)
+		(void) atomic_inc(counter);
+}

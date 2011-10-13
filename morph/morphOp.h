@@ -31,7 +31,7 @@ enum EStructureElementType
 };
 
 // Zwraca element strukturalny
-cv::Mat standardStructuringElement(int xsize, int ysize, 
+cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructureElementType type, int rotation = 0);
 
 // Operacja morfologiczna - erozja

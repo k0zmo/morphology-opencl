@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "morph", "morph\morph.vcxproj", "{249F2378-4B4E-4EE3-A3F1-C2D6E2370182}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "morph-cl", "morph-cl\morph-cl.vcxproj", "{AF914748-7FB3-39FF-829E-FA9A578F7931}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +15,10 @@ Global
 		{249F2378-4B4E-4EE3-A3F1-C2D6E2370182}.Debug|Win32.Build.0 = Debug|Win32
 		{249F2378-4B4E-4EE3-A3F1-C2D6E2370182}.Release|Win32.ActiveCfg = Release|Win32
 		{249F2378-4B4E-4EE3-A3F1-C2D6E2370182}.Release|Win32.Build.0 = Release|Win32
+		{AF914748-7FB3-39FF-829E-FA9A578F7931}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AF914748-7FB3-39FF-829E-FA9A578F7931}.Debug|Win32.Build.0 = Debug|Win32
+		{AF914748-7FB3-39FF-829E-FA9A578F7931}.Release|Win32.ActiveCfg = Release|Win32
+		{AF914748-7FB3-39FF-829E-FA9A578F7931}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

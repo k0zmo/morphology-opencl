@@ -24,7 +24,7 @@ public:
 	// Ustawia obraz zrodlowy
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 	// Ustawia element strukturalny
-	void setStructureElement(const cv::Mat& selement);
+	int setStructureElement(const cv::Mat& selement);
 
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
 	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
@@ -34,6 +34,8 @@ protected:
 	cl::Device dev;
 	cl::CommandQueue cq;
 
+	// Hash-map'a zbudowanych programow 
+	// (kluczem jest sciezka do pliku, z ktorego program zbudowano)
 	std::unordered_map<std::string, cl::Program> programs;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
@@ -51,7 +53,19 @@ protected:
 	// Zwraca czas trwania zdarzenia w nanosekundach 
 	cl_ulong elapsedEvent(const cl::Event& evt);
 
-	cl::Program createProgram(const char* progFile, const char* options = nullptr);
+	// Zwraca zbudowany program, opcjonalnie mozna podac liste opcji przy kompilowaniu
+	cl::Program createProgram(const char* progFile, 
+		const char* options = nullptr);
+
+	// Zeruje wskazany licznik atomowy
+	cl_ulong zeroAtomicCounter(const cl::Buffer& clAtomicCounter);
+
+	// Odczytue wartosc ze wzkazanego licznika atomowego
+	cl_ulong readAtomicCounter(cl_uint& v, const cl::Buffer& clAtomicCounter);
+
+	// Tworzy kernel'a z podanego programu
+	cl::Kernel createKernel(const cl::Program& prog,
+		const char* kernelName);
 };
 
 class MorphOpenCLImage : public MorphOpenCL
@@ -67,6 +81,7 @@ public:
 
 private:
 	cl::Kernel kernelSubtract;
+	cl::Kernel kernelDiffPixels;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
@@ -111,6 +126,7 @@ public:
 
 private:
 	cl::Kernel kernelSubtract;
+	cl::Kernel kernelDiffPixels;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
@@ -141,4 +157,7 @@ private:
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Buffer& clABuffer,
 		const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer);
+
+	cl_ulong executeDiffPixelsKernel(const cl::Buffer& clABuffer,
+		const cl::Buffer& clBBuffer, const cl::Buffer& clAtomicCounter);
 };

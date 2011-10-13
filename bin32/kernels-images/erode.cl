@@ -6,16 +6,13 @@ __kernel void erode(
 	__constant int2* coords,
 	const int coords_size)
 {
-	int gx = get_global_id(0);
-	int gy = get_global_id(1);
-	int2 gid = (int2)(gx, gy);
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	uint val = erodeINF;
 	
 	const sampler_t smp = 
 		CLK_NORMALIZED_COORDS_FALSE | 
 		CLK_FILTER_NEAREST | 
 		CLK_ADDRESS_CLAMP_TO_EDGE;
-		
-	uint val = erodeINF;
 	
 	for(int i = 0; i < coords_size; ++i)
 	{
@@ -32,22 +29,18 @@ __kernel void erode_c4(
 	__constant int4* coords,
 	const int coords_size)
 {
-	int gx = get_global_id(0);
-	int gy = get_global_id(1);
-	int2 gid = (int2)(gx, gy);
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	uint val = erodeINF;
+	int c2 = coords_size >> 1;
 	
 	const sampler_t smp = 
 		CLK_NORMALIZED_COORDS_FALSE | 
 		CLK_FILTER_NEAREST | 
 		CLK_ADDRESS_CLAMP_TO_EDGE;
-		
-	uint val = erodeINF;
-	int c2 = coords_size >> 1;
 	
 	for(int i = 0; i < c2; ++i)
 	{
-		int4 g = (int4)(gid, gid);
-		int4 coord = coords[i] + g;	
+		int4 coord = coords[i] + (int4)(gid, gid);	
 		
 		val = min(val, read_imageui(src, smp, coord.xy).x);
 		val = min(val, read_imageui(src, smp, coord.zw).x);
@@ -57,7 +50,45 @@ __kernel void erode_c4(
 	//if(coords_size % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[coords_size] + gid;
+		int2 coord = c[coords_size-1] + gid;
+		val = min(val, read_imageui(src, smp, coord).x);
+	}
+	
+	write_imageui(dst, gid, (uint4)(val));
+}
+
+#ifndef COORDS_SIZE
+#define COORDS_SIZE 3
+#endif
+
+__kernel void erode_c4_def(
+	__read_only image2d_t src,
+	__write_only image2d_t dst,
+	__constant int4* coords)
+{
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	uint val = erodeINF;
+	int c2 = COORDS_SIZE >> 1;
+	
+	const sampler_t smp = 
+		CLK_NORMALIZED_COORDS_FALSE | 
+		CLK_FILTER_NEAREST | 
+		CLK_ADDRESS_CLAMP_TO_EDGE;
+	
+	#pragma unroll
+	for(int i = 0; i < c2; ++i)
+	{
+		int4 coord = coords[i] + (int4)(gid, gid);	
+		
+		val = min(val, read_imageui(src, smp, coord.xy).x);
+		val = min(val, read_imageui(src, smp, coord.zw).x);
+	}
+	
+	// Dla masek 2n+1 x 2m+1 ilosc wspolrzednych zawsze bedzie nieparzysta
+	//if(COORDS_SIZE % 2)
+	{
+		__constant int2* c = (__constant int2*)(coords);
+		int2 coord = c[COORDS_SIZE-1] + gid;
 		val = min(val, read_imageui(src, smp, coord).x);
 	}
 	

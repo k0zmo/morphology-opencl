@@ -59,10 +59,10 @@ cv::Mat structuringElementDiamond(int radius)
 	return element;
 }
 // -------------------------------------------------------------------------
-cv::Mat standardStructuringElement(int xsize, int ysize,
+cv::Mat standardStructuringElement(int xradius, int yradius,
 	EStructureElementType type, int rotation)
 {
-	cv::Point anchor(xsize, ysize);
+	cv::Point anchor(xradius, yradius);
 
 	cv::Size elem_size(
 		2 * anchor.x + 1,
@@ -559,6 +559,9 @@ int morphologySkeleton(cv::Mat &src, cv::Mat &dst)
 {
 	int niters = 0;
 
+	// tmp jest obrazem z poprzednich 8 iteracji
+	cv::Mat tmp = src.clone();
+
 	while(true) 
 	{
 		// iteracja
@@ -566,9 +569,10 @@ int morphologySkeleton(cv::Mat &src, cv::Mat &dst)
 		++niters;
 
 		// warunek stopu
-		if(countDiffPixels(src, dst) == 0) break;
+		if(countDiffPixels(tmp, dst) == 0) break;
 
 		src = dst.clone();
+		tmp = dst.clone();
 	}
 
 	return niters;
@@ -582,6 +586,8 @@ int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune)
 	src = 255 - src;
 	dst = 255 - dst;
 
+	cv::Mat tmp = src.clone();
+
 	while(true) 
 	{
 		// iteracja
@@ -589,9 +595,10 @@ int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune)
 		++niters;
 
 		// warunek stopu
-		if(countDiffPixels(src, dst) == 0) break;
+		if(countDiffPixels(tmp, dst) == 0) break;
 
 		src = dst.clone();
+		tmp = dst.clone();
 	}
 
 	if(prune > 0)

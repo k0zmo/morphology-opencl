@@ -41,7 +41,7 @@ bool MorphOpenCL::initOpenCL(cl_device_type dt)
 	return true;
 }
 // -------------------------------------------------------------------------
-void MorphOpenCL::setStructureElement(const cv::Mat& selement)
+int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 {
 	std::vector<cl_int2> coords;
 
@@ -70,6 +70,8 @@ void MorphOpenCL::setStructureElement(const cv::Mat& selement)
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		csize * sizeof(cl_int2), coords.data(), &err);
 	clError("Error while creating buffer for structure element!", err);
+
+	return csize;
 }
 // -------------------------------------------------------------------------
 void MorphOpenCL::clError(const QString& message, cl_int err)
@@ -129,6 +131,37 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 		return it->second;
 	}	
 }
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
+{
+	static cl_uint d_init = 0;
+	cl::Event evt;
+	cl_int err= cq.enqueueWriteBuffer(clAtomicCounter, CL_FALSE,
+		0, 	sizeof(cl_uint), &d_init, nullptr, &evt);
+	clError("Error while zeroing atomic counter value!", err);
+	evt.wait();
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCL::readAtomicCounter(cl_uint& v, const cl::Buffer& clAtomicCounter)
+{
+	cl::Event evt;
+	cl_int err = cq.enqueueReadBuffer(clAtomicCounter, CL_FALSE,
+		0, sizeof(cl_uint), &v, nullptr, &evt);
+	clError("Error while reading atomic counter value!", err);
+	evt.wait();
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog, 
+	const char* kernelName)
+{
+	cl_int err;
+	cl::Kernel k(prog, kernelName, &err);
+	clError("Failed to create " + 
+		QString(kernelName) + " kernel!", err);
+	return k;
+}
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCLImage
@@ -141,22 +174,22 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
 	cl::Program pthinning = createProgram("kernels-images/thinning.cl");
 	cl::Program putils = createProgram("kernels-images/utils.cl");
+	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl");
 
-	auto createKernel = [this](const cl::Program& prog,
-		const char* kernelName) -> cl::Kernel
-	{
-		cl_int err;
-		cl::Kernel k(prog, kernelName, &err);
-		clError("Failed to create " + 
-			QString(kernelName) + 
-			" kernel!", err);
-		return k;
-	};
-
-	kernelErode = createKernel(perode, "erode_c4");
-	kernelDilate = createKernel(pdilate, "dilate_c4");
+	kernelErode = createKernel(perode, "erode");
+	kernelDilate = createKernel(pdilate, "dilate");
 	kernelThinning = createKernel(pthinning, "thinning");
 	kernelSubtract = createKernel(putils, "subtract");
+	kernelDiffPixels = createKernel(putils, "diffPixels");
+
+	for(int i = 0; i < 8; ++i)
+	{
+		QString kernelName = "skeleton_iter" + QString::number(i+1);
+		QByteArray kk = kernelName.toAscii();
+		const char* k = kk.data();
+
+		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
+	}
 
 	return true;
 }
@@ -197,7 +230,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	// Obraz docelowy
 	cl_int err;
 	clDstImage = cl::Image2D(context,
-		/*CL_MEM_ALLOC_HOST_PTR | */CL_MEM_WRITE_ONLY, 
+		CL_MEM_WRITE_ONLY, 
 		cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
 		src->cols, src->rows, 0, nullptr, &err); 
 	clError("Error while creating destination OpenCL image2D", err);
@@ -261,30 +294,6 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 			elapsed += copyImage(clSrcImage, clDstImage, evt);
 			elapsed += executeHitMissKernel(&kernelThinning, clSrcImage, clDstImage);
 		}
-		/*
-		// Operacja szkieletyzacji
-		else if(opType == OT_Skeleton)
-		{
-			// Skopiuj obraz zrodlowy do docelowego
-			cl::Event evt;	
-			elapsed += copyImage(clSrcImage, clTmpImage, evt);
-			elapsed += copyImage(clSrcImage, clDstImage, evt);
-
-			// FIXME
-			for(int iters = 0; iters < 111; ++iters)
-			{
-				for(int i = 0; i < 8; ++i)
-				{
-					elapsed += executeHitMissKernel(&kernelSkeleton_iter[i],
-						clTmpImage, clDstImage);
-
-					// Kopiowanie obrazu
-					copyImage(clDstImage, clTmpImage, evt);
-					elapsed += elapsedEvent(evt);
-				}
-			}
-		}
-		*/
 		else
 		{
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -294,8 +303,33 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 				src->cols, src->rows, 0, nullptr, &err); 
 			clError("Error while creating temporary OpenCL image2D", err);
 
+			// Operacja szkieletyzacji
+			if(opType == OT_Skeleton)
+			{
+				assert(0 && "Skeleton not yet implemented");
+				/*
+				// Skopiuj obraz zrodlowy do docelowego
+				cl::Event evt;	
+				elapsed += copyImage(clSrcImage, clTmpImage, evt);
+				elapsed += copyImage(clSrcImage, clDstImage, evt);
+
+				// FIXME
+				for(int iters = 0; iters < 111; ++iters)
+				{
+					for(int i = 0; i < 8; ++i)
+					{
+						elapsed += executeHitMissKernel(&kernelSkeleton_iter[i],
+							clTmpImage, clDstImage);
+
+						// Kopiowanie obrazu
+						copyImage(clDstImage, clTmpImage, evt);
+						elapsed += elapsedEvent(evt);
+					}
+				}
+				*/
+			}
 			// Gradient morfologiczny
-			if(opType == OT_Gradient)
+			else if(opType == OT_Gradient)
 			{ 
 				//dst = dilate(src) - erode(src);
 				elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clTmpImage);
@@ -359,10 +393,6 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(2, clSeCoords);
 	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
-
-	//size_t localSize = kernel->getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(dev, &err);
-	//clError("Error while retrieving kernel work group info!", err);
-	//auto w = kernel->getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(dev);
 
 	// Odpal kernela
 	cl::Event evt;	
@@ -436,20 +466,11 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 	cl::Program putils = createProgram("kernels-buffers/utils.cl");
 	cl::Program pskeleton = createProgram("kernels-buffers/skeleton.cl");
 
-	auto createKernel = [this](const cl::Program& prog,
-		const char* kernelName) -> cl::Kernel
-	{
-		cl_int err;
-		cl::Kernel k(prog, kernelName, &err);
-		clError("Failed to create " + 
-			QString(kernelName) + " kernel!", err);
-		return k;
-	};
-
 	kernelErode = createKernel(perode, "erode");
 	kernelDilate = createKernel(pdilate, "dilate");
 	kernelThinning = createKernel(pthinning, "thinning");
 	kernelSubtract = createKernel(putils, "subtract");
+	kernelDiffPixels = createKernel(putils, "diffPixels");
 
 	for(int i = 0; i < 8; ++i)
 	{
@@ -457,7 +478,7 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 		QByteArray kk = kernelName.toAscii();
 		const char* k = kk.data();
 
-		kernelSkeleton_iter[i] = createKernel(pskeleton, kk);
+		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
 	}
 
 	return true;
@@ -491,7 +512,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	// Bufor docelowy
 	cl_int err;
 	clDst = cl::Buffer(context,
-		/*CL_MEM_ALLOC_HOST_PTR | */ CL_MEM_WRITE_ONLY, 
+		CL_MEM_WRITE_ONLY, 
 		dstSize, // obraz 1-kanalowy
 		nullptr, &err);
 	clError("Error while creating destination OpenCL buffer", err);
@@ -560,26 +581,6 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 			elapsed += copyBuffer(clSrc, clDst, evt);
 			elapsed += executeHitMissKernel(&kernelThinning, clSrc, clDst);
 		}
-		// Operacja szkieletyzacji
-		else if(opType == OT_Skeleton)
-		{
-			// Skopiuj obraz zrodlowy do docelowego
-			cl::Event evt;	
-			elapsed += copyBuffer(clSrc, clTmp, evt);
-			elapsed += copyBuffer(clSrc, clDst, evt);
-
-			for(int iters = 0; iters < 111; ++iters)
-			{
-				for(int i = 0; i < 8; ++i)
-				{
-					elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], clTmp, clDst);
-
-					// Kopiowanie bufora
-					copyBuffer(clDst, clTmp, evt);
-					elapsed += elapsedEvent(evt);
-				}
-			}
-		}
 		else
 		{
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -588,37 +589,86 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 				dstSize, // obraz 1-kanalowy
 				nullptr, &err);
 			clError("Error while creating temporary OpenCL buffer", err);
-			initWithValue(clTmp2, 0, dstSize);
 
-			// Gradient morfologiczny
-			if(opType == OT_Gradient)
-			{ 
-				//dst = dilate(src) - erode(src);
-				elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
-				elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp2);
-				elapsed += executeSubtractKernel(clTmp, clTmp2, clDst);
-			}
-			// TopHat
-			else if(opType == OT_TopHat)
-			{ 
-				// dst = src - dilate(erode(src))
-				elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
-				elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clTmp2);
-				elapsed += executeSubtractKernel(clSrc, clTmp2, clDst);
-			}
-			// BlackHat
-			else if(opType == OT_BlackHat)
-			{ 
-				// dst = close(src) - src
-				elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
-				elapsed += executeMorphologyKernel(&kernelErode, clTmp, clTmp2);
-				elapsed += executeSubtractKernel(clTmp2, clSrc, clDst);
+			// Operacja szkieletyzacji
+			if(opType == OT_Skeleton)
+			{
+				iters = 0;
+
+				// Skopiuj obraz zrodlowy do docelowego
+				cl::Event evt;	
+				elapsed += copyBuffer(clSrc, clTmp2, evt);
+				elapsed += copyBuffer(clSrc, clTmp, evt);
+				elapsed += copyBuffer(clSrc, clDst, evt);				
+
+				// Licznik atomowy
+				cl_uint d_init = 0;
+				cl::Buffer clAtomicCnt(context, 
+					CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+					sizeof(cl_uint), &d_init, &err);
+				clError("Error while creating temporary OpenCL atomic counter", err);
+				
+				do 
+				{
+					for(int i = 0; i < 8; ++i)
+					{
+						elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], clTmp, clDst);
+						// Kopiowanie bufora
+						elapsed += copyBuffer(clDst, clTmp, evt);
+					}
+
+					iters++;
+
+					// warunek stopu
+					elapsed += executeDiffPixelsKernel(clDst, clTmp2, clAtomicCnt);
+
+					// Odczytaj wartoœæ z atomowego licznika
+					cl_uint diff;
+					elapsed += readAtomicCounter(diff, clAtomicCnt);
+				
+					// Sprawdz warunek stopu
+					if(diff == 0)
+						break;
+
+					elapsed += zeroAtomicCounter(clAtomicCnt);					
+					elapsed += copyBuffer(clDst, clTmp2, evt);
+
+				} while (true);
 			}
 			else
 			{
-				iters = 0;
-				dst.create(src->size(), CV_8U);
-				return 0.0;				
+				initWithValue(clTmp2, 0, dstSize);
+
+				// Gradient morfologiczny
+				if(opType == OT_Gradient)
+				{ 
+					//dst = dilate(src) - erode(src);
+					elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
+					elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp2);
+					elapsed += executeSubtractKernel(clTmp, clTmp2, clDst);
+				}
+				// TopHat
+				else if(opType == OT_TopHat)
+				{ 
+					// dst = src - dilate(erode(src))
+					elapsed += executeMorphologyKernel(&kernelErode, clSrc, clTmp);
+					elapsed += executeMorphologyKernel(&kernelDilate, clTmp, clTmp2);
+					elapsed += executeSubtractKernel(clSrc, clTmp2, clDst);
+				}
+				// BlackHat
+				else if(opType == OT_BlackHat)
+				{ 
+					// dst = close(src) - src
+					elapsed += executeMorphologyKernel(&kernelDilate, clSrc, clTmp);
+					elapsed += executeMorphologyKernel(&kernelErode, clTmp, clTmp2);
+					elapsed += executeSubtractKernel(clTmp2, clSrc, clDst);
+				}
+				else
+				{
+					iters = 0;
+					dst.create(src->size(), CV_8U);
+					return 0.0;				
+				}
 			}
 		}
 	}
@@ -701,6 +751,31 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 		cl::NDRange(src->cols * src->rows),
 		cl::NullRange, 
 		nullptr, &evt);
+	evt.wait();
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::executeDiffPixelsKernel(
+	const cl::Buffer& clABuffer, const cl::Buffer& clBBuffer, 
+	const cl::Buffer& clAtomicCounter )
+{
+	// Ustaw argumenty kernela
+	cl_int err;
+	err  = kernelDiffPixels.setArg(0, clABuffer);
+	err |= kernelDiffPixels.setArg(1, clBBuffer);
+	err |= kernelDiffPixels.setArg(2, clAtomicCounter);
+	clError("Error while setting kernel arguments", err);
+
+	// Odpal kernela
+	cl::Event evt;	
+	err |= cq.enqueueNDRangeKernel(kernelDiffPixels,
+		cl::NullRange,
+		cl::NDRange(src->cols * src->rows),
+		cl::NullRange, //cl::NDRange(64), 
+		nullptr, &evt);
+	clError("Error while executing kernel over ND range!", err);
 	evt.wait();
 
 	// Ile czasu to zajelo

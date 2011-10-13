@@ -1,6 +1,9 @@
 morph/Debug
 morph/Release
 morph/GeneratedFiles
+morph-cl/Debug
+morph-cl/Release
+
 ipch
 
 *.exe

@@ -57,7 +57,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
-#if 1
+#if 0
 	ocl = new MorphOpenCLImage();
 #else
 	ocl = new MorphOpenCLBuffer();
@@ -71,7 +71,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 		exit(1);
 	};
 
-	oclSupported = ocl->initOpenCL(CL_DEVICE_TYPE_GPU);
+	oclSupported = ocl->initOpenCL(CL_DEVICE_TYPE_CPU);
 	if(oclSupported)
 	{
 		ui.actionOpenCL->setEnabled(true);
