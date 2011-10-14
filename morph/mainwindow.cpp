@@ -57,7 +57,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
-#if 0
+#if 1
 	ocl = new MorphOpenCLImage();
 #else
 	ocl = new MorphOpenCLBuffer();
@@ -375,7 +375,7 @@ void MainWindow::morphologyOpenCV()
 				// Szkielet - bialy
 				// tlo - szare (zmiana z bialego)
 				// obiekt - czarny
-				dst = src/2 + dst;
+				//dst = src/2 + dst;
 				break;
 			}
 
@@ -387,7 +387,7 @@ void MainWindow::morphologyOpenCV()
 
 				// Strefy - szare
 				// Reszta - niezmienione
-				dst = dst/2 + src;		
+				//dst = dst/2 + src;		
 			}
 		default: break;
 		}
