@@ -46,8 +46,7 @@ __kernel void dilate_c4(
 		val = max(val, read_imageui(src, smp, coord.zw).x);
 	}
 	
-	// Dla masek 2n+1 x 2m+1 ilosc wspolrzednych zawsze bedzie nieparzysta
-	//if(coords_size % 2)
+	if(coords_size % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[coords_size-1] + gid;
@@ -84,8 +83,7 @@ __kernel void dilate_c4_def(
 		val = max(val, read_imageui(src, smp, coord.zw).x);
 	}
 	
-	// Dla masek 2n+1 x 2m+1 ilosc wspolrzednych zawsze bedzie nieparzysta
-	//if(COORDS_SIZE % 2)
+	if(COORDS_SIZE % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[COORDS_SIZE-1] + gid;
