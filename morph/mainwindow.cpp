@@ -61,7 +61,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
 
-#if 1
+#if 0
 	ocl = new MorphOpenCLImage();
 #else
 	ocl = new MorphOpenCLBuffer();
@@ -474,7 +474,7 @@ void MainWindow::morphologyOpenCV()
 
 	QString txt;
 	QTextStream strm(&txt);
-	strm << "Time elasped : " << /*timer.*/elapsed/*()*/ << " ms, iterations: " << iters;
+	strm << "Time elasped : " << elapsed << " ms, iterations: " << iters;
 	statusBarLabel->setText(txt);
 }
 // -------------------------------------------------------------------------

@@ -86,7 +86,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	{
 		element = structuringElementDiamond(std::min(anchor.x, anchor.y));
 	}
-
+/*
 	// Rotacja elementu strukturalnego
 	if(rotation != 0)
 	{
@@ -108,7 +108,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		cv::copyMakeBorder(element, tmp, b,b,b,b, cv::BORDER_CONSTANT);
 		element = rotateImage(tmp, rotation);
 	}
-
+*/
 	return element;
 }
 // -------------------------------------------------------------------------
