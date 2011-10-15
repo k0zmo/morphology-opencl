@@ -60,6 +60,7 @@ private slots:
 	void invertChanged(int state);
 	void operationToggled(bool checked);
 	void structureElementToggled(bool checked);
+	void structureElementPreview();
 
 	void ratioChanged(int state);
 	void elementSizeXChanged(int value);

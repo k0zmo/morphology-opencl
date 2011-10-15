@@ -11,6 +11,8 @@
 #include <sys/time.h>
 #endif
 
+#include "ui_sepreview.h"
+
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Morph
 
@@ -49,6 +51,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.rbEllipse, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
 	connect(ui.rbCross, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
 	connect(ui.rbDiamond, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
+
+	connect(ui.pbShowSE, SIGNAL(pressed()), this, SLOT(structureElementPreview()));
 
 	// Rozmiar elementu strukturalnego
 	connect(ui.cbSquare, SIGNAL(stateChanged(int)), this, SLOT(ratioChanged(int)));
@@ -189,6 +193,43 @@ void MainWindow::structureElementToggled(bool checked)
 		if(!ui.rbNone->isChecked())
 			refresh();
 	}
+}
+// -------------------------------------------------------------------------
+void MainWindow::structureElementPreview()
+{
+	QDialog* d = new QDialog(this);
+
+	Ui::SEPreview uid;
+	uid.setupUi(d);
+
+	cv::Mat se = standardStructuringElement();
+	// Konwertuje 0,1 na 0,255
+	cv::Mat lut(1, 256, CV_8U);
+	uchar* p = lut.ptr<uchar>();
+	p[0] = 0;
+	for(int i = 1; i < lut.cols; ++i) 
+		p[i] = 255;
+	cv::LUT(se, lut, se);
+
+	int xsize = 256;
+	int ysize = 256;
+	if(se.cols != se.rows)
+	{
+		auto round = [](double v) { return static_cast<int>(v + 0.5); };
+
+		if(se.cols > se.rows) ysize = se.rows * round(256.0/se.cols);
+		else xsize = se.cols * round(256.0/se.rows);
+	}
+	cv::resize(se, se, cv::Size(xsize, ysize), 0.0, 0.0, cv::INTER_NEAREST);
+
+	QImage img(reinterpret_cast<const quint8*>(se.data),
+		se.cols, se.rows, se.step, 
+		QImage::Format_Indexed8);
+
+	uid.lbSEPreview->setPixmap(QPixmap::fromImage(img));
+
+	d->setModal(true);
+	d->exec();
 }
 // -------------------------------------------------------------------------
 void MainWindow::ratioChanged(int state)

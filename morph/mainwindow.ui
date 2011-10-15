@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>259</width>
-    <height>742</height>
+    <width>457</width>
+    <height>805</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -244,6 +244,13 @@
              </property>
             </widget>
            </item>
+           <item>
+            <widget class="QPushButton" name="pbShowSE">
+             <property name="text">
+              <string>Show structuring element</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -446,7 +453,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>259</width>
+     <width>457</width>
      <height>21</height>
     </rect>
    </property>

@@ -73,6 +73,9 @@
     <ClInclude Include="GeneratedFiles\ui_mainwindow.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_sepreview.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="morph.qrc">
@@ -82,6 +85,9 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="mainwindow.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="sepreview.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
   </ItemGroup>

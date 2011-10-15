@@ -92,7 +92,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	{
 		rotation %= 360;
 
-		auto rotateImage = [=](const cv::Mat& source, double angle) -> cv::Mat
+		auto rotateImage = [](const cv::Mat& source, double angle) -> cv::Mat
 		{
 			cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
 			cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
@@ -101,14 +101,12 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 			return dst;
 		};
 
-		//cv::Mat tmp(element.size() * 2, CV_8U, cv::Scalar(0));
-		//int border = element.rows/4;
-		//cv::copyMakeBorder(element, tmp, border, border, border, border, cv::BORDER_CONSTANT);
+		int s = 2 * qMax(element.rows, element.cols);
+		int b = s/4;
 
-		element = rotateImage(element, rotation);
-
-		//for(int i = 0; i < element.cols*element.rows; ++i)
-		//{ uchar* p = element.ptr<uchar>(); if(p[i] == 1) p[i] = 255; }
+		cv::Mat tmp(cv::Size(s, s), CV_8U, cv::Scalar(0));
+		cv::copyMakeBorder(element, tmp, b,b,b,b, cv::BORDER_CONSTANT);
+		element = rotateImage(tmp, rotation);
 	}
 
 	return element;
