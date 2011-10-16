@@ -18,6 +18,7 @@ public:
 	{ }
 
 	std::function<void(const QString&, cl_int)> errorCallback;
+	static QString openCLErrorCodeStr(cl_int errcode);
 
 	// Inicjalizuje OpenCL'a
 	virtual bool initOpenCL(cl_device_type dt);
@@ -45,6 +46,7 @@ protected:
 
 	const cv::Mat* src;
 	int kradiusx, kradiusy;
+	int deviceWidth, deviceHeight;
 
 protected:
 	// Pomocznicza funkcja do zglaszania bledow OpenCL'a

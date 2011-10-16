@@ -5,10 +5,10 @@ __constant uchar BCK = 0;
 
 __kernel void skeleton_iter1(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 	
 	// Element strukturalny pierwszy
 	// 1|1|1
@@ -32,10 +32,10 @@ __kernel void skeleton_iter1(
 
 __kernel void skeleton_iter2(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 		
 	// Element strukturalny pierwszy - 90 w lewo
 	// 1|X|0
@@ -59,10 +59,10 @@ __kernel void skeleton_iter2(
 
 __kernel void skeleton_iter3(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 
 	// Element strukturalny pierwszy - 180 w lewo
 	// 0|0|0
@@ -84,11 +84,11 @@ __kernel void skeleton_iter3(
 
 __kernel void skeleton_iter4(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
-
+	
 	// Element strukturalny pierwszy - 270 w lewo
 	// 0|X|1
 	// 0|1|1
@@ -109,10 +109,10 @@ __kernel void skeleton_iter4(
 
 __kernel void skeleton_iter5(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 
 	// Element strukturalny drugi
 	// X|1|X
@@ -133,10 +133,10 @@ __kernel void skeleton_iter5(
 
 __kernel void skeleton_iter6(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 		
 	// Element strukturalny drugi - 90 stopni w lewo
 	// X|1|X
@@ -157,10 +157,10 @@ __kernel void skeleton_iter6(
 
 __kernel void skeleton_iter7(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 		
 	// Element strukturalny drugi - 180 stopni w lewo
 	// X|0|0
@@ -181,10 +181,10 @@ __kernel void skeleton_iter7(
 
 __kernel void skeleton_iter8(
 	__global uchar* input,
-	__global uchar* output)
+	__global uchar* output,
+	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	size_t rowPitch = get_global_size(0) + 2;
 		
 	// Element strukturalny drugi - 270 stopni w lewo
 	// 0|0|X

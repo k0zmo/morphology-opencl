@@ -70,7 +70,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	ocl->errorCallback = [this](const QString& message, cl_int err)
 	{
 		Q_UNUSED(err);
-		QMessageBox::critical(this, "OpenCL error", message,
+		QMessageBox::critical(this, "OpenCL error", 
+			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
 			QMessageBox::Ok);
 		exit(1);
 	};

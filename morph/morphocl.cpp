@@ -9,6 +9,13 @@ int roundUp(int value, int multiple)
 	return value + (multiple - v);
 }
 
+static const int workGroupSizeX = 16;
+static const int workGroupSizeY = 16;
+
+#define NOT_OPTIMIZED
+//#define READ_ALIGNED
+//#define READ4
+
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCL
 bool MorphOpenCL::initOpenCL(cl_device_type dt)
@@ -168,6 +175,64 @@ cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog,
 	clError("Failed to create " + 
 		QString(kernelName) + " kernel!", err);
 	return k;
+}
+// -------------------------------------------------------------------------
+QString MorphOpenCL::openCLErrorCodeStr(cl_int errcode)
+{
+	switch(errcode)
+	{
+	case CL_SUCCESS: return "CL_SUCCESS";
+	case CL_DEVICE_NOT_FOUND: return "CL_DEVICE_NOT_FOUND";
+	case CL_DEVICE_NOT_AVAILABLE: return "CL_DEVICE_NOT_AVAILABLE";
+	case CL_COMPILER_NOT_AVAILABLE: return "CL_COMPILER_NOT_AVAILABLE";
+	case CL_MEM_OBJECT_ALLOCATION_FAILURE: return "CL_MEM_OBJECT_ALLOCATION_FAILURE";
+	case CL_OUT_OF_RESOURCES: return "CL_OUT_OF_RESOURCES";
+	case CL_OUT_OF_HOST_MEMORY: return "CL_OUT_OF_HOST_MEMORY";
+	case CL_PROFILING_INFO_NOT_AVAILABLE: return "CL_PROFILING_INFO_NOT_AVAILABLE";
+	case CL_MEM_COPY_OVERLAP: return "CL_MEM_COPY_OVERLAP";
+	case CL_IMAGE_FORMAT_MISMATCH: return "CL_IMAGE_FORMAT_MISMATCH";
+	case CL_IMAGE_FORMAT_NOT_SUPPORTED: return "CL_IMAGE_FORMAT_NOT_SUPPORTED";
+	case CL_BUILD_PROGRAM_FAILURE: return "CL_BUILD_PROGRAM_FAILURE";
+	case CL_MAP_FAILURE: return "CL_MAP_FAILURE";
+	case CL_MISALIGNED_SUB_BUFFER_OFFSET: return "CL_MISALIGNED_SUB_BUFFER_OFFSET";
+	case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST: return "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST";
+	case CL_INVALID_VALUE: return "CL_INVALID_VALUE";
+	case CL_INVALID_DEVICE_TYPE: return "CL_INVALID_DEVICE_TYPE";
+	case CL_INVALID_PLATFORM: return "CL_INVALID_PLATFORM";
+	case CL_INVALID_DEVICE: return "CL_INVALID_DEVICE";
+	case CL_INVALID_CONTEXT: return "CL_INVALID_CONTEXT";
+	case CL_INVALID_QUEUE_PROPERTIES: return "CL_INVALID_QUEUE_PROPERTIES";
+	case CL_INVALID_COMMAND_QUEUE: return "CL_INVALID_COMMAND_QUEUE";
+	case CL_INVALID_HOST_PTR: return "CL_INVALID_HOST_PTR";
+	case CL_INVALID_MEM_OBJECT: return "CL_INVALID_MEM_OBJECT";
+	case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR: return "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR";
+	case CL_INVALID_IMAGE_SIZE: return "CL_INVALID_IMAGE_SIZE";
+	case CL_INVALID_SAMPLER: return "CL_INVALID_SAMPLER";
+	case CL_INVALID_BINARY: return "CL_INVALID_BINARY";
+	case CL_INVALID_BUILD_OPTIONS: return "CL_INVALID_BUILD_OPTIONS";
+	case CL_INVALID_PROGRAM: return "CL_INVALID_PROGRAM";
+	case CL_INVALID_PROGRAM_EXECUTABLE: return "CL_INVALID_PROGRAM_EXECUTABLE";
+	case CL_INVALID_KERNEL_NAME: return "CL_INVALID_KERNEL_NAME";
+	case CL_INVALID_KERNEL_DEFINITION: return "CL_INVALID_KERNEL_DEFINITION";
+	case CL_INVALID_KERNEL: return "CL_INVALID_KERNEL";
+	case CL_INVALID_ARG_INDEX: return "CL_INVALID_ARG_INDEX";
+	case CL_INVALID_ARG_VALUE: return "CL_INVALID_ARG_VALUE";
+	case CL_INVALID_ARG_SIZE: return "CL_INVALID_ARG_SIZE";
+	case CL_INVALID_KERNEL_ARGS: return "CL_INVALID_KERNEL_ARGS";
+	case CL_INVALID_WORK_DIMENSION: return "CL_INVALID_WORK_DIMENSION";
+	case CL_INVALID_WORK_GROUP_SIZE: return "CL_INVALID_WORK_GROUP_SIZE";
+	case CL_INVALID_WORK_ITEM_SIZE: return "CL_INVALID_WORK_ITEM_SIZE";
+	case CL_INVALID_GLOBAL_OFFSET: return "CL_INVALID_GLOBAL_OFFSET";
+	case CL_INVALID_EVENT_WAIT_LIST: return "CL_INVALID_EVENT_WAIT_LIST";
+	case CL_INVALID_EVENT: return "CL_INVALID_EVENT";
+	case CL_INVALID_OPERATION: return "CL_INVALID_OPERATION";
+	case CL_INVALID_GL_OBJECT: return "CL_INVALID_GL_OBJECT";
+	case CL_INVALID_BUFFER_SIZE: return "CL_INVALID_BUFFER_SIZE";
+	case CL_INVALID_MIP_LEVEL: return "CL_INVALID_MIP_LEVEL";
+	case CL_INVALID_GLOBAL_WORK_SIZE: return "CL_INVALID_GLOBAL_WORK_SIZE";
+	case CL_INVALID_PROPERTY: return "CL_INVALID_PROPERTY";
+	default: return "UNKNOWN";
+	}
 }
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
@@ -520,7 +585,7 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 
 	kernelErode = createKernel(perode, "erode");
 	kernelDilate = createKernel(pdilate, "dilate");
-	kernelThinning = createKernel(pthinning, "thinning_local");
+	kernelThinning = createKernel(pthinning, "thinning");
 	kernelSubtract = createKernel(putils, "subtract");
 	kernelDiffPixels = createKernel(putils, "diffPixels");
 
@@ -540,13 +605,41 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 {
 	cl_int err;
 
-	clSrc = cl::Buffer(context,
-		CL_MEM_READ_ONLY, newSrc->rows * newSrc->cols, // zakladamy obraz 1-kanalowy
-		nullptr, &err);
+#ifdef NOT_OPTIMIZED
+	deviceWidth = newSrc->cols;
+#else
+	deviceWidth = roundUp(newSrc->cols, workGroupSizeX);
+#endif
+
+	deviceHeight = newSrc->rows;
+	int bufferDeviceSize = deviceWidth * deviceHeight;
+
+	clSrc = cl::Buffer(context, CL_MEM_READ_ONLY, bufferDeviceSize, nullptr, &err);
 	clError("Error while creating OpenCL source buffer", err);		
 
+#ifdef NOT_OPTIMIZED
 	err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0, 
-		newSrc->rows * newSrc->cols, const_cast<uchar*>(newSrc->ptr<uchar>()));
+		bufferDeviceSize, const_cast<uchar*>(newSrc->ptr<uchar>()));
+#else
+	cl::size_t<3> origin;
+	origin[0] = 0;
+	origin[1] = 0;
+	origin[2] = 0;
+
+	cl::size_t<3> region;
+	region[0] = newSrc->cols;
+	region[1] = newSrc->rows;
+	region[2] = 1;
+
+	size_t buffer_row_pitch = deviceWidth;
+	size_t host_row_pitch = newSrc->cols;
+
+	err = cq.enqueueWriteBufferRect(clSrc, CL_TRUE, 
+		origin, origin, region, 
+		buffer_row_pitch, 0, 
+		host_row_pitch, 0, 
+		const_cast<uchar*>(newSrc->ptr<uchar>()));
+#endif
 	clError("Error while writing new data to OpenCL source buffer!", err);
 
 	src = newSrc;
@@ -556,23 +649,23 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 {
 	int dstSizeX = src->cols;
 	int dstSizeY = src->rows;
-	size_t dstSize = dstSizeX * dstSizeY;
+	size_t bufferDeviceSize = deviceWidth * deviceHeight;
 
 	// Bufor docelowy
 	cl_int err;
 	clDst = cl::Buffer(context,
 		CL_MEM_WRITE_ONLY, 
-		dstSize, // obraz 1-kanalowy
+		bufferDeviceSize, // obraz 1-kanalowy
 		nullptr, &err);
-	clError("Error while creating destination OpenCL buffer", err);
+	clError("Error while creating destination OpenCL buffer!", err);
 
-	auto initWithValue = [this](cl::Buffer& buf, int value, size_t size)
+	auto initWithValue = [=](cl::Buffer& buf, int value, size_t size)
 	{
 		void* ptr = cq.enqueueMapBuffer(buf, CL_TRUE, CL_MAP_WRITE, 0, size);
 		memset(ptr, value, size);
 		cq.enqueueUnmapMemObject(buf, ptr);
 	};
-	initWithValue(clDst, 0, dstSize);
+	//initWithValue(clDst, 0, deviceBufferSize);
 
 	iters = 1;
 	cl_ulong elapsed = 0;
@@ -594,11 +687,11 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	{
 		// Funkcja lambda kopiujaca zawartosc jednego bufora OpenCL'a do drugiego
 		// przy okazji mierzac czas tej operacji
-		auto copyBuffer = [this](const cl::Buffer& clsrc, cl::Buffer& cldst,
+		auto copyBuffer = [=](const cl::Buffer& clsrc, cl::Buffer& cldst,
 			cl::Event& clevt) -> cl_ulong
 		{
 			cq.enqueueCopyBuffer(clsrc, cldst, 
-				0, 0, src->size().area(), 
+				0, 0, bufferDeviceSize, 
 				nullptr, &clevt);
 			clevt.wait();
 			return elapsedEvent(clevt);
@@ -619,10 +712,10 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 			clTmp = cl::Buffer(context,
 				CL_MEM_READ_WRITE, 
-				dstSize, // obraz 1-kanalowy
+				bufferDeviceSize, // obraz 1-kanalowy
 				nullptr, &err);
 			clError("Error while creating temporary OpenCL buffer", err);
-			initWithValue(clTmp, 0, dstSize);
+			//initWithValue(clTmp, 0, deviceBufferSize);
 
 			// Otwarcie
 			if(opType == OT_Open)
@@ -653,7 +746,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 				// Potrzebowac bedziemy jeszcze jednego dodatkowego bufora tymczasowego
 				clTmp2 = cl::Buffer(context,
 					CL_MEM_READ_WRITE, 
-					dstSize, // obraz 1-kanalowy
+					bufferDeviceSize, // obraz 1-kanalowy
 					nullptr, &err);
 				clError("Error while creating temporary OpenCL buffer", err);
 
@@ -707,7 +800,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 				}
 				else
 				{
-					initWithValue(clTmp2, 0, dstSize);
+					//initWithValue(clTmp2, 0, deviceBufferSize);
 
 					// Gradient morfologiczny
 					if(opType == OT_Gradient)
@@ -758,45 +851,36 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 			}
 		}
 	}
-
-#if 1
 	// Zczytaj wynik z karty
 	dst.create(src->size(), CV_8U);
 	cl::Event evt;
-	cq.enqueueReadBuffer(clDst, CL_FALSE, 0,
-		dstSize, dst.ptr<uchar>(),
-		nullptr, &evt);
-	evt.wait();
-#else
-	dst.create(cv::Size(dstSizeX, dstSizeY), CV_8U);
-	cl::Event evt;
 
- 	cl::size_t<3> buffer_offset;
- 	cl::size_t<3> host_offset;
- 	cl::size_t<3> region;
+// 	err = cq.enqueueReadBuffer(clDst, CL_FALSE, 0,
+// 		deviceBufferSize, dst.ptr<uchar>(),
+// 		nullptr, &evt);
 
-	buffer_offset[0] = (src->cols - dstSizeX)/2;
-	buffer_offset[1] = (src->rows - dstSizeY)/2;
-	buffer_offset[2] = 0;
+	cl::size_t<3> origin;
+	cl::size_t<3> region;
 
-	host_offset[0] = 0;
-	host_offset[1] = 0;
-	host_offset[2] = 0;
+	origin[0] = (src->cols - dstSizeX)/2;
+	origin[1] = (src->rows - dstSizeY)/2;
+	origin[2] = 0;
 
 	region[0] = dstSizeX;
 	region[1] = dstSizeY;
 	region[2] = 1;
 
-	size_t buffer_row_pitch = src->cols * sizeof(cl_uchar);
-	size_t host_row_pitch = dstSizeX;
+	size_t buffer_row_pitch = deviceWidth;
+	size_t host_row_pitch = src->cols;
 
-	cq.enqueueReadBufferRect(clDst, CL_FALSE, 
-		buffer_offset, host_offset, region, 
+	err = cq.enqueueReadBufferRect(clDst, CL_FALSE, 
+		origin, origin, region, 
 		buffer_row_pitch, 0, 
-		host_row_pitch, 0,
+		host_row_pitch, 0, 
 		dst.ptr<uchar>(), nullptr, &evt);
+
+	clError("Error while reading result to buffer!", err);
 	evt.wait();
-#endif
 
 	// Ile czasu zajelo zczytanie danych z powrotem
 	elapsed += elapsedEvent(evt);
@@ -807,12 +891,14 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
 	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
 {
+	cl::Event evt;
+	cl_int err;
+
 #if 1
 	cl_int4 seSize = { kradiusx, kradiusy, csize, 0 };
-	cl_int2 imageSize = { src->cols, src->rows };
+	cl_int2 imageSize = { deviceWidth, deviceHeight };
 
 	// Ustaw argumenty kernela
-	cl_int err;
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
 	err |= kernel->setArg(2, clSeCoords);
@@ -821,20 +907,14 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;	
 	err = cq.enqueueNDRangeKernel(*kernel,
 		cl::NullRange,
 		cl::NDRange(src->cols - kradiusx*2, src->rows - kradiusy*2),
 		cl::NullRange, 
 		nullptr, &evt);
-	clError("Error while executing kernel over ND range!", err);
-	evt.wait();
 #else
 	int apronX = kradiusx * 2;
 	int apronY = kradiusy * 2;
-
-	int workGroupSizeX = 16;
-	int workGroupSizeY = 16;
 
 	int globalItemsX = roundUp(rangeX - apronX, workGroupSizeX);
 	int globalItemsY = roundUp(rangeY - apronY, workGroupSizeX);
@@ -845,7 +925,6 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	size_t sharedBlockSize = sizeof(cl_uchar) * sharedSize.s[0] * sharedSize.s[1];
 
 	// Ustaw argumenty kernela
-	cl_int err;
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
 	err |= kernel->setArg(2, clSeCoords);
@@ -856,16 +935,14 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;	
 	err = cq.enqueueNDRangeKernel(*kernel,
 		cl::NullRange,
 		cl::NDRange(globalItemsX, globalItemsY),
-		//cl::NDRange(16, 16),
 		cl::NDRange(workGroupSizeX, workGroupSizeY), 
 		nullptr, &evt);
-	clError("Error while executing kernel over ND range!", err);
-	evt.wait();
 #endif
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
@@ -874,41 +951,41 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel, 
 	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
 {
+	cl::Event evt;
+	cl_int err;
+
 #if 1
 	// Ustaw argumenty kernela
-	cl_int err;
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
+	err |= kernel->setArg(2, deviceWidth);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;
-	cq.enqueueNDRangeKernel(*kernel,
+	err = cq.enqueueNDRangeKernel(*kernel,
 		cl::NDRange(1, 1),
 		cl::NDRange(src->cols - 2, src->rows - 2),
 		cl::NullRange,
 		nullptr, &evt);
-	evt.wait();
 #else
-	cl_int2 imageSize = { src->cols, src->rows };
+	cl_int2 imageSize = { deviceWidth, deviceHeight };
 	int lsize = 16;
 
 	// Ustaw argumenty kernela
-	cl_int err;
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
 	err |= kernel->setArg(2, imageSize);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;
-	cq.enqueueNDRangeKernel(*kernel,
-		cl::NDRange(1, 1),
+	err = cq.enqueueNDRangeKernel(*kernel,
+		cl::NullRange,
 		cl::NDRange(roundUp(src->cols - 2, lsize), roundUp(src->rows - 2, lsize)),
 		cl::NDRange(lsize, lsize), 
 		nullptr, &evt);
-	evt.wait();
 #endif
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
@@ -917,21 +994,24 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer)
 {
-	// Ustaw argumenty kernela
 	cl_int err;
+	cl::Event evt;
+
+	// Ustaw argumenty kernela
 	err  = kernelSubtract.setArg(0, clABuffer);
 	err |= kernelSubtract.setArg(1, clBBuffer);
 	err |= kernelSubtract.setArg(2, clDstBuffer);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;	
-	cq.enqueueNDRangeKernel(kernelSubtract,
+	err = cq.enqueueNDRangeKernel(kernelSubtract,
 		cl::NullRange,
-		cl::NDRange(src->cols * src->rows),
+		cl::NDRange(deviceWidth * deviceHeight),
 		cl::NullRange, 
 		nullptr, &evt);
+
 	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
@@ -941,22 +1021,24 @@ cl_ulong MorphOpenCLBuffer::executeDiffPixelsKernel(
 	const cl::Buffer& clABuffer, const cl::Buffer& clBBuffer, 
 	const cl::Buffer& clAtomicCounter )
 {
-	// Ustaw argumenty kernela
 	cl_int err;
+	cl::Event evt;
+
+	// Ustaw argumenty kernela
 	err  = kernelDiffPixels.setArg(0, clABuffer);
 	err |= kernelDiffPixels.setArg(1, clBBuffer);
 	err |= kernelDiffPixels.setArg(2, clAtomicCounter);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
-	cl::Event evt;	
-	err |= cq.enqueueNDRangeKernel(kernelDiffPixels,
+	err = cq.enqueueNDRangeKernel(kernelDiffPixels,
 		cl::NullRange,
-		cl::NDRange(src->cols * src->rows),
+		cl::NDRange(deviceWidth * deviceHeight),
 		cl::NullRange, //cl::NDRange(64), 
 		nullptr, &evt);
-	clError("Error while executing kernel over ND range!", err);
+
 	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
