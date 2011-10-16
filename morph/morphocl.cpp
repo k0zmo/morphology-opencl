@@ -12,9 +12,9 @@ int roundUp(int value, int multiple)
 static const int workGroupSizeX = 16;
 static const int workGroupSizeY = 16;
 
-#define NOT_OPTIMIZED
+//#define NOT_OPTIMIZED
 //#define READ_ALIGNED
-//#define READ4
+#define READ4
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCL
@@ -584,8 +584,8 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 	cl::Program pskeleton = createProgram("kernels-buffers/skeleton.cl");
 
 	kernelErode = createKernel(perode, "erode");
-	kernelDilate = createKernel(pdilate, "dilate");
-	kernelThinning = createKernel(pthinning, "thinning");
+	kernelDilate = createKernel(pdilate, "dilate4_c4_local");
+	kernelThinning = createKernel(pthinning, "thinning4_local");
 	kernelSubtract = createKernel(putils, "subtract");
 	kernelDiffPixels = createKernel(putils, "diffPixels");
 
@@ -894,10 +894,10 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	cl::Event evt;
 	cl_int err;
 
-#if 1
 	cl_int4 seSize = { kradiusx, kradiusy, csize, 0 };
 	cl_int2 imageSize = { deviceWidth, deviceHeight };
 
+#if 0
 	// Ustaw argumenty kernela
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
@@ -916,13 +916,18 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	int apronX = kradiusx * 2;
 	int apronY = kradiusy * 2;
 
-	int globalItemsX = roundUp(rangeX - apronX, workGroupSizeX);
-	int globalItemsY = roundUp(rangeY - apronY, workGroupSizeX);
+	int globalItemsX = roundUp(src->cols - apronX, workGroupSizeX);
+	int globalItemsY = roundUp(src->rows - apronY, workGroupSizeX);	
 
-	cl_int4 seSize = { kradiusx, kradiusy, csize, 0 };
-	cl_int2 imageSize = { src->cols, src->rows };
+#ifndef READ4
 	cl_int2 sharedSize = { workGroupSizeX + apronX, workGroupSizeY + apronY };
-	size_t sharedBlockSize = sizeof(cl_uchar) * sharedSize.s[0] * sharedSize.s[1];
+#else
+	cl_int2 sharedSize = { 
+		roundUp(workGroupSizeX + apronX, 4),
+		workGroupSizeY + apronY };
+#endif
+
+	size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
 
 	// Ustaw argumenty kernela
 	err  = kernel->setArg(0, clSrcBuffer);
@@ -954,7 +959,7 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	cl::Event evt;
 	cl_int err;
 
-#if 1
+#if 0
 	// Ustaw argumenty kernela
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
