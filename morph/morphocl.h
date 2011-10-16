@@ -10,12 +10,7 @@
 class MorphOpenCL
 {
 public:
-	MorphOpenCL()
-		: src(nullptr), 
-		kradiusx(0),
-		kradiusy(0),
-		errorCallback(nullptr)
-	{ }
+	MorphOpenCL();
 
 	std::function<void(const QString&, cl_int)> errorCallback;
 	static QString openCLErrorCodeStr(cl_int errcode);
@@ -48,6 +43,18 @@ protected:
 	int kradiusx, kradiusy;
 	int deviceWidth, deviceHeight;
 
+	int workGroupSizeX;
+	int workGroupSizeY;
+
+	enum EReadingMethod
+	{
+		RM_NotOptimized,
+		RM_ReadAligned,
+		RM_Read4
+	};
+	EReadingMethod readingMethod;
+	bool local;
+
 protected:
 	// Pomocznicza funkcja do zglaszania bledow OpenCL'a
 	void clError(const QString& message, cl_int err);
@@ -68,6 +75,9 @@ protected:
 	// Tworzy kernel'a z podanego programu
 	cl::Kernel createKernel(const cl::Program& prog,
 		const char* kernelName);
+
+	cl::Kernel createKernel(const cl::Program& prog, 
+		const QString& kernelName);
 };
 
 class MorphOpenCLImage : public MorphOpenCL

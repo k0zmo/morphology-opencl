@@ -5,10 +5,6 @@ int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 
-	QCoreApplication::setApplicationName("MorphCL");
-	QCoreApplication::setOrganizationName("AGH");
-	QCoreApplication::setOrganizationDomain("agh.edu.pl");
-
 #if 0
 	QString filename = QFileDialog::getOpenFileName(
 		nullptr, QString(), ".",
