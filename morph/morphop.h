@@ -41,5 +41,5 @@ void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
 void morphologyThinning(const cv::Mat& src, cv::Mat& dst);
 
 // Operacja morfologiczna - szkieletyzacja
-int morphologySkeleton(cv::Mat &src, cv::Mat &dst);
+int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
 

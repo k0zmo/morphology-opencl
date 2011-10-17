@@ -394,8 +394,7 @@ void MainWindow::morphologyOpenCV()
 
 		case OT_Skeleton:
 			{
-				cv::Mat src1 = src.clone();
-				iters = morphologySkeleton(src1, dst);
+				iters = morphologySkeleton(src, dst);
 
 				// Szkielet - bialy
 				// tlo - szare (zmiana z bialego)
