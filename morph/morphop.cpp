@@ -86,6 +86,8 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	{
 		element = structuringElementDiamond(std::min(anchor.x, anchor.y));
 	}
+
+	(void)(rotation);
 /*
 	// Rotacja elementu strukturalnego
 	if(rotation != 0)
@@ -121,7 +123,8 @@ int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2)
 // -------------------------------------------------------------------------
 void morphologyThinning(const cv::Mat& src, cv::Mat& dst)
 {
-	// TODO: border
+#if 0
+	dst = src.clone();
 
 	// 1 - obiekt (bialy)
 	// 0 - tlo (czarny)
@@ -150,12 +153,35 @@ void morphologyThinning(const cv::Mat& src, cv::Mat& dst)
 			}
 		}
 	}
+#else
+	dst.create(src.size(), src.type());
+
+	for(int y = 1; y < src.rows - 1; ++y)
+	{
+		for(int x = 1; x < src.cols - 1; ++x)
+		{
+			if (src.at<uchar>(y-1, x-1) == OBJ &&
+				src.at<uchar>(y-1, x  ) == OBJ &&
+				src.at<uchar>(y-1, x+1) == OBJ &&
+				src.at<uchar>(y  , x-1) == OBJ &&
+				src.at<uchar>(y  , x+1) == OBJ &&
+				src.at<uchar>(y+1, x-1) == OBJ &&
+				src.at<uchar>(y+1, x  ) == OBJ &&
+				src.at<uchar>(y+1, x+1) == OBJ)
+			{
+				dst.at<uchar>(y, x) = BCK;
+			}
+			else
+			{
+				dst.at<uchar>(y, x) = src.at<uchar>(y, x);
+			}
+		}
+	}
+#endif
 }
 // -------------------------------------------------------------------------
-void _morphologySkeleton_iter(cv::Mat src, cv::Mat dst)
+int _morphologySkeleton_iter(cv::Mat& src, cv::Mat& dst)
 {
-	// TODO: border
-
 	// Element strukturalny pierwszy
 	// 1|1|1
 	// X|1|X
@@ -349,213 +375,16 @@ void _morphologySkeleton_iter(cv::Mat src, cv::Mat dst)
 			}
 		}
 	}
-}
-// -------------------------------------------------------------------------
-void _morphologyPruning_iter(cv::Mat src, cv::Mat dst)
-{
-	// TODO: border
 
-	// Element strukturalny pierwszy
-	// 0|X|X
-	// 0|1|0
-	// 0|0|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x-1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK &&
-				src.at<uchar>(y+1, x+1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-	src = dst.clone();
-
-	// Element strukturalny pierwszy - 90 stopni w lewo
-	// X|0|0
-	// X|1|0
-	// 0|0|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x-1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK &&
-				src.at<uchar>(y+1, x+1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny pierwszy - 180 stopni w lewo
-	// 0|0|0
-	// 0|1|0
-	// X|X|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x+1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny pierwszy - 270 stopni w lewo
-	// 0|0|0
-	// 0|1|X
-	// 0|0|X
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y+1, x-1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny drugi
-	// X|X|0
-	// 0|1|0
-	// 0|0|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x-1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK &&
-				src.at<uchar>(y+1, x+1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny drugi - 90 stopni w lewo
-	// 0|0|0
-	// X|1|0
-	// X|0|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK &&
-				src.at<uchar>(y+1, x-1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny drugi - 180 stopni w lewo
-	// 0|0|0
-	// 0|1|0
-	// 0|X|X
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y-1, x+1) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y  , x+1) == BCK &&
-				src.at<uchar>(y+1, x-1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
-
-	src = dst.clone();
-
-	// Element strukturalny drugi - 270 stopni w lewo
-	// 0|0|X
-	// 0|1|X
-	// 0|0|0
-	//
-
-	for(int y = 1; y < src.rows - 1; ++y)
-	{
-		for(int x = 1; x < src.cols - 1; ++x)
-		{
-			if (src.at<uchar>(y-1, x-1) == BCK &&
-				src.at<uchar>(y-1, x  ) == BCK &&
-				src.at<uchar>(y  , x-1) == BCK &&
-				src.at<uchar>(y  , x  ) == OBJ &&
-				src.at<uchar>(y+1, x-1) == BCK &&
-				src.at<uchar>(y+1, x  ) == BCK &&
-				src.at<uchar>(y+1, x+1) == BCK)
-			{
-				dst.at<uchar>(y, x) = BCK;
-			}
-		}
-	}
+	return 0;
 }
 // -------------------------------------------------------------------------
 int morphologySkeleton(cv::Mat &src, cv::Mat &dst) 
 {
+#if 0
 	int niters = 0;
+
+	dst = src.clone();
 
 	// tmp jest obrazem z poprzednich 8 iteracji
 	cv::Mat tmp = src.clone();
@@ -574,44 +403,20 @@ int morphologySkeleton(cv::Mat &src, cv::Mat &dst)
 	}
 
 	return niters;
-}
-// -------------------------------------------------------------------------
-int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune) 
-{
+#else
 	int niters = 0;
 
-	// Diagram voronoi jest operacja dualna do szkieletowania
-	src = 255 - src;
-	dst = 255 - dst;
-
-	cv::Mat tmp = src.clone();
-
-	while(true) 
+	while(true)
 	{
-		// iteracja
-		_morphologySkeleton_iter(src, dst);
 		++niters;
+		if(_morphologySkeleton_iter(src, dst) == 0)
+			break;
 
-		// warunek stopu
-		if(countDiffPixels(tmp, dst) == 0) break;
-
-		src = dst.clone();
-		tmp = dst.clone();
-	}
-
-	if(prune > 0)
-	{
-		for(int i = 0; i < prune; ++i)
-		{
-			src = dst.clone();
-
-			// iteracja
-			_morphologyPruning_iter(src, dst);
-			++niters;				
-		}
+		std::swap(src, dst);
 	}
 
 	return niters;
+#endif
 }
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH

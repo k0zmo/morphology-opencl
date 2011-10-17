@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>457</width>
-    <height>805</height>
+    <width>259</width>
+    <height>722</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -148,37 +148,10 @@
              </property>
             </widget>
            </item>
-           <item row="14" column="0" colspan="2">
-            <widget class="QRadioButton" name="rbVoronoi">
-             <property name="text">
-              <string>Voronoi diagram</string>
-             </property>
-            </widget>
-           </item>
-           <item row="15" column="0">
-            <widget class="QSpinBox" name="sbPruning">
-             <property name="minimum">
-              <number>0</number>
-             </property>
-             <property name="value">
-              <number>0</number>
-             </property>
-            </widget>
-           </item>
            <item row="12" column="0" colspan="2">
             <widget class="QRadioButton" name="rbThinning">
              <property name="text">
               <string>Thinning</string>
-             </property>
-            </widget>
-           </item>
-           <item row="15" column="1">
-            <widget class="QCheckBox" name="cbPrune">
-             <property name="text">
-              <string>Prune</string>
-             </property>
-             <property name="tristate">
-              <bool>false</bool>
              </property>
             </widget>
            </item>
@@ -453,7 +426,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>457</width>
+     <width>259</width>
      <height>21</height>
     </rect>
    </property>
@@ -523,8 +496,6 @@
   <tabstop>rbBlackHat</tabstop>
   <tabstop>rbThinning</tabstop>
   <tabstop>rbSkeleton</tabstop>
-  <tabstop>rbVoronoi</tabstop>
-  <tabstop>sbPruning</tabstop>
   <tabstop>rbRect</tabstop>
   <tabstop>rbEllipse</tabstop>
   <tabstop>rbCross</tabstop>

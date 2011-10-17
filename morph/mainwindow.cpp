@@ -41,11 +41,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.rbBlackHat, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbThinning, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbSkeleton, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
-	connect(ui.rbVoronoi, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
-
-	//connect(ui.sbPruning, SIGNAL(valueChanged(int)), this, SLOT(pruningItersChanged(int)));
-	connect(ui.sbPruning, SIGNAL(valueChanged(int)), this, SLOT(pruneChanged(int)));
-	connect(ui.cbPrune, SIGNAL(stateChanged(int)), this, SLOT(pruneChanged(int)));
 
 	// Element strukturalny
 	connect(ui.rbRect, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
@@ -116,11 +111,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
-
-	// TODO
-	ui.rbVoronoi->setVisible(false);
-	ui.sbPruning->setVisible(false);
-	ui.cbPrune->setVisible(false);
 }
 // -------------------------------------------------------------------------
 MainWindow::~MainWindow()
@@ -305,15 +295,6 @@ void MainWindow::rotationResetPressed()
 {
 	ui.dialRotation->setValue(180);
 }
-// -------------------------------------------------------------------------
-void MainWindow::pruneChanged(int state)
-{
-	Q_UNUSED(state);
-	if(ui.rbVoronoi->isChecked() && ui.sbPruning->value() != 0)
-	{
-		refresh();
-	}
-}
 
 // Koniec zdarzen
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
@@ -365,8 +346,7 @@ void MainWindow::refresh()
 
 	// Operacje hit-miss
 	if (ui.rbThinning->isChecked() ||
-		ui.rbSkeleton->isChecked() || 
-		ui.rbVoronoi->isChecked())
+		ui.rbSkeleton->isChecked())
 	{
 		// deaktywuj wybor elementu strukturalnego
 		ui.gbElement->setEnabled(false);
@@ -402,11 +382,8 @@ void MainWindow::morphologyOpenCV()
 
 	// Operacje hit-miss
 	if (opType == OT_Thinning ||
-		opType == OT_Skeleton || 
-		opType == OT_Voronoi)
+		opType == OT_Skeleton)
 	{
-		dst = src.clone();
-
 		switch (opType)
 		{
 		case OT_Thinning:
@@ -425,17 +402,6 @@ void MainWindow::morphologyOpenCV()
 				// obiekt - czarny
 				//dst = src/2 + dst;
 				break;
-			}
-
-		case OT_Voronoi:
-			{
-				cv::Mat src1 = src.clone();
-				iters = morphologyVoronoi(src1, dst,
-					ui.cbPrune->isChecked() ? ui.sbPruning->value() : 0);
-
-				// Strefy - szare
-				// Reszta - niezmienione
-				//dst = dst/2 + src;		
 			}
 		default: break;
 		}
@@ -529,7 +495,6 @@ EOperationType MainWindow::operationType()
 	else if(ui.rbBlackHat->isChecked()) { return OT_BlackHat; }
 	else if(ui.rbThinning->isChecked()) { return OT_Thinning; }
 	else if(ui.rbSkeleton->isChecked()) { return OT_Skeleton; }
-	else if(ui.rbVoronoi->isChecked()) { return OT_Voronoi; }
 	else { return OT_Erode; }
 
 }

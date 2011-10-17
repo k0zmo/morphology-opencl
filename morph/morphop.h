@@ -18,8 +18,7 @@ enum EOperationType
 	OT_TopHat,
 	OT_BlackHat,
 	OT_Thinning,
-	OT_Skeleton,
-	OT_Voronoi
+	OT_Skeleton
 };
 
 enum EStructureElementType
@@ -44,5 +43,3 @@ void morphologyThinning(const cv::Mat& src, cv::Mat& dst);
 // Operacja morfologiczna - szkieletyzacja
 int morphologySkeleton(cv::Mat &src, cv::Mat &dst);
 
-// Operacja morfologiczna - diagram Voronoi
-int morphologyVoronoi(cv::Mat &src, cv::Mat &dst, int prune);

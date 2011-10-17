@@ -67,6 +67,4 @@ private slots:
 	void elementSizeYChanged(int value);
 	void rotationChanged(int value);
 	void rotationResetPressed();
-
-	void pruneChanged(int state);
 };

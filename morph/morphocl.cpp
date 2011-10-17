@@ -71,6 +71,8 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 	kradiusx = (selement.cols - 1) / 2;
 	kradiusy = (selement.rows - 1) / 2;
 
+	bool shiftCoords = (dynamic_cast<MorphOpenCLImage*>(this)) != nullptr;
+
 	// Przetworz wstepnie element strukturalny
 	for(int y = 0; y < selement.rows; ++y)
 	{
@@ -81,8 +83,13 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 			if(krow[x] == 0)
 				continue;
 
-			cl_int2 c = {x - kradiusx, y - kradiusy};
-			//cl_int2 c = {x, y};
+			cl_int2 c = {x, y};
+			if(shiftCoords)
+			{ 
+				c.s[0] -= kradiusx;
+				c.s[1] -= kradiusy;
+			}
+			
 			coords.push_back(c);
 		}
 	}
@@ -269,22 +276,22 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 	cl::Program putils = createProgram("kernels-images/utils.cl");
 	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl");
 
-	//QSettings settings("./settings.cfg", QSettings::IniFormat);
+	QSettings s("./settings.cfg", QSettings::IniFormat);
 
-	kernelErode = createKernel(perode, "erode");
-	kernelDilate = createKernel(pdilate, "dilate_c4_def");
-	kernelThinning = createKernel(pthinning, "thinning");
-	kernelSubtract = createKernel(putils, "subtract");
-	kernelDiffPixels = createKernel(putils, "diffPixels");
+	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
+	kernelDilate = createKernel(pdilate, s.value("kernel/dilate", "dilate").toString());
+	kernelThinning = createKernel(pthinning, s.value("kernel/thinning", "thinning").toString());
+	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
+	kernelDiffPixels = createKernel(putils, s.value("kernel/diffPixels", "diffPixels").toString());
 
-	for(int i = 0; i < 8; ++i)
-	{
-		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-
-		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
-	}
+// 	for(int i = 0; i < 8; ++i)
+// 	{
+// 		QString kernelName = "skeleton_iter" + QString::number(i+1);
+// 		QByteArray kk = kernelName.toAscii();
+// 		const char* k = kk.data();
+// 
+// 		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
+// 	}
 
 	return true;
 }
@@ -395,6 +402,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 					src->cols, src->rows, 0, nullptr, &err); 
 				clError("Error while creating temporary OpenCL image2D", err);
 
+				/*
 				// Operacja szkieletyzacji
 				if(opType == OT_Skeleton)
 				{
@@ -442,7 +450,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	
 				}
 				// Gradient morfologiczny
-				else if(opType == OT_Gradient)
+				else*/ if(opType == OT_Gradient)
 				{ 
 					//dst = dilate(src) - erode(src);
 					elapsed += executeMorphologyKernel(&kernelDilate, clSrcImage, clTmpImage);
@@ -505,7 +513,7 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err  = kernel->setArg(0, clSrcImage);
 	err |= kernel->setArg(1, clDstImage);
 	err |= kernel->setArg(2, clSeCoords);
-	//err |= kernel->setArg(3, csize);
+	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
@@ -614,14 +622,14 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
 	kernelDiffPixels = createKernel(putils, s.value("kernel/diffPixels", "diffPixels").toString());
 
-	for(int i = 0; i < 8; ++i)
-	{
-		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-
-		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
-	}
+// 	for(int i = 0; i < 8; ++i)
+// 	{
+// 		QString kernelName = "skeleton_iter" + QString::number(i+1);
+// 		QByteArray kk = kernelName.toAscii();
+// 		const char* k = kk.data();
+// 
+// 		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
+// 	}
 
 	return true;
 }
@@ -778,6 +786,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 					nullptr, &err);
 				clError("Error while creating temporary OpenCL buffer", err);
 
+				/*
 				// Operacja szkieletyzacji
 				if(opType == OT_Skeleton)
 				{
@@ -826,7 +835,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 					dstSizeX -= 2;
 					dstSizeY -= 2;
 				}
-				else
+				else*/
 				{
 					// Gradient morfologiczny
 					if(opType == OT_Gradient)
