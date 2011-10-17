@@ -81,8 +81,8 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 			if(krow[x] == 0)
 				continue;
 
-			//cl_int2 c = {x - kradiusx, y - kradiusy};
-			cl_int2 c = {x, y};
+			cl_int2 c = {x - kradiusx, y - kradiusy};
+			//cl_int2 c = {x, y};
 			coords.push_back(c);
 		}
 	}
@@ -272,7 +272,7 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 	//QSettings settings("./settings.cfg", QSettings::IniFormat);
 
 	kernelErode = createKernel(perode, "erode");
-	kernelDilate = createKernel(pdilate, "dilate");
+	kernelDilate = createKernel(pdilate, "dilate_c4_def");
 	kernelThinning = createKernel(pthinning, "thinning");
 	kernelSubtract = createKernel(putils, "subtract");
 	kernelDiffPixels = createKernel(putils, "diffPixels");
@@ -505,7 +505,7 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err  = kernel->setArg(0, clSrcImage);
 	err |= kernel->setArg(1, clDstImage);
 	err |= kernel->setArg(2, clSeCoords);
-	err |= kernel->setArg(3, csize);
+	//err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
@@ -535,7 +535,7 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 	err |= cq.enqueueNDRangeKernel(*kernel,
 		cl::NDRange(1, 1),
 		cl::NDRange(src->cols - 2, src->rows - 2),
-		cl::NullRange, 
+		cl::NullRange,
 		nullptr, &evt);
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
@@ -641,10 +641,10 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 	clSrc = cl::Buffer(context, CL_MEM_READ_ONLY, bufferDeviceSize, nullptr, &err);
 	clError("Error while creating OpenCL source buffer", err);
 
-// 	uint* ptr = new uint[newSrc->cols * newSrc->rows];
-// 	const uchar* uptr = newSrc->ptr<uchar>();
-// 	for(int i = 0; i < newSrc->cols * newSrc->rows; ++i)
-// 		ptr[i] = (int)(uptr[i]);
+//  	uint* ptr = new uint[newSrc->cols * newSrc->rows];
+//  	const uchar* uptr = newSrc->ptr<uchar>();
+//  	for(int i = 0; i < newSrc->cols * newSrc->rows; ++i)
+//  		ptr[i] = (int)(uptr[i]);
 
 	if(readingMethod == RM_NotOptimized)
 	{
@@ -916,8 +916,9 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	elapsed += elapsedEvent(evt);
 	// Ile czasu wszystko zajelo
 	return elapsed * 0.000001;
+#else
+	return 0;
 #endif
-
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
