@@ -1,5 +1,3 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
 #ifdef USE_ATOMIC_COUNTERS
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
 #define counter_type counter32_t
@@ -9,12 +7,12 @@
 #define atomic_inc atom_inc
 #endif
 
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
+__constant uint OBJ = 255;
+__constant uint BCK = 0;
 
 __kernel void skeleton_iter1(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -42,8 +40,8 @@ __kernel void skeleton_iter1(
 }
 
 __kernel void skeleton_iter2(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -71,8 +69,8 @@ __kernel void skeleton_iter2(
 }
 
 __kernel void skeleton_iter3(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -98,8 +96,8 @@ __kernel void skeleton_iter3(
 }
 
 __kernel void skeleton_iter4(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -125,8 +123,8 @@ __kernel void skeleton_iter4(
 }
 
 __kernel void skeleton_iter5(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -151,8 +149,8 @@ __kernel void skeleton_iter5(
 }
 
 __kernel void skeleton_iter6(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -177,8 +175,8 @@ __kernel void skeleton_iter6(
 }
 
 __kernel void skeleton_iter7(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {
@@ -203,8 +201,8 @@ __kernel void skeleton_iter7(
 }
 
 __kernel void skeleton_iter8(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch,
 	counter_type counter)
 {

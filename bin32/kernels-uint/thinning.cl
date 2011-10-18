@@ -1,11 +1,9 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
+__constant uint OBJ = 255;
+__constant uint BCK = 0;
 
 __kernel void thinning(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int rowPitch)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -30,8 +28,8 @@ __kernel void thinning(
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE,WORK_GROUP_SIZE,1)))
 void thinning_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	const int2 imageSize)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -39,7 +37,7 @@ void thinning_local(
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
 	
 #if 0
-	__local uchar sharedBlock[SHARED_SIZE * SHARED_SIZE];
+	__local uint sharedBlock[SHARED_SIZE * SHARED_SIZE];
 	
 	if(gid.x < imageSize.x && gid.y < imageSize.y)
 	{
@@ -86,14 +84,14 @@ void thinning_local(
 		output[(gid.y+1)*imageSize.x + (gid.x+1)] = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x + 1];
 	return;
 	
-	uchar v1 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x    ];
-	uchar v2 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 1];
-	uchar v3 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 2];
-	uchar v4 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x    ];
-	uchar v6 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x + 2];
-	uchar v7 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x    ];
-	uchar v8 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 1];
-	uchar v9 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 2];
+	uint v1 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x    ];
+	uint v2 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 1];
+	uint v3 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 2];
+	uint v4 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x    ];
+	uint v6 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x + 2];
+	uint v7 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x    ];
+	uint v8 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 1];
+	uint v9 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 2];
 	
 	if (v1 == OBJ &&
 		v2 == OBJ &&
@@ -107,7 +105,7 @@ void thinning_local(
 		output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
 	}
 #else
-	__local uchar sharedBlock[SHARED_SIZE][SHARED_SIZE];
+	__local uint sharedBlock[SHARED_SIZE][SHARED_SIZE];
 	
 	if(gid.x < imageSize.x && gid.y < imageSize.y)
 	{
@@ -148,14 +146,14 @@ void thinning_local(
 	if(gid.x >= imageSize.x - 2)
 		return;
 		
-	uchar v1 = sharedBlock[lid.y    ][lid.x    ];
-	uchar v2 = sharedBlock[lid.y    ][lid.x + 1];
-	uchar v3 = sharedBlock[lid.y    ][lid.x + 2];
-	uchar v4 = sharedBlock[lid.y + 1][lid.x    ];
-	uchar v6 = sharedBlock[lid.y + 1][lid.x + 2];
-	uchar v7 = sharedBlock[lid.y + 2][lid.x    ];
-	uchar v8 = sharedBlock[lid.y + 2][lid.x + 1];
-	uchar v9 = sharedBlock[lid.y + 2][lid.x + 2];
+	uint v1 = sharedBlock[lid.y    ][lid.x    ];
+	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
+	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
+	uint v4 = sharedBlock[lid.y + 1][lid.x    ];
+	uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
+	uint v7 = sharedBlock[lid.y + 2][lid.x    ];
+	uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
+	uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
 	
 	if (v1 == OBJ &&
 		v2 == OBJ &&
@@ -177,8 +175,8 @@ void thinning_local(
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE,WORK_GROUP_SIZE,1)))
 void thinning4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global uint4* input,
+	__global uint* output,
 	const int2 imageSize)
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -196,8 +194,8 @@ void thinning4_local(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;	
 	
-	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.y][lid.x*4]);
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.y][lid.x*4]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -218,14 +216,14 @@ void thinning4_local(
 		return;
 		
 	lid = (int2)(get_local_id(0), get_local_id(1));	
-	uchar v1 = sharedBlock[lid.y    ][lid.x    ];
-	uchar v2 = sharedBlock[lid.y    ][lid.x + 1];
-	uchar v3 = sharedBlock[lid.y    ][lid.x + 2];
-	uchar v4 = sharedBlock[lid.y + 1][lid.x    ];
-	uchar v6 = sharedBlock[lid.y + 1][lid.x + 2];
-	uchar v7 = sharedBlock[lid.y + 2][lid.x    ];
-	uchar v8 = sharedBlock[lid.y + 2][lid.x + 1];
-	uchar v9 = sharedBlock[lid.y + 2][lid.x + 2];
+	uint v1 = sharedBlock[lid.y    ][lid.x    ];
+	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
+	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
+	uint v4 = sharedBlock[lid.y + 1][lid.x    ];
+	uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
+	uint v7 = sharedBlock[lid.y + 2][lid.x    ];
+	uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
+	uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
 	
 	if (v1 == OBJ &&
 		v2 == OBJ &&

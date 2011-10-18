@@ -1,9 +1,19 @@
+#ifdef USE_ATOMIC_COUNTERS
+#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
+#define counter_type counter32_t
+#else
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#define counter_type __global uint*
+#define atomic_inc atom_inc
+#endif
+
 __constant uint OBJ = 255;
 __constant uint BCK = 0;
 
 __kernel void skeleton_iter1(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -35,12 +45,14 @@ __kernel void skeleton_iter1(
 		v9 == BCK)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter2(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -72,12 +84,14 @@ __kernel void skeleton_iter2(
 		v9 == BCK)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter3(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -109,12 +123,14 @@ __kernel void skeleton_iter3(
 		v9 == OBJ)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter4(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -146,12 +162,14 @@ __kernel void skeleton_iter4(
 		v9 == OBJ)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter5(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -181,12 +199,14 @@ __kernel void skeleton_iter5(
 		v8 == BCK)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter6(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -216,12 +236,14 @@ __kernel void skeleton_iter6(
 		v9 == BCK)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter7(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -251,12 +273,14 @@ __kernel void skeleton_iter7(
 		v8 == OBJ)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }
 
 __kernel void skeleton_iter8(
 	__read_only image2d_t src,
-	__write_only image2d_t dst)
+	__write_only image2d_t dst,
+	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
@@ -286,5 +310,6 @@ __kernel void skeleton_iter8(
 		v8 == OBJ)
 	{
 		write_imageui(dst, gid, (uint4)(BCK));
+		atomic_inc(counter);
 	}
 }

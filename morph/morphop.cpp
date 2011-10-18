@@ -120,13 +120,6 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	return element;
 }
 // -------------------------------------------------------------------------
-int countDiffPixels(const cv::Mat& src1, const cv::Mat& src2)
-{
-	cv::Mat diff;
-	cv::compare(src1, src2, diff, cv::CMP_NE);
-	return cv::countNonZero(diff);
-}
-// -------------------------------------------------------------------------
 void morphologyThinning(const cv::Mat& src, cv::Mat& dst)
 {
 	dst = src.clone();
@@ -413,19 +406,26 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
  		int d = 0;
 
 		d += _morphologySkeleton_iter1(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter2(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter3(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter4(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter5(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter6(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter7(src, dst);
-		src = dst.clone();
+		dst.copyTo(src);
+
 		d += _morphologySkeleton_iter8(src, dst);
 		
 		printf("%3d) %d\n", niters, d);
@@ -433,7 +433,7 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 		if(d == 0)
 			break;
 
-		src = dst.clone();
+		dst.copyTo(src);
 	}
 
 	return niters;

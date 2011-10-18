@@ -1,61 +1,59 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+__constant uint dilateINF = 0;
 
-__constant uchar erodeINF = 255;
-
-__kernel void erode(
-	__global uchar* input,
-	__global uchar* output,
+__kernel void dilate(
+	__global uint* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uchar val = erodeINF;
+	uint val = dilateINF;
 	
 	for(int i = 0; i < seSize.z; ++i)
 	{
 		int2 coord = coords[i] + gid;
-		val = min(val, input[coord.x + coord.y * imageSize.x]);
+		val = max(val, input[coord.x + coord.y * imageSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
-__kernel void erode_c4(
-	__global uchar* input,
-	__global uchar* output,
+__kernel void dilate_c4(
+	__global uint* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uchar val = erodeINF;
+	uint val = dilateINF;
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
 	{
 		int4 coord = coords[i] + (int4)(gid, gid);
-		val = min(val, input[coord.x + coord.y * imageSize.x]);
-		val = min(val, input[coord.z + coord.w * imageSize.x]);
+		val = max(val, input[coord.x + coord.y * imageSize.x]);
+		val = max(val, input[coord.z + coord.w * imageSize.x]);
 	}
 	
 	if(seSize.z % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + gid;
-		val = min(val, input[coord.x + coord.y * imageSize.x]);
+		val = max(val, input[coord.x + coord.y * imageSize.x]);
 	}
 
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
-__kernel void erode_local(
-	__global uchar* input,
-	__global uchar* output,
+__kernel void dilate_local(
+	__global uint* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -89,23 +87,23 @@ __kernel void erode_local(
 		return;
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = dilateINF;
 	for(int i = 0; i < seSize.z; ++i)
 	{
 		int2 coord = coords[i] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
-__kernel void erode_c4_local(
-	__global uchar* input,
-	__global uchar* output,
+__kernel void dilate_c4_local(
+	__global uint* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -139,34 +137,34 @@ __kernel void erode_c4_local(
 		return;
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = dilateINF;
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
 	{
 		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		val = max(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
 	}
 	
 	if(seSize.z % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * imageSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
 __kernel __attribute__((reqd_work_group_size(16,16,1))) 
-void erode4_local(
-	__global uchar4* input,
-	__global uchar* output,
+void dilate4_local(
+	__global uint4* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -184,7 +182,7 @@ void erode4_local(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -207,25 +205,25 @@ void erode4_local(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = dilateINF;
 
 	for(int i = 0; i < seSize.z; ++i)
 	{
 		int2 coord = coords[i] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
 __kernel __attribute__((reqd_work_group_size(16,16,1))) 
-void erode4_c4_local(
-	__global uchar4* input,
-	__global uchar* output,
+void dilate4_c4_local(
+	__global uint4* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -243,7 +241,7 @@ void erode4_c4_local(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -266,21 +264,21 @@ void erode4_c4_local(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;	
+	uint val = dilateINF;	
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
 	{
 		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		val = max(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
 	}
 	
 	if(seSize.z % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * imageSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
@@ -292,13 +290,13 @@ void erode4_c4_local(
 #endif
 
 __kernel __attribute__((work_group_size_hint(16,16,1))) 
-void erode4_c4_local_def(
-	__global uchar4* input,
-	__global uchar* output,
+void dilate4_c4_local_def(
+	__global uint4* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -316,7 +314,7 @@ void erode4_c4_local_def(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -339,22 +337,22 @@ void erode4_c4_local_def(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;	
+	uint val = dilateINF;	
 	int c2 = COORDS_SIZE / 2;
 	
 	#pragma unroll
 	for(int i = 0; i < c2; ++i)
 	{
 		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		val = max(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
 	}
 	
 	if(COORDS_SIZE % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = max(val, sharedBlock[coord.x + coord.y * imageSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	

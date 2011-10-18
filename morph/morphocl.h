@@ -93,7 +93,6 @@ public:
 
 private:
 	cl::Kernel kernelSubtract;
-	cl::Kernel kernelDiffPixels;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
@@ -118,14 +117,12 @@ private:
 
 	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
 	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
-		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage);
+		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage,
+		cl::Buffer* clAtomicCounter = nullptr);
 
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Image2D& clAImage, 
 		const cl::Image2D& clBImage, cl::Image2D& clDstImage);
-
-	cl_ulong executeDiffPixelsKernel(const cl::Image2D& clAImage,
-		const cl::Image2D& clBImage, const cl::Buffer& clAtomicCounter);
 };
 
 class MorphOpenCLBuffer : public MorphOpenCL
@@ -141,7 +138,6 @@ public:
 
 private:
 	cl::Kernel kernelSubtract;
-	cl::Kernel kernelDiffPixels;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
@@ -167,12 +163,10 @@ private:
 
 	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
 	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
-		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer);
+		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer,
+		cl::Buffer* clAtomicCounter = nullptr);
 
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Buffer& clABuffer,
 		const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer);
-
-	cl_ulong executeDiffPixelsKernel(const cl::Buffer& clABuffer,
-		const cl::Buffer& clBBuffer, const cl::Buffer& clAtomicCounter);
 };

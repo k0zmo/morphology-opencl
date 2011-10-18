@@ -1,4 +1,4 @@
-__constant uchar erodeINF = 255;
+__constant uint erodeINF = 255;
 
 __kernel void erode(
 	__read_only image2d_t src,

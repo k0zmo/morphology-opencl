@@ -1,16 +1,14 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
-__constant uchar erodeINF = 255;
+__constant uint erodeINF = 255;
 
 __kernel void erode(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uchar val = erodeINF;
+	uint val = erodeINF;
 	
 	for(int i = 0; i < seSize.z; ++i)
 	{
@@ -22,14 +20,14 @@ __kernel void erode(
 }
 
 __kernel void erode_c4(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uchar val = erodeINF;
+	uint val = erodeINF;
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
@@ -50,12 +48,12 @@ __kernel void erode_c4(
 }
 
 __kernel void erode_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -89,7 +87,7 @@ __kernel void erode_local(
 		return;
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = erodeINF;
 	for(int i = 0; i < seSize.z; ++i)
 	{
 		int2 coord = coords[i] + lid;
@@ -100,12 +98,12 @@ __kernel void erode_local(
 }
 
 __kernel void erode_c4_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global uint* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
@@ -139,7 +137,7 @@ __kernel void erode_c4_local(
 		return;
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = erodeINF;
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
@@ -161,12 +159,12 @@ __kernel void erode_c4_local(
 
 __kernel __attribute__((reqd_work_group_size(16,16,1))) 
 void erode4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global uint4* input,
+	__global uint* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -184,7 +182,7 @@ void erode4_local(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -207,7 +205,7 @@ void erode4_local(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;
+	uint val = erodeINF;
 
 	for(int i = 0; i < seSize.z; ++i)
 	{
@@ -220,12 +218,12 @@ void erode4_local(
 
 __kernel __attribute__((reqd_work_group_size(16,16,1))) 
 void erode4_c4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global uint4* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -243,7 +241,7 @@ void erode4_c4_local(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -266,7 +264,7 @@ void erode4_c4_local(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;	
+	uint val = erodeINF;	
 	int c2 = seSize.z >> 1;
 	
 	for(int i = 0; i < c2; ++i)
@@ -293,12 +291,12 @@ void erode4_c4_local(
 
 __kernel __attribute__((work_group_size_hint(16,16,1))) 
 void erode4_c4_local_def(
-	__global uchar4* input,
-	__global uchar* output,
+	__global uint4* input,
+	__global uint* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
@@ -316,7 +314,7 @@ void erode4_c4_local_def(
 	gid.x = groupStartId.x/4 + lid.x;
 	gid.y = groupStartId.y   + lid.y;
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
+	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -339,7 +337,7 @@ void erode4_c4_local_def(
 	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
-	uchar val = erodeINF;	
+	uint val = erodeINF;	
 	int c2 = COORDS_SIZE / 2;
 	
 	#pragma unroll

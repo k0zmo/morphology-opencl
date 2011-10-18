@@ -77,10 +77,10 @@ int main(int argc, char *argv[])
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 		fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 
-		for(int i = 0; i < 12; ++i)
+		for(int i = 0; i < 10; ++i)
 		{
 			cv::Mat dst, element = standardStructuringElement(radius, radius, SET_Ellipse);
-			EOperationType opType = OT_Dilate;
+			EOperationType opType = OT_Gradient;
 
 			int iters;
 			/*int coords_size =*/ ocl->setStructureElement(element);
@@ -93,8 +93,8 @@ int main(int argc, char *argv[])
 			fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
 
 			// Zapisz obraz wynikowy
-			//if(i == 9)
-			//cv::imshow("Test", dst);
+			if(i == 9)
+				cv::imshow("Test", dst);
 			//cv::imwrite("output.png", dst);
 		}
 	}

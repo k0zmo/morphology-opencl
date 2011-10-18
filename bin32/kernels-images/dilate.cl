@@ -1,4 +1,4 @@
-__constant uchar dilateINF = 0;
+__constant uint dilateINF = 0;
 
 __kernel void dilate(
 	__read_only image2d_t src,
