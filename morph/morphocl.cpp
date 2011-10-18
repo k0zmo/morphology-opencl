@@ -118,6 +118,22 @@ cl_ulong MorphOpenCL::elapsedEvent( const cl::Event& evt )
 	return (cl_ulong)(eventend - eventstart);
 }
 // -------------------------------------------------------------------------
+cl::Program MorphOpenCL::createProgram(const QString& progFile, 
+	const QString& options)
+{
+	QByteArray b = progFile.toAscii();
+	const char* pname = b.data();
+	const char* oname = nullptr;
+
+	if(!options.isEmpty())
+	{
+		QByteArray b1 = options.toAscii();
+		oname = b1.data();
+	}
+
+	return createProgram(pname, oname);
+}
+// -------------------------------------------------------------------------
 cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
 {
 	auto it = programs.find(progFile);
@@ -286,10 +302,7 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 	for(int i = 0; i < 8; ++i)
 	{
 		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-
-		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
+		kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
 	}
 
 	return true;
@@ -581,13 +594,25 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 {
 	MorphOpenCL::initOpenCL(dt);
 
-	cl::Program perode = createProgram("kernels-buffers/erode.cl");
-	cl::Program pdilate = createProgram("kernels-buffers/dilate.cl");
-	cl::Program pthinning = createProgram("kernels-buffers/thinning.cl");
-	cl::Program putils = createProgram("kernels-buffers/utils.cl");
-	cl::Program pskeleton = createProgram("kernels-buffers/skeleton.cl");
-
 	QSettings s("./settings.cfg", QSettings::IniFormat);
+
+	QString dir;
+	if(s.value("misc/datatype", "0").toInt() == 0)
+	{
+		dir = "kernels-buffers/";
+		useUint = false;
+	}
+	else
+	{
+		dir = "kernels-uint/";
+		useUint = true;
+	}
+
+	cl::Program perode = createProgram(dir + "erode.cl");
+	cl::Program pdilate = createProgram(dir + "dilate.cl");
+	cl::Program pthinning = createProgram(dir + "thinning.cl");
+	cl::Program putils = createProgram(dir + "utils.cl");
+	cl::Program pskeleton = createProgram(dir + "skeleton.cl");	
 
 	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
 	kernelDilate = createKernel(pdilate, s.value("kernel/dilate", "dilate").toString());
@@ -597,10 +622,7 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 	for(int i = 0; i < 8; ++i)
 	{
 		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		QByteArray kk = kernelName.toAscii();
-		const char* k = kk.data();
-
-		kernelSkeleton_iter[i] = createKernel(pskeleton, k);
+		kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
 	}
 
 	return true;
@@ -616,22 +638,32 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 		deviceWidth = roundUp(newSrc->cols, workGroupSizeX);
 
 	deviceHeight = newSrc->rows;
-	int bufferDeviceSize = deviceWidth * deviceHeight;// * sizeof(cl_int);
+	int bufferDeviceSize = deviceWidth * deviceHeight;
+	
+	if(useUint)
+		bufferDeviceSize *= sizeof(cl_uint);
 
 	clSrc = cl::Buffer(context, CL_MEM_READ_ONLY, bufferDeviceSize, nullptr, &err);
 	clError("Error while creating OpenCL source buffer", err);
 
-//  	uint* ptr = new uint[newSrc->cols * newSrc->rows];
-//  	const uchar* uptr = newSrc->ptr<uchar>();
-//  	for(int i = 0; i < newSrc->cols * newSrc->rows; ++i)
-//  		ptr[i] = (int)(uptr[i]);
+	void* srcptr = const_cast<uchar*>(newSrc->ptr<uchar>());
+	uint* ptr = nullptr;
+
+	if(useUint)
+	{
+		ptr = new uint[newSrc->cols * newSrc->rows];
+		const uchar* uptr = newSrc->ptr<uchar>();
+		for(int i = 0; i < newSrc->cols * newSrc->rows; ++i)
+			ptr[i] = (int)(uptr[i]);
+
+		srcptr = ptr;
+	}
 
 	if(readingMethod == RM_NotOptimized)
 	{
 		err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0, 
 			bufferDeviceSize, 
-			const_cast<uchar*>(newSrc->ptr<uchar>()));
-			//ptr);
+			srcptr);
 	}
 	else
 	{
@@ -648,15 +680,22 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 		size_t buffer_row_pitch = deviceWidth;
 		size_t host_row_pitch = newSrc->cols;
 
+		if(useUint)
+		{
+			region[0] *= sizeof(uint);
+
+			buffer_row_pitch *= sizeof(uint);
+			host_row_pitch *= sizeof(uint);
+		}
+
 		err = cq.enqueueWriteBufferRect(clSrc, CL_TRUE, 
 			origin, origin, region, 
 			buffer_row_pitch, 0, 
 			host_row_pitch, 0, 
-			const_cast<uchar*>(newSrc->ptr<uchar>()));
-			//ptr);
+			srcptr);
 	}
 
-	//delete [] ptr;
+	delete [] ptr;
 
 	clError("Error while writing new data to OpenCL source buffer!", err);
 	src = newSrc;
@@ -666,7 +705,10 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 {
 	int dstSizeX = src->cols;
 	int dstSizeY = src->rows;
-	size_t bufferDeviceSize = deviceWidth * deviceHeight;// * sizeof(cl_int);
+	size_t bufferDeviceSize = deviceWidth * deviceHeight;
+
+	if(useUint)
+		bufferDeviceSize *= sizeof(cl_uint);
 
 	// Bufor docelowy
 	cl_int err;
@@ -857,16 +899,11 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 		}
 	}
 
-#if 1
 	// Zczytaj wynik z karty
 	//dst.create(src->size(), CV_8U);
 	// Czasami zostaja smieci
 	dst = cv::Mat(src->size(), CV_8U, cv::Scalar(0));
 	cl::Event evt;
-
-// 	err = cq.enqueueReadBuffer(clDst, CL_FALSE, 0,
-// 		deviceBufferSize, dst.ptr<uchar>(),
-// 		nullptr, &evt);
 
 	cl::size_t<3> origin;
 	cl::size_t<3> region;
@@ -882,22 +919,49 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	size_t buffer_row_pitch = deviceWidth;
 	size_t host_row_pitch = src->cols;
 
-	err = cq.enqueueReadBufferRect(clDst, CL_FALSE, 
-		origin, origin, region, 
-		buffer_row_pitch, 0, 
-		host_row_pitch, 0, 
-		dst.ptr<uchar>(), nullptr, &evt);
+	if(useUint)
+	{
+		origin[0] *= sizeof(uint);
+		region[0] *= sizeof(uint);
 
-	clError("Error while reading result to buffer!", err);
-	evt.wait();
+		buffer_row_pitch *= sizeof(uint);
+		host_row_pitch *= sizeof(uint);
+
+		uint* dstTmp = new uint[src->size().area()];
+
+		err = cq.enqueueReadBufferRect(clDst, CL_FALSE, 
+			origin, origin, region, 
+			buffer_row_pitch, 0, 
+			host_row_pitch, 0, 
+			dstTmp, nullptr, &evt);
+
+		clError("Error while reading result to buffer!", err);
+		evt.wait();
+
+		uchar* dptr = dst.ptr<uchar>();
+		for(int i = 0; i < dst.cols * dst.rows; ++i)
+			//dptr[i] = cv::saturate_cast<uchar>(dstTmp[i]);
+			dptr[i] = static_cast<uchar>(dstTmp[i]);
+
+		delete [] dstTmp;
+	}
+	else
+	{
+		err = cq.enqueueReadBufferRect(clDst, CL_FALSE, 
+			origin, origin, region, 
+			buffer_row_pitch, 0, 
+			host_row_pitch, 0, 
+			dst.ptr<uchar>(), nullptr, &evt);
+
+		clError("Error while reading result to buffer!", err);
+		evt.wait();
+	}
 
 	// Ile czasu zajelo zczytanie danych z powrotem
-	elapsed += elapsedEvent(evt);
+	//elapsed += elapsedEvent(evt);
+
 	// Ile czasu wszystko zajelo
 	return elapsed * 0.000001;
-#else
-	return 0;
-#endif
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 

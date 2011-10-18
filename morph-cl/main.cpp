@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 		for(int i = 0; i < 10; ++i)
 		{
 			cv::Mat dst, element = standardStructuringElement(radius, radius, SET_Ellipse);
-			EOperationType opType = OT_Gradient;
+			EOperationType opType = OT_Dilate;
 
 			int iters;
 			/*int coords_size =*/ ocl->setStructureElement(element);
@@ -93,8 +93,8 @@ int main(int argc, char *argv[])
 			fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
 
 			// Zapisz obraz wynikowy
-			if(i == 9)
-				cv::imshow("Test", dst);
+			//if(i == 9)
+			//	cv::imshow("Test", dst);
 			//cv::imwrite("output.png", dst);
 		}
 	}

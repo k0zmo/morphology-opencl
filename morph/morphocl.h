@@ -66,6 +66,9 @@ protected:
 	cl::Program createProgram(const char* progFile, 
 		const char* options = nullptr);
 
+	cl::Program createProgram(const QString& progFile, 
+		const QString& options = "");
+
 	// Zeruje wskazany licznik atomowy
 	cl_ulong zeroAtomicCounter(const cl::Buffer& clAtomicCounter);
 
@@ -154,7 +157,9 @@ private:
 
 	// Tymczasowe bufory (ping-pong)
 	cl::Buffer clTmp;
-	cl::Buffer clTmp2;	
+	cl::Buffer clTmp2;
+
+	bool useUint;
 
 private:
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
