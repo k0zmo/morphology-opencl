@@ -501,9 +501,10 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 
 	dst.create(src->size(), CV_8U);
 	cl::Event evt;
-	cq.enqueueReadImage(clDstImage, CL_FALSE, origin,
+	err = cq.enqueueReadImage(clDstImage, CL_FALSE, origin,
 		region, 0, 0, dst.ptr<uchar>(),
 		nullptr, &evt);
+	clError("Error while reading result to image buffer!", err);
 	evt.wait();
 
 	// Ile czasu zajelo zczytanie danych z powrotem
