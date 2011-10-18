@@ -619,10 +619,23 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 	kernelThinning = createKernel(pthinning, s.value("kernel/thinning", "thinning").toString());
 	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
 
+	QString sub = s.value("kernel/subtract", "subtract").toString();
+	if(sub.endsWith("4")) sub4 = true;
+	else sub4 = false;
+	int local = s.value("kernel/local", "0").toInt();
+
 	for(int i = 0; i < 8; ++i)
 	{
-		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		if(local == 0)
+		{
+			QString kernelName = "skeleton_iter" + QString::number(i+1);
+			kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		}
+		else
+		{
+			QString kernelName = "skeleton4_iter" + QString::number(i+1) + "_local";
+			kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		}
 	}
 
 	return true;
@@ -901,6 +914,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 
 	// Zczytaj wynik z karty
 	//dst.create(src->size(), CV_8U);
+
 	// Czasami zostaja smieci
 	dst = cv::Mat(src->size(), CV_8U, cv::Scalar(0));
 	cl::Event evt;
@@ -998,19 +1012,12 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		int globalItemsX = roundUp(src->cols - apronX, workGroupSizeX);
 		int globalItemsY = roundUp(src->rows - apronY, workGroupSizeX);	
 
-		cl_int2 sharedSize;
-		if(readingMethod != RM_Read4)
-		{
-			sharedSize.s[0] = workGroupSizeX + apronX;
-			sharedSize.s[1] = workGroupSizeY + apronY;
-		}
-		else
-		{
-			sharedSize.s[0] = roundUp(workGroupSizeX + apronX, 4);
-			sharedSize.s[1] = workGroupSizeY + apronY;
-		}
-
+		cl_int2 sharedSize = {
+			roundUp(workGroupSizeX + apronX, 4),
+			workGroupSizeY + apronY
+		};
 		size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
+		if(useUint) sharedBlockSize *= sizeof(cl_uint);
 
 		// Ustaw argumenty kernela
 		err  = kernel->setArg(0, clSrcBuffer);
@@ -1065,7 +1072,7 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	else
 	{
 		cl_int2 imageSize = { deviceWidth, deviceHeight };
-		int lsize = 16;
+		const int lsize = 16;
 
 		// Ustaw argumenty kernela
 		err  = kernel->setArg(0, clSrcBuffer);
@@ -1103,10 +1110,13 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	err |= kernelSubtract.setArg(2, clDstBuffer);
 	clError("Error while setting kernel arguments", err);
 
+	int xitems = deviceWidth;
+	if(sub4) xitems /= 4;
+
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(kernelSubtract,
 		cl::NullRange,
-		cl::NDRange(deviceWidth * deviceHeight),
+		cl::NDRange(xitems * deviceHeight),
 		cl::NullRange, 
 		nullptr, &evt);
 

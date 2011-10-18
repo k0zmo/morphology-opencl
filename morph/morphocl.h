@@ -49,8 +49,7 @@ protected:
 	enum EReadingMethod
 	{
 		RM_NotOptimized,
-		RM_ReadAligned,
-		RM_Read4
+		RM_ReadAligned
 	};
 	EReadingMethod readingMethod;
 	bool local;
@@ -160,6 +159,7 @@ private:
 	cl::Buffer clTmp2;
 
 	bool useUint;
+	bool sub4;
 
 private:
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
