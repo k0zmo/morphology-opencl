@@ -286,6 +286,30 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 {
 	MorphOpenCL::initOpenCL(dt);
 
+	std::vector<cl::ImageFormat> imageFormats;
+	context.getSupportedImageFormats(CL_MEM_READ_WRITE,
+		CL_MEM_OBJECT_IMAGE2D, &imageFormats);
+
+	bool found = false;
+	for(auto i = imageFormats.cbegin(), 
+		ie = imageFormats.cend(); i != ie; ++i)
+	{
+		if (i->image_channel_data_type == CL_UNSIGNED_INT8 &&
+			i->image_channel_order == CL_R)
+		{
+			found = true;
+			break;
+		}
+	}
+
+	if(!found)
+	{
+		clError("Required image format (CL_R, CL_UNSIGNED8) not supported!",
+			CL_IMAGE_FORMAT_NOT_SUPPORTED);
+	}
+	imageFormat.image_channel_order = CL_R;
+	imageFormat.image_channel_data_type = CL_UNSIGNED_INT8;
+
 	cl::Program perode = createProgram("kernels-images/erode.cl");
 	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
 	cl::Program pthinning = createProgram("kernels-images/thinning.cl");
@@ -313,8 +337,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 	cl_int err;
 
 	clSrcImage = cl::Image2D(context,
-		CL_MEM_READ_ONLY,
-		cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+		CL_MEM_READ_ONLY, imageFormat,
 		newSrc->cols, newSrc->rows, 0, 
 		nullptr, &err);
 	clError("Error while creating OpenCL source image!", err);
@@ -340,8 +363,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	// Obraz docelowy
 	cl_int err;
 	clDstImage = cl::Image2D(context,
-		CL_MEM_WRITE_ONLY, 
-		cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+		CL_MEM_WRITE_ONLY, imageFormat,
 		src->cols, src->rows, 0, nullptr, &err); 
 	clError("Error while creating destination OpenCL image2D", err);
 
@@ -386,8 +408,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 		{
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 			clTmpImage = cl::Image2D(context,
-				CL_MEM_READ_WRITE, 
-				cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+				CL_MEM_READ_WRITE, imageFormat,
 				src->cols, src->rows, 0, nullptr, &err); 
 			clError("Error while creating temporary OpenCL image2D", err);
 
@@ -451,8 +472,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 			{
 				// Potrzebowac bedziemy jeszcze jednego dodatkowego bufora tymczasowego
 				clTmp2Image = cl::Image2D(context,
-					CL_MEM_READ_WRITE, 
-					cl::ImageFormat(CL_R, CL_UNSIGNED_INT8),
+					CL_MEM_READ_WRITE, imageFormat,
 					src->cols, src->rows, 0, nullptr, &err); 
 				clError("Error while creating temporary OpenCL image2D", err);
 

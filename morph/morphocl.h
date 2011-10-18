@@ -112,6 +112,8 @@ private:
 	cl::Image2D clTmpImage;
 	cl::Image2D clTmp2Image;
 
+	cl::ImageFormat imageFormat;
+
 private:
 	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
 	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
