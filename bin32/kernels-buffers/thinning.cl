@@ -28,7 +28,7 @@ __kernel void thinning(
 #define WORK_GROUP_SIZE 16
 #define SHARED_SIZE WORK_GROUP_SIZE+2
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE,WORK_GROUP_SIZE,1)))
+__kernel __attribute__((reqd_work_group_size(16,16,1)))
 void thinning_local(
 	__global uchar* input,
 	__global uchar* output,
@@ -38,6 +38,7 @@ void thinning_local(
 	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
 	
+	// doesn't work
 #if 0
 	__local uchar sharedBlock[SHARED_SIZE * SHARED_SIZE];
 	
@@ -175,7 +176,7 @@ void thinning_local(
 #define SHARED_SIZEX 20
 #define SHARED_SIZEY 18
 
-__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE,WORK_GROUP_SIZE,1)))
+__kernel __attribute__((reqd_work_group_size(16,16,1)))
 void thinning4_local(
 	__global uchar4* input,
 	__global uchar* output,

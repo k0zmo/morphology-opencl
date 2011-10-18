@@ -153,7 +153,7 @@ __kernel void erode_c4_local(
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
@@ -280,7 +280,7 @@ void erode4_c4_local(
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
@@ -354,7 +354,7 @@ void erode4_c4_local_def(
 	{
 		__constant int2* c = (__constant int2*)(coords);
 		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * imageSize.x]);
+		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
