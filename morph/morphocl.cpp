@@ -21,6 +21,7 @@ errorCallback(nullptr)
 {
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 
+	// Wczytaj opcje z pliku konfiguracyjnego
 	workGroupSizeX = settings.value("misc/workgroupsizex", 16).toInt();
 	workGroupSizeY = settings.value("misc/workgroupsizey", 16).toInt();
 	readingMethod = static_cast<EReadingMethod>(
@@ -71,6 +72,8 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 	kradiusx = (selement.cols - 1) / 2;
 	kradiusy = (selement.rows - 1) / 2;
 
+	// Dla implementacji z wykorzystaniem obrazow musimy przesunac uklad wspolrzednych
+	// elementu strukturalnego
 	bool shiftCoords = (dynamic_cast<MorphOpenCLImage*>(this)) != nullptr;
 
 	// Przetworz wstepnie element strukturalny
@@ -111,7 +114,7 @@ void MorphOpenCL::clError(const QString& message, cl_int err)
 		errorCallback(message, err);
 }
 // -------------------------------------------------------------------------
-cl_ulong MorphOpenCL::elapsedEvent( const cl::Event& evt )
+cl_ulong MorphOpenCL::elapsedEvent(const cl::Event& evt)
 {
 	cl_ulong eventstart = evt.getProfilingInfo<CL_PROFILING_COMMAND_START>();
 	cl_ulong eventend = evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
@@ -182,6 +185,8 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
 {
+	// Zapisuje wartosc 0 do wskazanego bufora
+	// (moze to byc zwykly bufor lub licznik atomowy)
 	static cl_uint d_init = 0;
 	cl::Event evt;
 	cl_int err= cq.enqueueWriteBuffer(clAtomicCounter, CL_FALSE,
@@ -194,6 +199,8 @@ cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
 cl_ulong MorphOpenCL::readAtomicCounter(cl_uint& v, 
 	const cl::Buffer& clAtomicCounter)
 {
+	// Odczytuje pojedyncza wartosc ze wskazanego bufora
+	// (moze to byc zwykly bufor lub licznik atomowy)
 	cl::Event evt;
 	cl_int err = cq.enqueueReadBuffer(clAtomicCounter, CL_FALSE,
 		0, sizeof(cl_uint), &v, nullptr, &evt);
@@ -286,16 +293,21 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 {
 	MorphOpenCL::initOpenCL(dt);
 
+	// Pobierz obslugiwane formaty obrazow
 	std::vector<cl::ImageFormat> imageFormats;
 	context.getSupportedImageFormats(CL_MEM_READ_WRITE,
 		CL_MEM_OBJECT_IMAGE2D, &imageFormats);
 
+	// Sprawdz czy ten co chcemy jest obslugiwany
 	bool found = false;
+	imageFormat.image_channel_data_type = CL_UNSIGNED_INT8;
+	imageFormat.image_channel_order = CL_R;
+
 	for(auto i = imageFormats.cbegin(), 
 		ie = imageFormats.cend(); i != ie; ++i)
 	{
-		if (i->image_channel_data_type == CL_UNSIGNED_INT8 &&
-			i->image_channel_order == CL_R)
+		if (i->image_channel_data_type == imageFormat.image_channel_data_type &&
+			i->image_channel_order == imageFormat.image_channel_order)
 		{
 			found = true;
 			break;
@@ -307,9 +319,8 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 		clError("Required image format (CL_R, CL_UNSIGNED8) not supported!",
 			CL_IMAGE_FORMAT_NOT_SUPPORTED);
 	}
-	imageFormat.image_channel_order = CL_R;
-	imageFormat.image_channel_data_type = CL_UNSIGNED_INT8;
 
+	// Wczytaj programy
 	cl::Program perode = createProgram("kernels-images/erode.cl");
 	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
 	cl::Program pthinning = createProgram("kernels-images/thinning.cl");
@@ -318,6 +329,7 @@ bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 
+	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
 	kernelDilate = createKernel(pdilate, s.value("kernel/dilate", "dilate").toString());
 	kernelThinning = createKernel(pthinning, s.value("kernel/thinning", "thinning").toString());
@@ -336,6 +348,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 {
 	cl_int err;
 
+	// Zaladuj obraz zrodlowy do karty
 	clSrcImage = cl::Image2D(context,
 		CL_MEM_READ_ONLY, imageFormat,
 		newSrc->cols, newSrc->rows, 0, 
@@ -382,6 +395,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	}
 	else
 	{
+		// Kopiuje caly obraz, zwraca czas operacji
 		auto copyImage = [this](const cl::Image2D& s, cl::Image2D& d,
 			cl::Event evt) -> cl_ulong
 		{
@@ -402,6 +416,8 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;
 			elapsed += copyImage(clSrcImage, clDstImage, evt);
+
+			// Wykonaj operacje hitmiss
 			elapsed += executeHitMissKernel(&kernelThinning, clSrcImage, clDstImage);
 		}
 		else
@@ -431,12 +447,12 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 			{
 				iters = 0;
 
-				// Skopiuj obraz zrodlowy do docelowego
+				// Skopiuj obraz zrodlowy do docelowego i tymczasowego
 				cl::Event evt;	
 				elapsed += copyImage(clSrcImage, clTmpImage, evt);
 				elapsed += copyImage(clSrcImage, clDstImage, evt);
 
-				// Licznik atomowy
+				// Licznik atomowy (ew. zwyczajny bufor)
 				cl_int err;
 				cl_uint d_init = 0;
 				cl::Buffer clAtomicCnt(context, 
@@ -448,6 +464,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 				{
 					iters++;
 
+					// 8 operacji hit miss, 2 elementy strukturalnego, 4 orientacje
 					for(int i = 0; i < 8; ++i)
 					{
 						elapsed += executeHitMissKernel(&kernelSkeleton_iter[i],
@@ -457,6 +474,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 						elapsed += copyImage(clDstImage, clTmpImage, evt);
 					}
 
+					// Sprawdz ile pikseli zostalo zmodyfikowanych
 					cl_uint diff;
 					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
@@ -502,6 +520,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 				}
 				else
 				{
+					// Nieznana operacja - do tego miejsca nie powinnismy nigdy dojsc
 					iters = 0;
 					dst.create(src->size(), CV_8U);
 					return 0.0;		
@@ -510,10 +529,11 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 		}
 	}
 	
-	// Zczytaj wynik
+	// Zczytaj wynik z karty
 	cl::size_t<3> origin;
 	origin[0] = origin[1] = origin[2] = 0;
 
+	// Chcemy caly obszar
 	cl::size_t<3> region;
 	region[0] = src->cols; 
 	region[1] = src->rows;
@@ -529,6 +549,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 
 	// Ile czasu zajelo zczytanie danych z powrotem
 	elapsed += elapsedEvent(evt);
+
 	// Ile czasu wszystko zajelo
 	return elapsed * 0.000001;
 }
@@ -544,14 +565,20 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 
+	//cl::NDRange offset(kradiusx, kradiusy);
+	//cl::NDRange gridDim(src->cols - 2*kradiusx, src->rows - 2*kradiusy);
+
+	cl::NDRange offset(0, 0);
+	cl::NDRange gridDim(src->cols, src->rows);
+
 	// Odpal kernela
 	cl::Event evt;	
-	cq.enqueueNDRangeKernel(*kernel,
-		cl::NullRange,
-		cl::NDRange(src->cols, src->rows),
+	err |= cq.enqueueNDRangeKernel(*kernel,
+		offset, gridDim,
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
@@ -570,11 +597,13 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 
 	clError("Error while setting kernel arguments", err);
 
+	cl::NDRange offset(1, 1);
+	cl::NDRange gridDim(src->cols - 2, src->rows - 2);
+
 	// Odpal kernela
 	cl::Event evt;
 	err |= cq.enqueueNDRangeKernel(*kernel,
-		cl::NDRange(1, 1),
-		cl::NDRange(src->cols - 2, src->rows - 2),
+		offset, gridDim,
 		cl::NullRange,
 		nullptr, &evt);
 	evt.wait();
@@ -596,12 +625,13 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 
 	// Odpal kernela
 	cl::Event evt;	
-	cq.enqueueNDRangeKernel(kernelSubtract,
+	err |= cq.enqueueNDRangeKernel(kernelSubtract,
 		cl::NullRange,
 		cl::NDRange(src->cols, src->rows),
 		cl::NullRange, 
 		nullptr, &evt);
 	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
 
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
@@ -617,6 +647,7 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 
+	// Typ danych (uchar czy uint)
 	QString dir;
 	if(s.value("misc/datatype", "0").toInt() == 0)
 	{
@@ -629,22 +660,25 @@ bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
 		useUint = true;
 	}
 
+	// Wczytaj programy
 	cl::Program perode = createProgram(dir + "erode.cl");
 	cl::Program pdilate = createProgram(dir + "dilate.cl");
 	cl::Program pthinning = createProgram(dir + "thinning.cl");
 	cl::Program putils = createProgram(dir + "utils.cl");
 	cl::Program pskeleton = createProgram(dir + "skeleton.cl");	
 
+	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
 	kernelDilate = createKernel(pdilate, s.value("kernel/dilate", "dilate").toString());
 	kernelThinning = createKernel(pthinning, s.value("kernel/thinning", "thinning").toString());
 	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
 
+	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
 	QString sub = s.value("kernel/subtract", "subtract").toString();
 	if(sub.endsWith("4")) sub4 = true;
 	else sub4 = false;
-	int local = s.value("kernel/local", "0").toInt();
 
+	int local = s.value("kernel/local", "0").toInt();
 	for(int i = 0; i < 8; ++i)
 	{
 		if(local == 0)
@@ -666,11 +700,13 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 {
 	cl_int err;
 
+	// Czy chcemy aby bufor mial wyrownane wiersze danych do rozmiary grupy roboczej
 	if(readingMethod == RM_NotOptimized)
 		deviceWidth = newSrc->cols;
 	else
 		deviceWidth = roundUp(newSrc->cols, workGroupSizeX);
 
+	// Rozmiar bufora
 	deviceHeight = newSrc->rows;
 	int bufferDeviceSize = deviceWidth * deviceHeight;
 	
@@ -683,6 +719,7 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 	void* srcptr = const_cast<uchar*>(newSrc->ptr<uchar>());
 	uint* ptr = nullptr;
 
+	// Konwersja uchar -> uint
 	if(useUint)
 	{
 		ptr = new uint[newSrc->cols * newSrc->rows];
@@ -693,12 +730,14 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 		srcptr = ptr;
 	}
 
+	// Skopiuj dane 1:1
 	if(readingMethod == RM_NotOptimized)
 	{
 		err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0, 
 			bufferDeviceSize, 
 			srcptr);
 	}
+	// Skopiuj dane tak by byly odpowiednio wyrownane
 	else
 	{
 		cl::size_t<3> origin;
@@ -788,6 +827,8 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 			// Skopiuj obraz zrodlowy do docelowego
 			cl::Event evt;
 			elapsed += copyBuffer(clSrc, clDst, evt);
+
+			// Wykonaj operacje hitmiss
 			elapsed += executeHitMissKernel(&kernelThinning, clSrc, clDst);
 			dstSizeX -= 2;
 			dstSizeY -= 2;
@@ -833,12 +874,12 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 				{
 					iters = 0;
 
-					// Skopiuj obraz zrodlowy do docelowego
+					// Skopiuj obraz zrodlowy do docelowego i tymczasowego
 					cl::Event evt;	
 					elapsed += copyBuffer(clSrc, clTmp, evt);
 					elapsed += copyBuffer(clSrc, clDst, evt);				
 
-					// Licznik atomowy
+					// Licznik atomowy (ew. zwyczajny bufor)
 					cl_uint d_init = 0;
 					cl::Buffer clAtomicCnt(context, 
 						CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
@@ -849,6 +890,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 					{
 						iters++;
 
+						// 8 operacji hit miss, 2 elementy strukturalnego, 4 orientacje
 						for(int i = 0; i < 8; ++i)
 						{
 							elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], 
@@ -858,9 +900,8 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 							elapsed += copyBuffer(clDst, clTmp, evt);
 						}
 
+						// Sprawdz ile pikseli zostalo zmodyfikowanych
 						cl_uint diff;
-
-						// Odczytaj wartoœæ z atomowego licznika
 						elapsed += readAtomicCounter(diff, clAtomicCnt);
 
 						// Sprawdz warunek stopu
@@ -925,6 +966,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 				}
 				else
 				{
+					// Nieznana operacja - do tego miejsca nie powinnismy nigdy dojsc
 					iters = 0;
 					dst.create(src->size(), CV_8U);
 					return 0.0;				
@@ -956,12 +998,14 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 
 	if(useUint)
 	{
+		// Musimy wczytac wiecej danych
 		origin[0] *= sizeof(uint);
 		region[0] *= sizeof(uint);
 
 		buffer_row_pitch *= sizeof(uint);
 		host_row_pitch *= sizeof(uint);
 
+		// .. do tymczasowego bufora uint'ow
 		uint* dstTmp = new uint[src->size().area()];
 
 		err = cq.enqueueReadBufferRect(clDst, CL_FALSE, 
@@ -973,6 +1017,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 		clError("Error while reading result to buffer!", err);
 		evt.wait();
 
+		// .. a nastepnie zrzutowac do uchar'ow
 		uchar* dptr = dst.ptr<uchar>();
 		for(int i = 0; i < dst.cols * dst.rows; ++i)
 			//dptr[i] = cv::saturate_cast<uchar>(dstTmp[i]);
@@ -993,7 +1038,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	}
 
 	// Ile czasu zajelo zczytanie danych z powrotem
-	//elapsed += elapsedEvent(evt);
+	elapsed += elapsedEvent(evt);
 
 	// Ile czasu wszystko zajelo
 	return elapsed * 0.000001;
@@ -1005,7 +1050,7 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	cl::Event evt;
 	cl_int err;
 
-	cl_int4 seSize = { kradiusx, kradiusy, csize, 0 };
+	cl_int4 seSize = { kradiusx, kradiusy, (int)(csize), 0 };
 	cl_int2 imageSize = { deviceWidth, deviceHeight };
 
 	if(!local)

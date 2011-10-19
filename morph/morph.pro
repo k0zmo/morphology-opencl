@@ -20,10 +20,12 @@ HEADERS  += mainwindow.h \
 	morphop.h \
 	precompiled.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+	sepreview.ui
 
 PRECOMPILED_HEADER = precompiled.h
 
 # For gcc only
 QMAKE_CXXFLAGS += -std=c++0x
 LIBS += -lopencv_core -lopencv_imgproc -lOpenCL
+LIBS += -L$(AMDAPPSDKROOT)/lib/x86_64
