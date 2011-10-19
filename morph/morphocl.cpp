@@ -14,10 +14,10 @@ int roundUp(int value, int multiple)
 // MorphOpenCL
 
 MorphOpenCL::MorphOpenCL()
-: src(nullptr), 
+: errorCallback(nullptr),
+src(nullptr),
 kradiusx(0),
-kradiusy(0),
-errorCallback(nullptr)
+kradiusy(0)
 {
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 
@@ -96,7 +96,7 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 			coords.push_back(c);
 		}
 	}
-	csize = coords.size();
+	csize = static_cast<int>(coords.size());
 
 	// Zaladuj dane do bufora
 	cl_int err;

@@ -37,7 +37,7 @@ protected:
 	// Bufor ze wspolrzednymi elementu strukturalnego
 	cl::Buffer clSeCoords;
 	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
-	size_t csize;
+	int csize;
 
 	const cv::Mat* src;
 	int kradiusx, kradiusy;

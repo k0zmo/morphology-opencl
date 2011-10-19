@@ -107,7 +107,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 			return dst;
 		};
 
-		int s = 2 * qMax(element.rows, element.cols);
+		int s = 2 * std::max(element.rows, element.cols);
 		int b = s/4;
 
 		cv::Mat tmp(cv::Size(s, s), CV_8U, cv::Scalar(0));
