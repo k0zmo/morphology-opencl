@@ -93,8 +93,6 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		element = structuringElementDiamond(std::min(anchor.x, anchor.y));
 	}
 
-	(void)(rotation);
-/*
 	// Rotacja elementu strukturalnego
 	if(rotation != 0)
 	{
@@ -115,8 +113,67 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		cv::Mat tmp(cv::Size(s, s), CV_8U, cv::Scalar(0));
 		cv::copyMakeBorder(element, tmp, b,b,b,b, cv::BORDER_CONSTANT);
 		element = rotateImage(tmp, rotation);
+
+		// Trzeba teraz wyciac niepotrzebny nadmiar pikseli ramkowych
+		int top = 0, 
+			bottom = element.rows, 
+			left = 0,
+			right = element.cols;
+
+		// Zwraca true jesli wskazany wiersz w danej macierzy nie jest "pusty" (nie ma samych 0)
+		auto checkRow = [](int row, const cv::Mat& e) -> bool
+		{
+			const uchar* p = e.ptr<uchar>(row);
+			for(int x = 0; x < e.cols; ++x)
+				if(p[x] != 0)
+					return true;
+			return false;
+		};
+
+		// Zwraca true jesli wskazana kolumna w danej macierzy nie jest "pusta" (nie ma samych 0)
+		auto checkColumn = [](int column, const cv::Mat& e) -> bool
+		{
+			for(int y = 0; y < e.rows; ++y)
+				if(e.at<uchar>(y, column) != 0)
+					return true;
+			return false;
+		};
+
+		// Kadruj gore
+		for(int y = 0; y < element.rows; ++y)
+		{
+			if (checkRow(y, element))
+				break;
+			++top;
+		}
+
+		// Kadruj dol
+		for(int y = element.rows-1; y >= 0; --y)
+		{
+			if (checkRow(y, element))
+				break;
+			--bottom;
+		}
+
+		// Kadruj lewa strone
+		for(int x = 0; x < element.cols; ++x)
+		{
+			if (checkColumn(x, element))
+				break;
+			++left;
+		}
+
+		// Kadruj prawa strone
+		for(int x = element.cols-1; x >= 0; --x)
+		{
+			if (checkColumn(x, element))
+				break;
+			--right;
+		}
+
+		element = element(cv::Rect(left, top, right-left, bottom-top));
 	}
-*/
+
 	return element;
 }
 // -------------------------------------------------------------------------
