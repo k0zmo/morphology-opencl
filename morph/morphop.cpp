@@ -485,7 +485,7 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 
 		d += _morphologySkeleton_iter8(src, dst);
 		
-		printf("%3d) %d\n", niters, d);
+		//printf("%3d) %d\n", niters, d);
 
 		if(d == 0)
 			break;
