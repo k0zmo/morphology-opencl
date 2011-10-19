@@ -70,6 +70,10 @@ int main(int argc, char *argv[])
 	fout << "workgroupsizey: " << settings.value("misc/workgroupsizey", 0).toInt() << endl;
 	fout << "readingmethod: " << settings.value("misc/readingmethod", 0).toInt() << endl;
 	fout << "kernel: " << settings.value("kernel/dilate", "").toString() << endl;
+	
+	cv::Mat dst, element = standardStructuringElement(radius, radius, SET_Ellipse);
+	EOperationType opType = OT_Thinning;
+	/*int coords_size =*/ ocl->setStructureElement(element);
 
 	//for(int radius = 1; radius <= 35; ++radius)
 	{
@@ -79,11 +83,7 @@ int main(int argc, char *argv[])
 
 		for(int i = 0; i < 10; ++i)
 		{
-			cv::Mat dst, element = standardStructuringElement(radius, radius, SET_Ellipse);
-			EOperationType opType = OT_Thinning;
-
 			int iters;
-			/*int coords_size =*/ ocl->setStructureElement(element);
 
 			// "Rozgrzej karte" - pierwsze 2-3 iteracje beda wolniejsze
 			double delapsed = ocl->morphology(opType, dst, iters);
@@ -91,13 +91,12 @@ int main(int argc, char *argv[])
 			// Wyswietl statystyki
 			qout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
 			fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
-
-			// Zapisz obraz wynikowy
-			if(i == 9)
-				cv::imshow("Test", dst);
-			//cv::imwrite("output.png", dst);
 		}
 	}
+	
+	// Pokaz/Zapisz obraz wynikowy
+	cv::imshow("Test", dst);
+	//cv::imwrite("output.png", dst);
 
 	return app.exec();
 }
