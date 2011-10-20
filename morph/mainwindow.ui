@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>259</width>
-    <height>722</height>
+    <width>273</width>
+    <height>819</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -83,7 +83,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0" colspan="2">
+           <item row="3" column="0" colspan="2">
             <widget class="Line" name="line">
              <property name="frameShadow">
               <enum>QFrame::Sunken</enum>
@@ -99,66 +99,93 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0" colspan="2">
+           <item row="10" column="0" colspan="2">
             <widget class="QRadioButton" name="rbErode">
              <property name="text">
               <string>Erode</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0" colspan="2">
+           <item row="11" column="0" colspan="2">
             <widget class="QRadioButton" name="rbDilate">
              <property name="text">
               <string>Dilate</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="0" colspan="2">
+           <item row="12" column="0" colspan="2">
             <widget class="QRadioButton" name="rbOpen">
              <property name="text">
               <string>Open</string>
              </property>
             </widget>
            </item>
-           <item row="6" column="0" colspan="2">
+           <item row="13" column="0" colspan="2">
             <widget class="QRadioButton" name="rbClose">
              <property name="text">
               <string>Close</string>
              </property>
             </widget>
            </item>
-           <item row="8" column="0" colspan="2">
+           <item row="15" column="0" colspan="2">
             <widget class="QRadioButton" name="rbTopHat">
              <property name="text">
               <string>Top Hat</string>
              </property>
             </widget>
            </item>
-           <item row="10" column="0" colspan="2">
+           <item row="17" column="0" colspan="2">
             <widget class="QRadioButton" name="rbBlackHat">
              <property name="text">
               <string>Black Hat</string>
              </property>
             </widget>
            </item>
-           <item row="13" column="0" colspan="2">
+           <item row="20" column="0" colspan="2">
             <widget class="QRadioButton" name="rbSkeleton">
              <property name="text">
               <string>Skeleton</string>
              </property>
             </widget>
            </item>
-           <item row="12" column="0" colspan="2">
+           <item row="19" column="0" colspan="2">
             <widget class="QRadioButton" name="rbThinning">
              <property name="text">
               <string>Thinning</string>
              </property>
             </widget>
            </item>
-           <item row="11" column="0">
+           <item row="18" column="0">
             <widget class="QRadioButton" name="rbGradient">
              <property name="text">
               <string>Morphological gradient</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0" colspan="2">
+            <widget class="QPushButton" name="pbRun">
+             <property name="text">
+              <string>Run</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0" colspan="2">
+            <widget class="QCheckBox" name="cbAutoTrigger">
+             <property name="text">
+              <string>Run on every change</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="0" colspan="2">
+            <widget class="Line" name="line_2">
+             <property name="lineWidth">
+              <number>1</number>
+             </property>
+             <property name="midLineWidth">
+              <number>1</number>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
              </property>
             </widget>
            </item>
@@ -426,7 +453,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>259</width>
+     <width>273</width>
      <height>21</height>
     </rect>
    </property>

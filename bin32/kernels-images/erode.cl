@@ -57,7 +57,7 @@ __kernel void erode_c4(
 }
 
 #ifndef COORDS_SIZE
-#define COORDS_SIZE 3
+#define COORDS_SIZE 169
 #endif
 
 __kernel void erode_c4_def(

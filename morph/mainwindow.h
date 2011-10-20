@@ -58,6 +58,7 @@ private slots:
 	void openCLTriggered(bool state);
 
 	void invertChanged(int state);
+	void noneOperationToggled(bool checked);
 	void operationToggled(bool checked);
 	void structureElementToggled(bool checked);
 	void structureElementPreview();
@@ -67,4 +68,7 @@ private slots:
 	void elementSizeYChanged(int value);
 	void rotationChanged(int value);
 	void rotationResetPressed();
+
+	void runPressed();
+	void autoRunChanged(int state);
 };

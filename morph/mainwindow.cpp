@@ -31,7 +31,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.cbInvert, SIGNAL(stateChanged(int)), this, SLOT(invertChanged(int)));
 
 	// Operacje
-	connect(ui.rbNone, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
+	connect(ui.rbNone, SIGNAL(toggled(bool)), this, SLOT(noneOperationToggled(bool)));
 	connect(ui.rbErode, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbDilate, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbOpen, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
@@ -56,6 +56,9 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.hsYElementSize, SIGNAL(valueChanged(int)), this, SLOT(elementSizeYChanged(int)));
 	connect(ui.dialRotation, SIGNAL(valueChanged(int)), this, SLOT(rotationChanged(int)));
 	connect(ui.pbResetRotation, SIGNAL(pressed()), this, SLOT(rotationResetPressed()));
+
+	connect(ui.cbAutoTrigger, SIGNAL(stateChanged(int)), this, SLOT(autoRunChanged(int)));
+	connect(ui.pbRun, SIGNAL(pressed()), this, SLOT(runPressed()));
 
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 
@@ -110,7 +113,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 // -------------------------------------------------------------------------
 MainWindow::~MainWindow()
 {
-
 }
 
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
@@ -167,6 +169,19 @@ void MainWindow::invertChanged(int state)
 	refresh();
 }
 // -------------------------------------------------------------------------
+void MainWindow::noneOperationToggled(bool checked)
+{
+	if(checked)
+	{
+		refresh();
+		ui.pbRun->setEnabled(false);
+	}
+	else
+	{
+		ui.pbRun->setEnabled(true);
+	}
+}
+// -------------------------------------------------------------------------
 void MainWindow::operationToggled(bool checked)
 {
 	// Warunek musi byc spelniony bo sa zglaszane 2 zdarzenia
@@ -174,7 +189,8 @@ void MainWindow::operationToggled(bool checked)
 	// 2 - zaznaczony radiobutton zmienil stan z nieaktywnego na aktywny
 	if(checked)
 	{
-		refresh();
+		if(ui.cbAutoTrigger->isChecked())
+			refresh();
 	}
 }
 // -------------------------------------------------------------------------
@@ -182,7 +198,7 @@ void MainWindow::structureElementToggled(bool checked)
 {
 	if(checked)
 	{
-		if(!ui.rbNone->isChecked())
+		if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
 			refresh();
 	}
 }
@@ -248,7 +264,7 @@ void MainWindow::elementSizeXChanged(int value)
 
 	kradiusx = ui.hsXElementSize->value();
 
-	if(!ui.rbNone->isChecked())
+	if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
 		refresh();
 }
 // -------------------------------------------------------------------------
@@ -266,7 +282,7 @@ void MainWindow::elementSizeYChanged(int value)
 
 	kradiusy = ui.hsYElementSize->value();
 
-	if(!ui.rbNone->isChecked())
+	if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
 		refresh();
 }
 // -------------------------------------------------------------------------
@@ -282,13 +298,24 @@ void MainWindow::rotationChanged(int value)
 	ui.lbRotation->setText(QString::number(angle));
 	krotation = angle;
 
-	if(!ui.rbNone->isChecked())
+	if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
 		refresh();
 }
 // -------------------------------------------------------------------------
 void MainWindow::rotationResetPressed()
 {
 	ui.dialRotation->setValue(180);
+}
+// -------------------------------------------------------------------------
+void MainWindow::runPressed()
+{
+	refresh();
+}
+// -------------------------------------------------------------------------
+void MainWindow::autoRunChanged(int state)
+{
+	if(state == Qt::Checked)
+		refresh();
 }
 
 // Koniec zdarzen

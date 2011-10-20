@@ -220,13 +220,14 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 
 		printf("Building %s program...", progFile);
 		err = program.build(devs, options);
+		QString log(QString::fromStdString(
+			program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
 		if(err != CL_SUCCESS)
-		{
-			QString log(QString::fromStdString(
-				program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
 			clError(log, err);
-		}
 		printf("[OK]\n");
+
+		if(log.size() > 0)
+			printf("log: %s\n", log.toAscii().constData());
 
 		programs[progFile] = program;
 		return program;
@@ -419,11 +420,17 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 	region[1] = newSrc->rows;
 	region[2] = 1;
 
-	err = cq.enqueueWriteImage(clSrcImage, CL_TRUE, 
+	cl::Event evt;
+	err = cq.enqueueWriteImage(clSrcImage, CL_FALSE, 
 		origin, region, 0, 0,
-		const_cast<uchar*>(newSrc->ptr<uchar>()));
-	clError("Error while writing new data to OpenCL source image!", err);
+		const_cast<uchar*>(newSrc->ptr<uchar>()), 0, &evt);
+	evt.wait();
 
+	// Podaj czas trwania transferu
+	cl_ulong delta = elapsedEvent(evt);
+	printf("Transfering source image to GPU took %.3lf ms\n", delta * 0.000001);
+
+	clError("Error while writing new data to OpenCL source image!", err);
 	src = newSrc;
 }
 // -------------------------------------------------------------------------
@@ -604,10 +611,13 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	evt.wait();
 
 	// Ile czasu zajelo zczytanie danych z powrotem
-	elapsed += elapsedEvent(evt);
+	cl_ulong readingTime = elapsedEvent(evt);
+	double totalTime = (elapsed + readingTime) * 0.000001;
+	printf("Processing time: %.3lf (%.3lf transfer time)\n",
+		totalTime, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
-	return elapsed * 0.000001;
+	return totalTime;
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel, 
@@ -786,12 +796,14 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 		srcptr = ptr;
 	}
 
+	cl::Event evt;
+
 	// Skopiuj dane 1:1
 	if(readingMethod == RM_NotOptimized)
 	{
 		err = cq.enqueueWriteBuffer(clSrc, CL_TRUE, 0, 
 			bufferDeviceSize, 
-			srcptr);
+			srcptr, 0, &evt);
 	}
 	// Skopiuj dane tak by byly odpowiednio wyrownane
 	else
@@ -821,12 +833,17 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 			origin, origin, region, 
 			buffer_row_pitch, 0, 
 			host_row_pitch, 0, 
-			srcptr);
+			srcptr, 0, &evt);
 	}
 
-	delete [] ptr;
-
+	evt.wait();
 	clError("Error while writing new data to OpenCL source buffer!", err);
+
+	// Podaj czas trwania transferu
+	cl_ulong delta = elapsedEvent(evt);
+	printf("Transfering source image to GPU took %.3lfms\n", delta * 0.000001);
+
+	delete [] ptr;	
 	src = newSrc;
 }
 // -------------------------------------------------------------------------
@@ -1094,10 +1111,13 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	}
 
 	// Ile czasu zajelo zczytanie danych z powrotem
-	elapsed += elapsedEvent(evt);
+	cl_ulong readingTime = elapsedEvent(evt);
+	double totalTime = (elapsed + readingTime) * 0.000001;
+	printf("Processing time: %.3lf (%.3lf transfer time)\n",
+		totalTime, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
-	return elapsed * 0.000001;
+	return totalTime;
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
