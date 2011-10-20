@@ -29,32 +29,83 @@ kradiusy(0)
 	local = settings.value("kernel/local", false).toBool();
 }
 // -------------------------------------------------------------------------
-bool MorphOpenCL::initOpenCL(cl_device_type dt)
+bool MorphOpenCL::initOpenCL()
 {
 	// Connect to a compute device
 	std::vector<cl::Platform> platforms;
-	cl::Platform::get(&platforms);
+	cl_int err;
+	err = cl::Platform::get(&platforms);
 
 	if (platforms.empty())
 		return false;
 
-	// FIXME Wybierz platforme 
-	cl::Platform platform = platforms[0];
+	cl::Platform platform;
+
+	// Jesli mamy tylko jedna platforme to ja wybierz bez pytania
+	if(platforms.size() == 1)
+	{
+		platform = platforms[0];
+		std::string name = platform.getInfo<CL_PLATFORM_NAME>(&err);
+		std::string version = platform.getInfo<CL_PLATFORM_VERSION>(&err);
+		printf("Using '%s' %s platform.\n", name.c_str(), version.c_str());
+	}
+	else
+	{
+		for(size_t i = 0; i < platforms.size(); ++i)
+		{
+			std::string name = platforms[i].getInfo<CL_PLATFORM_NAME>(&err);
+			std::string version = platforms[i].getInfo<CL_PLATFORM_VERSION>(&err);
+			printf("\t%d) %s %s\n", i, name.c_str(), version.c_str());
+		}
+
+		int choice = -1;
+		while(choice >= platforms.size() || choice < 0)
+		{
+			printf("\nChoose OpenCL platform: \n");
+			scanf("%d", &choice);
+		}
+		platform = platforms[choice];
+	}
+	printf("\n");
+
 	cl_context_properties properties[] = { 
 		CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(),
 		0, 0
-	};
+	};	
 	
 	// Stworz kontekst
-	cl_int err;
-	context = cl::Context(dt, properties, nullptr, nullptr, &err);
+	context = cl::Context(CL_DEVICE_TYPE_ALL, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 
 	// Pobierz liste urzadzen
 	std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
-	// FIXME Wybierz pierwsze urzadzenie
-	dev = devices[0];
+	// Wybierz urzadzenie
+	if(devices.size() == 1)
+	{
+		dev = devices[0];
+		std::string devName = dev.getInfo<CL_DEVICE_NAME>(&err);
+		printf("\tUsing %s\n", devName.c_str());
+	}
+	else
+	{
+		for(size_t i = 0; i < devices.size(); ++i)
+		{
+			std::string devName = devices[i].getInfo<CL_DEVICE_NAME>(&err);
+			cl_bool devImagesSupported = devices[i].getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err);
+			printf("\t%d) %s (%s)\n", i, devName.c_str(), 
+				(devImagesSupported ? "Images supported" : "Images NOT supported"));
+		}
+
+		int choice = -1;
+		while(choice >= devices.size() || choice < 0)
+		{
+			printf("\nChoose OpenCL device: \n");
+			scanf("%d", &choice);
+		}
+		dev = devices[choice];
+	}
+
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
 
@@ -97,6 +148,7 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 		}
 	}
 	csize = static_cast<int>(coords.size());
+	printf("Coordinates size: %d\n", csize);
 
 	// Zaladuj dane do bufora
 	cl_int err;
@@ -166,13 +218,15 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 		std::vector<cl::Device> devs(1);
 		devs[0] = (dev);
 
+		printf("Building %s program...", progFile);
 		err = program.build(devs, options);
 		if(err != CL_SUCCESS)
 		{
 			QString log(QString::fromStdString(
 				program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
-			clError(log, -1);
+			clError(log, err);
 		}
+		printf("[OK]\n");
 
 		programs[progFile] = program;
 		return program;
@@ -213,9 +267,11 @@ cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog,
 	const char* kernelName)
 {
 	cl_int err;
+	printf("Creating %s kernel...", kernelName);
 	cl::Kernel k(prog, kernelName, &err);
 	clError("Failed to create " + 
 		QString(kernelName) + " kernel!", err);
+	printf("[OK]\n");
 	return k;
 }
 // -------------------------------------------------------------------------
@@ -289,9 +345,9 @@ QString MorphOpenCL::openCLErrorCodeStr(cl_int errcode)
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // MorphOpenCLImage
 
-bool MorphOpenCLImage::initOpenCL(cl_device_type dt)
+bool MorphOpenCLImage::initOpenCL()
 {
-	MorphOpenCL::initOpenCL(dt);
+	MorphOpenCL::initOpenCL();
 
 	// Pobierz obslugiwane formaty obrazow
 	std::vector<cl::ImageFormat> imageFormats;
@@ -641,9 +697,9 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 // MorphOpenCLBuffer
 
 // -------------------------------------------------------------------------
-bool MorphOpenCLBuffer::initOpenCL(cl_device_type dt)
+bool MorphOpenCLBuffer::initOpenCL()
 {
-	MorphOpenCL::initOpenCL(dt);
+	MorphOpenCL::initOpenCL();
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 

@@ -60,8 +60,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 
 	int method = settings.value("opencl/method", 0).toInt();
-	int device = settings.value("opencl/device", 0).toInt();
-
 	if(method == 0) ocl = new MorphOpenCLImage();
 	else ocl = new MorphOpenCLBuffer();
 
@@ -74,10 +72,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 		exit(1);
 	};
 
-	cl_device_type deviceType = CL_DEVICE_TYPE_CPU;
-	if(device == 1) deviceType = CL_DEVICE_TYPE_GPU;
-
-	oclSupported = ocl->initOpenCL(deviceType);
+	oclSupported = ocl->initOpenCL();
 	if(oclSupported)
 	{
 		ui.actionOpenCL->setEnabled(true);

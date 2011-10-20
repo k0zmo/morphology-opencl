@@ -16,7 +16,7 @@ public:
 	static QString openCLErrorCodeStr(cl_int errcode);
 
 	// Inicjalizuje OpenCL'a
-	virtual bool initOpenCL(cl_device_type dt);
+	virtual bool initOpenCL();
 	// Ustawia obraz zrodlowy
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 	// Ustawia element strukturalny
@@ -89,7 +89,7 @@ public:
 		: MorphOpenCL()
 	{ }
 
-	/*override*/ virtual bool initOpenCL(cl_device_type dt);
+	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
@@ -136,7 +136,7 @@ public:
 		: MorphOpenCL()
 	{ }
 
-	/*override*/ virtual bool initOpenCL(cl_device_type dt);
+	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
