@@ -73,7 +73,7 @@ bool MorphOpenCL::initOpenCL()
 	};	
 	
 	// Stworz kontekst
-	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
+	context = cl::Context(CL_DEVICE_TYPE_ALL, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 
 	// Pobierz liste urzadzen

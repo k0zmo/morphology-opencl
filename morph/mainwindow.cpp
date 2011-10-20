@@ -128,14 +128,12 @@ void MainWindow::openTriggered()
 	{
 		openFile(filename);
 
-		if(ui.cbAutoTrigger->isChecked())
-		{
+		if(ui.cbAutoTrigger->isChecked() || ui.rbNone->isChecked())
 			refresh();
-		}
 		else
-		{
 			ui.rbNone->setChecked(true);
-		}
+
+		this->resize(0,0);
 	}
 }
 // -------------------------------------------------------------------------
@@ -338,7 +336,21 @@ void MainWindow::showCvImage(const cv::Mat& image)
 			QImage::Format_Indexed8);
 	};
 
-	ui.lbImage->setPixmap(QPixmap::fromImage(toQImage(image)));
+	const int maxWidth = 1024;
+	const int maxHeight = 1024;
+
+	cv::Mat img = image;
+	if(img.rows > maxHeight ||img.cols > maxWidth)
+	{
+		double fx;
+		if(img.rows > img.cols)
+			fx = static_cast<double>(maxHeight) / img.rows;
+		else
+			fx = static_cast<double>(maxWidth) / img.cols;
+		cv::resize(img, img, cv::Size(0,0), fx, fx, cv::INTER_LINEAR);
+	}
+
+	ui.lbImage->setPixmap(QPixmap::fromImage(toQImage(img)));
 }
 // -------------------------------------------------------------------------
 void MainWindow::openFile(const QString& filename)
