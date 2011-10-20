@@ -127,7 +127,15 @@ void MainWindow::openTriggered()
 	if(!filename.isEmpty())
 	{
 		openFile(filename);
-		refresh();
+
+		if(ui.cbAutoTrigger->isChecked())
+		{
+			refresh();
+		}
+		else
+		{
+			ui.rbNone->setChecked(true);
+		}
 	}
 }
 // -------------------------------------------------------------------------
@@ -135,10 +143,9 @@ void MainWindow::saveTriggered()
 {
 	QString filename = QFileDialog::getSaveFileName(this, QString(), ".",
 		QString::fromLatin1("Image file (*.png)"));
+
 	if(!filename.isEmpty())
-	{
 		ui.lbImage->pixmap()->toImage().save(filename);
-	}
 }
 // -------------------------------------------------------------------------
 void MainWindow::exitTriggered()

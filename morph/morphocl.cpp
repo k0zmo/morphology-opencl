@@ -55,18 +55,17 @@ bool MorphOpenCL::initOpenCL()
 		{
 			std::string name = platforms[i].getInfo<CL_PLATFORM_NAME>(&err);
 			std::string version = platforms[i].getInfo<CL_PLATFORM_VERSION>(&err);
-			printf("\t%d) %s %s\n", i, name.c_str(), version.c_str());
+			printf("\t%d) %s %s\n", i+1, name.c_str(), version.c_str());
 		}
 
-		int choice = -1;
-		while(choice >= platforms.size() || choice < 0)
+		int choice = 0;
+		while(choice > platforms.size() || choice <= 0)
 		{
 			printf("\nChoose OpenCL platform: \n");
 			scanf("%d", &choice);
 		}
-		platform = platforms[choice];
+		platform = platforms[choice-1];
 	}
-	printf("\n");
 
 	cl_context_properties properties[] = { 
 		CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(),
@@ -74,7 +73,7 @@ bool MorphOpenCL::initOpenCL()
 	};	
 	
 	// Stworz kontekst
-	context = cl::Context(CL_DEVICE_TYPE_ALL, properties, nullptr, nullptr, &err);
+	context = cl::Context(CL_DEVICE_TYPE_CPU, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 
 	// Pobierz liste urzadzen
@@ -85,25 +84,26 @@ bool MorphOpenCL::initOpenCL()
 	{
 		dev = devices[0];
 		std::string devName = dev.getInfo<CL_DEVICE_NAME>(&err);
-		printf("\tUsing %s\n", devName.c_str());
+		printf("Using %s\n", devName.c_str());
 	}
 	else
 	{
+		printf("\n");
 		for(size_t i = 0; i < devices.size(); ++i)
 		{
 			std::string devName = devices[i].getInfo<CL_DEVICE_NAME>(&err);
 			cl_bool devImagesSupported = devices[i].getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err);
-			printf("\t%d) %s (%s)\n", i, devName.c_str(), 
+			printf("\t%d) %s (%s)\n", i+1, devName.c_str(), 
 				(devImagesSupported ? "Images supported" : "Images NOT supported"));
 		}
 
-		int choice = -1;
-		while(choice >= devices.size() || choice < 0)
+		int choice = 0;
+		while(choice > devices.size() || choice <= 0)
 		{
 			printf("\nChoose OpenCL device: \n");
 			scanf("%d", &choice);
 		}
-		dev = devices[choice];
+		dev = devices[choice-1];
 	}
 
 	std::vector<cl::Device> devs(1);
@@ -148,7 +148,7 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 		}
 	}
 	csize = static_cast<int>(coords.size());
-	printf("Coordinates size: %d\n", csize);
+	printf("Structure element size (number of 'white' pixels): %d\n", csize);
 
 	// Zaladuj dane do bufora
 	cl_int err;
@@ -613,7 +613,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	// Ile czasu zajelo zczytanie danych z powrotem
 	cl_ulong readingTime = elapsedEvent(evt);
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Processing time: %.3lf (%.3lf transfer time)\n",
+	printf("Processing time: %.3lf ms (in which %.3lf ms was transfer time)\n",
 		totalTime, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
@@ -1113,7 +1113,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	// Ile czasu zajelo zczytanie danych z powrotem
 	cl_ulong readingTime = elapsedEvent(evt);
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Processing time: %.3lf (%.3lf transfer time)\n",
+	printf("Processing time: %.3lf ms (in which %.3lf ms was transfer time)\n",
 		totalTime, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
