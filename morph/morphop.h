@@ -17,8 +17,9 @@ enum EOperationType
 	OT_Gradient,
 	OT_TopHat,
 	OT_BlackHat,
-	OT_Thinning,
-	OT_Skeleton
+	OT_Outline,
+	OT_Skeleton,
+	OT_Skeleton_ZhangSuen
 };
 
 enum EStructureElementType
@@ -35,11 +36,9 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 
 // Operacja morfologiczna - erozja
 void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
-
-// Operacja morfologiczna - scienienie
-
-void morphologyThinning(const cv::Mat& src, cv::Mat& dst);
-
+// Operacja morfologiczna - kontrur
+void morphologyOutline(const cv::Mat& src, cv::Mat& dst);
 // Operacja morfologiczna - szkieletyzacja
 int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
-int morphologySkeleton1(const cv::Mat& _src, cv::Mat& dst);
+// Operacja morfologiczna - Zhang and Suen
+int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst);

@@ -102,8 +102,9 @@ private:
 	cl::Kernel kernelDilate;
 
 	// Hit-miss
-	cl::Kernel kernelThinning;
+	cl::Kernel kernelOutline;
 	cl::Kernel kernelSkeleton_iter[8];
+	cl::Kernel kernelSkeleton_pass[2];
 
 	// Obraz wejsciowy
 	cl::Image2D clSrcImage;
@@ -123,6 +124,7 @@ private:
 	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
 	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
 		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage,
+		const cl::Buffer* clLut = nullptr,
 		cl::Buffer* clAtomicCounter = nullptr);
 
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
@@ -149,8 +151,9 @@ private:
 	cl::Kernel kernelDilate;
 
 	// Hit-miss
-	cl::Kernel kernelThinning;
+	cl::Kernel kernelOutline;
 	cl::Kernel kernelSkeleton_iter[8];
+	cl::Kernel kernelSkeleton_pass[2];
 
 	// Bufor z danymi wejsciowymi
 	cl::Buffer clSrc;
@@ -172,6 +175,7 @@ private:
 	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
 	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
 		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer,
+		const cl::Buffer* clLut = nullptr,
 		cl::Buffer* clAtomicCounter = nullptr);
 
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie

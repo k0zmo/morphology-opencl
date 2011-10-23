@@ -3,7 +3,7 @@
 __constant uchar OBJ = 255;
 __constant uchar BCK = 0;
 
-__kernel void thinning(
+__kernel void outline(
 	__global uchar* input,
 	__global uchar* output,
 	const int rowPitch)
@@ -29,7 +29,7 @@ __kernel void thinning(
 #define SHARED_SIZE WORK_GROUP_SIZE+2
 
 __kernel __attribute__((reqd_work_group_size(16,16,1)))
-void thinning_local(
+void outline_local(
 	__global uchar* input,
 	__global uchar* output,
 	const int2 imageSize)
@@ -177,7 +177,7 @@ void thinning_local(
 #define SHARED_SIZEY 18
 
 __kernel __attribute__((reqd_work_group_size(16,16,1)))
-void thinning4_local(
+void outline4_local(
 	__global uchar4* input,
 	__global uchar* output,
 	const int2 imageSize)

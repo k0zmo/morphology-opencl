@@ -144,14 +144,14 @@
            <item row="20" column="0" colspan="2">
             <widget class="QRadioButton" name="rbSkeleton">
              <property name="text">
-              <string>Skeleton</string>
+              <string>Skeletonize (8-connectivity)</string>
              </property>
             </widget>
            </item>
            <item row="19" column="0" colspan="2">
-            <widget class="QRadioButton" name="rbThinning">
+            <widget class="QRadioButton" name="rbOutline">
              <property name="text">
-              <string>Thinning</string>
+              <string>Outline</string>
              </property>
             </widget>
            </item>
@@ -186,6 +186,13 @@
              </property>
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="21" column="0">
+            <widget class="QRadioButton" name="rbSkeletonZhang">
+             <property name="text">
+              <string>Skeletonize (Zhang and Suen)</string>
              </property>
             </widget>
            </item>
@@ -521,7 +528,7 @@
   <tabstop>rbClose</tabstop>
   <tabstop>rbTopHat</tabstop>
   <tabstop>rbBlackHat</tabstop>
-  <tabstop>rbThinning</tabstop>
+  <tabstop>rbOutline</tabstop>
   <tabstop>rbSkeleton</tabstop>
   <tabstop>rbRect</tabstop>
   <tabstop>rbEllipse</tabstop>

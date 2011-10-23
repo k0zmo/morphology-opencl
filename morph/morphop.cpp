@@ -9,6 +9,17 @@ const int BCK = 0;
 #define force_inline inline __attribute__((always_inline))
 #endif
 
+static int table[]  = {
+	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
+	0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	2,0,0,0,0,0,0,0,2,0,0,0,2,0,0,0,3,0,0,0,0,0,0,0,3,0,0,0,3,0,2,0,
+	0,0,3,1,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+	3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	2,3,1,3,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	2,3,0,1,0,0,0,1,0,0,0,0,0,0,0,0,3,3,0,1,0,0,0,0,2,2,0,0,2,0,0,0
+};
+
 // -------------------------------------------------------------------------
 cv::Mat structuringElementDiamond(int radius)
 {
@@ -177,7 +188,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	return element;
 }
 // -------------------------------------------------------------------------
-void morphologyThinning(const cv::Mat& src, cv::Mat& dst)
+void morphologyOutline(const cv::Mat& src, cv::Mat& dst)
 {
 	dst = src.clone();
 
@@ -478,7 +489,6 @@ force_inline int _morphologySkeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 // -------------------------------------------------------------------------
 int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 {
-#if 1
 	int niters = 0;
 
 	cv::Mat src = _src.clone();
@@ -522,234 +532,12 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 	}
 
 	return niters;
-#else
-	int niters = 0;
-	bool stable;
-
-	cv::Mat src = _src.clone();
-	//dst.create(_src.size(), _src.type());
-	dst = _src.clone();
-
-	do 
-	{
-		stable = true;
-		++niters;
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (src.at<uchar>(y-1, x-1) ||
-					src.at<uchar>(y  , x-1) ||
-					src.at<uchar>(y+1, x-1) ||
-					!(
-					src.at<uchar>(y  ,x  ) && 
-					src.at<uchar>(y-1,x+1) && 
-					src.at<uchar>(y  ,x+1) && 
-					src.at<uchar>(y+1,x+1))
-					)
-				{
-					dst.at<uchar>(y, x) = src.at<uchar>(y, x);
-				}
-				else
-				{
-					dst.at<uchar>(y, x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (dst.at<uchar>(y  ,x-1) ||
-					dst.at<uchar>(y-1,x-1) ||
-					dst.at<uchar>(y-1,x  ) ||
-					!(
-					dst.at<uchar>(y  ,x  ) &&
-					dst.at<uchar>(y  ,x+1) &&
-					dst.at<uchar>(y+1,x+1) &&
-					dst.at<uchar>(y+1,x  ))
-					)
-				{
-					src.at<uchar>(y,x) = dst.at<uchar>(y,x);
-				}
-				else
-				{
-					src.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (src.at<uchar>(y-1,x-1) ||
-					src.at<uchar>(y-1,x  ) ||
-					src.at<uchar>(y-1,x+1) ||
-					!(
-					src.at<uchar>(y  ,x  ) &&
-					src.at<uchar>(y+1,x-1) &&
-					src.at<uchar>(y+1,x  ) &&
-					src.at<uchar>(y+1,x+1)))
-				{
-					dst.at<uchar>(y,x) = src.at<uchar>(y,x);
-				}
-				else
-				{
-					dst.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (dst.at<uchar>(y-1,x  ) ||
-					dst.at<uchar>(y-1,x+1) ||
-					dst.at<uchar>(y  ,x+1) ||
-					!(
-					dst.at<uchar>(y  ,x  ) &&
-					dst.at<uchar>(y  ,x-1) &&
-					dst.at<uchar>(y+1,x-1) &&
-					dst.at<uchar>(y+1,x)))
-				{
-					src.at<uchar>(y,x) = dst.at<uchar>(y,x);
-				}
-				else
-				{
-					src.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (src.at<uchar>(y-1,x+1) ||
-					src.at<uchar>(y  ,x+1) ||
-					src.at<uchar>(y+1,x+1) ||
-					!(
-					src.at<uchar>(y  ,x  ) &&
-					src.at<uchar>(y-1,x-1) &&
-					src.at<uchar>(y  ,x-1) &&
-					src.at<uchar>(y+1,x-1))
-					)
-				{
-					dst.at<uchar>(y,x) = src.at<uchar>(y,x);
-				}
-				else
-				{
-					dst.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (dst.at<uchar>(y,x+1) ||
-					dst.at<uchar>(y+1,x+1) ||
-					dst.at<uchar>(y+1,x) ||
-					!(
-					dst.at<uchar>(y,x) &&
-					dst.at<uchar>(y,x-1) &&
-					dst.at<uchar>(y-1,x-1) &&
-					dst.at<uchar>(y-1,x))
-					)
-				{
-					src.at<uchar>(y,x) = dst.at<uchar>(y,x);
-				}
-				else
-				{
-					src.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (src.at<uchar>(y+1,x-1) ||
-					src.at<uchar>(y+1,x  ) ||
-					src.at<uchar>(y+1,x+1) ||
-					!(
-					src.at<uchar>(y  ,x  ) && 
-					src.at<uchar>(y-1,x-1) && 
-					src.at<uchar>(y-1,x  ) &&
-					src.at<uchar>(y-1,x+1))
-					)
-				{
-					dst.at<uchar>(y,x) = src.at<uchar>(y,x);
-				}
-				else
-				{
-					dst.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-		for(int y = 1; y < src.rows - 1; ++y)
-		{
-			for(int x = 1; x < src.cols - 1; ++x)
-			{
-				if (dst.at<uchar>(y  ,x-1) ||
-					dst.at<uchar>(y+1,x-1) ||
-					dst.at<uchar>(y+1,x  ) ||
-					!(
-					dst.at<uchar>(y  ,x  ) &&
-					dst.at<uchar>(y-1,x  ) &&
-					dst.at<uchar>(y-1,x+1) &&
-					dst.at<uchar>(y  ,x+1))
-					)
-				{
-					src.at<uchar>(y,x) = dst.at<uchar>(y,x);
-				}
-				else
-				{
-					src.at<uchar>(y,x) = 0;
-					stable = false;
-				}
-			}
-		}
-
-	} while (!stable);
-
-	dst = src;
-
-	return niters;
-#endif
 }
 
-int morphologySkeleton1(const cv::Mat& _src, cv::Mat& dst)
+int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 {
 	// Based on ImageJ implementation of skeletonization which is
 	// based on an a thinning algorithm by by Zhang and Suen (CACM, March 1984, 236-239)
-	static int table[]  = {
-		0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
-		0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		2,0,0,0,0,0,0,0,2,0,0,0,2,0,0,0,3,0,0,0,0,0,0,0,3,0,0,0,3,0,2,0,
-		0,0,3,1,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-		3,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		2,3,1,3,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		2,3,0,1,0,0,0,1,0,0,0,0,0,0,0,0,3,3,0,1,0,0,0,0,2,2,0,0,2,0,0,0
-	};
-
 	int pass = 0;
 	int pixelsRemoved = 0;
 	dst = _src.clone();
@@ -824,8 +612,9 @@ int morphologySkeleton1(const cv::Mat& _src, cv::Mat& dst)
 	do 
 	{
 		niters++;
-		pixelsRemoved = thin(pass++, table);
-		pixelsRemoved = thin(pass++, table);
+		pixelsRemoved  = thin(pass++, table);
+		pixelsRemoved += thin(pass++, table);
+		printf("Iteration: %3d, pixel changed: %d\n", niters, pixelsRemoved);
 	} while (pixelsRemoved > 0);
 
 	return niters;

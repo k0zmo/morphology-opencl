@@ -1,7 +1,7 @@
 __constant uint OBJ = 255;
 __constant uint BCK = 0;
 
-__kernel void thinning(
+__kernel void outline(
 	__read_only image2d_t src,
 	__write_only image2d_t dst)
 {

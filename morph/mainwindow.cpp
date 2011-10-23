@@ -39,8 +39,9 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.rbGradient, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbTopHat, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbBlackHat, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
-	connect(ui.rbThinning, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
+	connect(ui.rbOutline, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 	connect(ui.rbSkeleton, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
+	connect(ui.rbSkeletonZhang, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 
 	// Element strukturalny
 	connect(ui.rbRect, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
@@ -201,8 +202,9 @@ void MainWindow::operationToggled(bool checked)
 	if(checked)
 	{
 		// Operacje hit-miss
-		if (ui.rbThinning->isChecked() ||
-			ui.rbSkeleton->isChecked())
+		if (ui.rbOutline->isChecked() ||
+			ui.rbSkeleton->isChecked() ||
+			ui.rbSkeletonZhang->isChecked())
 		{
 			// deaktywuj wybor elementu strukturalnego
 			ui.gbElement->setEnabled(false);
@@ -428,25 +430,25 @@ void MainWindow::morphologyOpenCV()
 	cv::Mat dst;
 
 	// Operacje hit-miss
-	if (opType == OT_Thinning ||
-		opType == OT_Skeleton)
+	if (opType == OT_Outline ||
+		opType == OT_Skeleton ||
+		opType == OT_Skeleton_ZhangSuen)
 	{
 		switch (opType)
 		{
-		case OT_Thinning:
+		case OT_Outline:
 			{
-				morphologyThinning(src, dst);
+				morphologyOutline(src, dst);
 				break;
 			}
-
 		case OT_Skeleton:
 			{
-				iters = morphologySkeleton1(src, dst);
-
-				// Szkielet - bialy
-				// tlo - szare (zmiana z bialego)
-				// obiekt - czarny
-				//dst = src/2 + dst;
+				iters = morphologySkeleton(src, dst);
+				break;
+			}
+		case OT_Skeleton_ZhangSuen:
+			{
+				iters = morphologySkeletonZhangSuen(src, dst);
 				break;
 			}
 		default: break;
@@ -539,8 +541,9 @@ EOperationType MainWindow::operationType()
 	else if(ui.rbGradient->isChecked()) { return OT_Gradient; }
 	else if(ui.rbTopHat->isChecked()) { return OT_TopHat; }
 	else if(ui.rbBlackHat->isChecked()) { return OT_BlackHat; }
-	else if(ui.rbThinning->isChecked()) { return OT_Thinning; }
+	else if(ui.rbOutline->isChecked()) { return OT_Outline; }
 	else if(ui.rbSkeleton->isChecked()) { return OT_Skeleton; }
+	else if(ui.rbSkeletonZhang->isChecked()) { return OT_Skeleton_ZhangSuen; }
 	else { return OT_Erode; }
 
 }
