@@ -801,8 +801,8 @@ bool MorphOpenCLBuffer::initOpenCL()
 	cl::Program pdilate = createProgram(dir + "dilate.cl");
 	cl::Program poutline = createProgram(dir + "outline.cl");
 	cl::Program putils = createProgram(dir + "utils.cl");
-	cl::Program pskeleton = createProgram(dir + "skeleton.cl");	
-	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl");	
+	cl::Program pskeleton = createProgram(dir + "skeleton.cl", QString("-I") + dir);	
+	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", QString("-I") + dir);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
@@ -837,8 +837,8 @@ bool MorphOpenCLBuffer::initOpenCL()
 	}
 	else
 	{
-		kernelSkeleton_pass[0] = createKernel(pskeletonz, "skeletonZhang_pass1");
-		kernelSkeleton_pass[1] = createKernel(pskeletonz, "skeletonZhang_pass2");
+		kernelSkeleton_pass[0] = createKernel(pskeletonz, "skeletonZhang4_pass1_local");
+		kernelSkeleton_pass[1] = createKernel(pskeletonz, "skeletonZhang4_pass2_local");
 	}
 
 	return true;
