@@ -154,7 +154,9 @@ void MainWindow::exitTriggered()
 void MainWindow::openCLTriggered(bool state)
 {
 	Q_UNUSED(state);
-	refresh();
+
+	if(ui.cbAutoTrigger->isChecked())
+		refresh();
 }
 // -------------------------------------------------------------------------
 void MainWindow::invertChanged(int state)
@@ -178,6 +180,10 @@ void MainWindow::noneOperationToggled(bool checked)
 {
 	if(checked)
 	{
+		// aktywuj wybor elementu strukturalnego
+		ui.gbElement->setEnabled(true);
+		ui.gbElementSize->setEnabled(true);
+
 		refresh();
 		ui.pbRun->setEnabled(false);
 	}
@@ -194,6 +200,21 @@ void MainWindow::operationToggled(bool checked)
 	// 2 - zaznaczony radiobutton zmienil stan z nieaktywnego na aktywny
 	if(checked)
 	{
+		// Operacje hit-miss
+		if (ui.rbThinning->isChecked() ||
+			ui.rbSkeleton->isChecked())
+		{
+			// deaktywuj wybor elementu strukturalnego
+			ui.gbElement->setEnabled(false);
+			ui.gbElementSize->setEnabled(false);
+		}
+		else
+		{
+			// aktywuj wybor elementu strukturalnego
+			ui.gbElement->setEnabled(true);
+			ui.gbElementSize->setEnabled(true);
+		}
+
 		if(ui.cbAutoTrigger->isChecked())
 			refresh();
 	}
@@ -385,21 +406,6 @@ void MainWindow::refresh()
 		return;
 	}
 
-	// Operacje hit-miss
-	if (ui.rbThinning->isChecked() ||
-		ui.rbSkeleton->isChecked())
-	{
-		// deaktywuj wybor elementu strukturalnego
-		ui.gbElement->setEnabled(false);
-		ui.gbElementSize->setEnabled(false);
-	}
-	else
-	{
-		// deaktywuj wybor elementu strukturalnego
-		ui.gbElement->setEnabled(true);
-		ui.gbElementSize->setEnabled(true);
-	}
-
 	if(ui.actionOpenCL->isChecked())
 		morphologyOpenCL();
 	else
@@ -435,7 +441,7 @@ void MainWindow::morphologyOpenCV()
 
 		case OT_Skeleton:
 			{
-				iters = morphologySkeleton(src, dst);
+				iters = morphologySkeleton1(src, dst);
 
 				// Szkielet - bialy
 				// tlo - szare (zmiana z bialego)

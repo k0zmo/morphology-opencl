@@ -541,6 +541,8 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 					cl_uint diff;
 					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
+					printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
+
 					// Sprawdz warunek stopu
 					if(diff == 0)
 						break;
@@ -980,6 +982,8 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 						// Sprawdz warunek stopu
 						if(diff == 0)
 							break;
+
+						printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
 
 						elapsed += zeroAtomicCounter(clAtomicCnt);
 

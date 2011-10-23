@@ -42,4 +42,4 @@ void morphologyThinning(const cv::Mat& src, cv::Mat& dst);
 
 // Operacja morfologiczna - szkieletyzacja
 int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
-
+int morphologySkeleton1(const cv::Mat& _src, cv::Mat& dst);

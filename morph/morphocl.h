@@ -1,9 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <unordered_map>
+
 #include <CL/cl.hpp>
 #include <QString>
-#include <unordered_map>
 
 #include "morphop.h"
 
