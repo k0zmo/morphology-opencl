@@ -61,7 +61,7 @@ __kernel void skeletonZhang_pass1(
 		}
 	}
 	
-	output[(gid.x+1) + (gid.y+1) * rowPitch] = v;
+	output[gid.x+ + gid.y * rowPitch] = v;
 }
 
 __kernel void skeletonZhang_pass2(
@@ -86,5 +86,5 @@ __kernel void skeletonZhang_pass2(
 		}
 	}
 	
-	output[(gid.x+1) + (gid.y+1) * rowPitch] = v;
+	output[gid.x+ + gid.y * rowPitch] = v;
 }
