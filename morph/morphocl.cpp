@@ -188,17 +188,16 @@ cl_ulong MorphOpenCL::elapsedEvent(const cl::Event& evt)
 cl::Program MorphOpenCL::createProgram(const QString& progFile, 
 	const QString& options)
 {
-	QByteArray b = progFile.toAscii();
-	const char* pname = b.data();
+	std::string b1, b = progFile.toStdString();
 	const char* oname = nullptr;
 
 	if(!options.isEmpty())
 	{
-		QByteArray b1 = options.toAscii();
-		oname = b1.data();
+		b1 = options.toStdString();
+		oname = b1.c_str();
 	}
 
-	return createProgram(pname, oname);
+	return createProgram(b.c_str(), oname);
 }
 // -------------------------------------------------------------------------
 cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
@@ -239,7 +238,10 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 		printf("[OK]\n");
 
 		if(log.size() > 0)
-			printf("log: %s\n", log.toAscii().constData());
+		{
+			std::string slog = log.toStdString();
+			printf("log: %s\n", slog.c_str());
+		}
 
 		programs[progFile] = program;
 		return program;
@@ -291,10 +293,8 @@ cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog,
 cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog, 
 	const QString& kernelName)
 {
-	QByteArray b = kernelName.toAscii();
-	const char* kname = b.data();
-
-	return createKernel(prog, kname);
+	std::string b = kernelName.toStdString();
+	return createKernel(prog, b.c_str());
 }
 // -------------------------------------------------------------------------
 QString MorphOpenCL::openCLErrorCodeStr(cl_int errcode)
@@ -795,14 +795,15 @@ bool MorphOpenCLBuffer::initOpenCL()
 		dir = "kernels-uint/";
 		useUint = true;
 	}
+	QString opts = "-I " + dir;
 
 	// Wczytaj programy
 	cl::Program perode = createProgram(dir + "erode.cl");
 	cl::Program pdilate = createProgram(dir + "dilate.cl");
 	cl::Program poutline = createProgram(dir + "outline.cl");
 	cl::Program putils = createProgram(dir + "utils.cl");
-	cl::Program pskeleton = createProgram(dir + "skeleton.cl", QString("-I") + dir);	
-	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", QString("-I") + dir);
+	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
+	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, s.value("kernel/erode", "erode").toString());
