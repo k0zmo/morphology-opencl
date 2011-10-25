@@ -523,7 +523,7 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 
 		d += _morphologySkeleton_iter8(src, dst);
 		
-		printf("Iteration: %3d, pixel changed: %d\n", niters, d);
+		printf("Iteration: %3d, pixel changed: %5d\r", niters, d);
 
 		if(d == 0)
 			break;
@@ -614,7 +614,7 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 		niters++;
 		pixelsRemoved  = thin(pass++, table);
 		pixelsRemoved += thin(pass++, table);
-		printf("Iteration: %3d, pixel changed: %d\n", niters, pixelsRemoved);
+		printf("Iteration: %3d, pixel changed: %5d\r", niters, pixelsRemoved);
 	} while (pixelsRemoved > 0);
 
 	return niters;

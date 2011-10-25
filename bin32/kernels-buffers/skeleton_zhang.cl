@@ -59,11 +59,9 @@ __kernel void skeletonZhang_pass1(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			output[gid.x+ + gid.y * rowPitch] = BCK;
 		}
 	}
-	
-	output[gid.x+ + gid.y * rowPitch] = v;
 }
 
 __kernel void skeletonZhang_pass2(
@@ -84,11 +82,9 @@ __kernel void skeletonZhang_pass2(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			output[gid.x+ + gid.y * rowPitch] = BCK;
 		}
 	}
-	
-	output[gid.x+ + gid.y * rowPitch] = v;
 }
 
 // ###########################################################################
@@ -155,11 +151,9 @@ void skeletonZhang4_pass1_local(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
 		}
 	}	
-
-	output[(gid.y+1)*imageSize.x + (gid.x+1)] = v;
 }	
 
 __kernel 
@@ -197,10 +191,8 @@ void skeletonZhang4_pass2_local(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
 		}
-	}	
-
-	output[(gid.y+1)*imageSize.x + (gid.x+1)] = v;
+	}
 }
 

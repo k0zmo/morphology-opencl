@@ -1,5 +1,7 @@
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
+#include "cache16x16.cl"
+
 __constant uchar OBJ = 255;
 __constant uchar BCK = 0;
 
@@ -26,7 +28,6 @@ __kernel void outline(
 }
 
 #define WORK_GROUP_SIZE 16
-#define SHARED_SIZE WORK_GROUP_SIZE+2
 
 __kernel __attribute__((reqd_work_group_size(16,16,1)))
 void outline_local(
@@ -38,77 +39,7 @@ void outline_local(
 	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
 	
-	// doesn't work
-#if 0
-	__local uchar sharedBlock[SHARED_SIZE * SHARED_SIZE];
-	
-	if(gid.x < imageSize.x && gid.y < imageSize.y)
-	{
-		// Wczytaj piksel do pamieci lokalnej odpowiadajacy temu w pamieci globalnej
-		sharedBlock[lid.y*SHARED_SIZE + lid.x] = input[gid.y*imageSize.x + gid.x];
-		
-		// Wczytaj piksele z 'apron'
-		if(lid.x < 2)
-		{
-			int x = gid.x + localSize.x ;
-			if(x < imageSize.x)
-				sharedBlock[lid.y*SHARED_SIZE + lid.x + localSize.x] = input[gid.y*imageSize.x + x];
-		}
-		
-		if(lid.y < 2)
-		{
-			int y = gid.y + localSize.y;
-			if(y < imageSize.y)
-				sharedBlock[(lid.y + localSize.y)*SHARED_SIZE + lid.x] = input[y*imageSize.x + gid.x];
-		}
-		
-		if(lid.x > 13 && lid.y > 13)
-		{
-			int x = gid.x + 2;
-			int y = gid.y + 2;
-			
-			if(x < imageSize.x && y < imageSize.y)
-				sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 2] = input[y*imageSize.x + x];
-		}
-	}		
-	barrier(CLK_LOCAL_MEM_FENCE);
-	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - 2)
-		return;
-		
-	if(gid.x >= imageSize.x - 2)
-		return;
-		
-	if(lid.x == localSize.x - 1 || lid.y == localSize.y - 1)
-		output[(gid.y+1)*imageSize.x + (gid.x+1)] = 128;
-	else
-		output[(gid.y+1)*imageSize.x + (gid.x+1)] = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x + 1];
-	return;
-	
-	uchar v1 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x    ];
-	uchar v2 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 1];
-	uchar v3 = sharedBlock[(lid.y    )*SHARED_SIZE + lid.x + 2];
-	uchar v4 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x    ];
-	uchar v6 = sharedBlock[(lid.y + 1)*SHARED_SIZE + lid.x + 2];
-	uchar v7 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x    ];
-	uchar v8 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 1];
-	uchar v9 = sharedBlock[(lid.y + 2)*SHARED_SIZE + lid.x + 2];
-	
-	if (v1 == OBJ &&
-		v2 == OBJ &&
-		v3 == OBJ &&
-		v4 == OBJ &&
-		v6 == OBJ &&
-		v7 == OBJ &&
-		v8 == OBJ &&
-		v9 == OBJ)
-	{
-		output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
-	}
-#else
-	__local uchar sharedBlock[SHARED_SIZE][SHARED_SIZE];
+	__local uchar sharedBlock[WORK_GROUP_SIZE+2][WORK_GROUP_SIZE+2];
 	
 	if(gid.x < imageSize.x && gid.y < imageSize.y)
 	{
@@ -169,12 +100,7 @@ void outline_local(
 	{
 		output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
 	}
-#endif
 }
-
-#undef SHARED_SIZE
-#define SHARED_SIZEX 20
-#define SHARED_SIZEY 18
 
 __kernel __attribute__((reqd_work_group_size(16,16,1)))
 void outline4_local(
@@ -182,33 +108,10 @@ void outline4_local(
 	__global uchar* output,
 	const int2 imageSize)
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
-	
-	// Przebiega od 0 do 255
-	int flatLid = get_local_id(0) + get_local_id(1) * localSize.x;
-	
-	int2 lid;
-	lid.x = (flatLid % (SHARED_SIZEX/4));
-	lid.y = (flatLid / (SHARED_SIZEX/4));	
-	
-	int2 gid;
-	gid.x = groupStartId.x/4 + lid.x;
-	gid.y = groupStartId.y   + lid.y;	
-	
 	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[lid.y][lid.x*4]);
+	cacheNeighbours(input, imageSize, sharedBlock);
 	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
-		lid.y < SHARED_SIZEY)
-	{
-		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-	
-	gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -218,7 +121,7 @@ void outline4_local(
 	if(gid.x >= imageSize.x - 2)
 		return;
 		
-	lid = (int2)(get_local_id(0), get_local_id(1));	
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
 	uchar v1 = sharedBlock[lid.y    ][lid.x    ];
 	uchar v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uchar v3 = sharedBlock[lid.y    ][lid.x + 2];

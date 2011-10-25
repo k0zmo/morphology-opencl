@@ -63,7 +63,8 @@ __kernel void erode_c4(
 __kernel void erode_c4_def(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
-	__constant int4* coords)
+	__constant int4* coords,
+	const int coords_size /* dummy */)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	uint val = erodeINF;

@@ -24,9 +24,7 @@ int main(int argc, char *argv[])
 	QTextStream qout(stdout);
 
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
-
 	int method = settings.value("opencl/method", 0).toInt();
-	int device = settings.value("opencl/device", 0).toInt();
 
 	MorphOpenCL* ocl;
 	if(method == 0) ocl = new MorphOpenCLImage();
@@ -39,14 +37,8 @@ int main(int argc, char *argv[])
 			MorphOpenCL::openCLErrorCodeStr(err) << endl;
 		exit(1);
 	};
-
-	cl_device_type deviceType = CL_DEVICE_TYPE_CPU;
-	if(device == 1) deviceType = CL_DEVICE_TYPE_GPU;
-	QString dev = (device == 1) ? ("GPU") : ("CPU");
-
-	qout << "Creating OpenCL Stuff [" << dev << "]..." << endl;
 	
-	if(!ocl->initOpenCL(deviceType))
+	if(!ocl->initOpenCL())
 	{
 		qout << "Opencl init failed" << endl;
 		exit(1);
@@ -71,17 +63,20 @@ int main(int argc, char *argv[])
 	fout << "readingmethod: " << settings.value("misc/readingmethod", 0).toInt() << endl;
 	fout << "kernel: " << settings.value("kernel/dilate", "").toString() << endl;
 	
-	cv::Mat dst, element = standardStructuringElement(radius, radius, SET_Ellipse);
-	EOperationType opType = OT_Thinning;
-	/*int coords_size =*/ ocl->setStructureElement(element);
+	EOperationType opType = OT_Skeleton_ZhangSuen;
+	cv::Mat dst;
 
 	//for(int radius = 1; radius <= 35; ++radius)
 	{
 		int radius = 7;
+		cv::Mat element = standardStructuringElement(7, 7, SET_Ellipse);
+		/*int coords_size =*/ ocl->setStructureElement(element);
+		
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 		fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
+		qout.flush();
 
-		for(int i = 0; i < 10; ++i)
+		for(int i = 0; i < 12; ++i)
 		{
 			int iters;
 
@@ -89,11 +84,11 @@ int main(int argc, char *argv[])
 			double delapsed = ocl->morphology(opType, dst, iters);
 
 			// Wyswietl statystyki
-			qout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
+			//qout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
 			fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
 		}
 	}
-	
+
 	// Pokaz/Zapisz obraz wynikowy
 	cv::imshow("Test", dst);
 	//cv::imwrite("output.png", dst);

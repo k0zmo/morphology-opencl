@@ -351,7 +351,7 @@ void dilate4_c4_local_def(
 	if(COORDS_SIZE % 2)
 	{
 		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[seSize.z-1] + lid;
+		int2 coord = c[COORDS_SIZE-1] + lid;
 		val = max(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
 	}
 	

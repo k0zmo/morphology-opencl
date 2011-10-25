@@ -73,7 +73,7 @@ bool MorphOpenCL::initOpenCL()
 		int choice = 0;
 		while(choice > platforms.size() || choice <= 0)
 		{
-			printf("\nChoose OpenCL platform: \n");
+			printf("\nChoose OpenCL platform: ");
 			scanf("%d", &choice);
 		}
 		platform = platforms[choice-1];
@@ -112,7 +112,7 @@ bool MorphOpenCL::initOpenCL()
 		int choice = 0;
 		while(choice > devices.size() || choice <= 0)
 		{
-			printf("\nChoose OpenCL device: \n");
+			printf("\nChoose OpenCL device: ");
 			scanf("%d", &choice);
 		}
 		dev = devices[choice-1];
@@ -242,6 +242,9 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 			std::string slog = log.toStdString();
 			printf("log: %s\n", slog.c_str());
 		}
+
+		// get binaries
+		//std::vector<char*> binary = program.getInfo<CL_PROGRAM_BINARIES>(&err);
 
 		programs[progFile] = program;
 		return program;
@@ -444,7 +447,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
-	printf("Transfering source image to GPU took %.3lf ms\n", delta * 0.000001);
+	printf("Transfering source image to GPU took %.5lf ms\n", delta * 0.000001);
 
 	clError("Error while writing new data to OpenCL source image!", err);
 	src = newSrc;
@@ -561,7 +564,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 					cl_uint diff;
 					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
-					printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
+					printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
 					// Sprawdz warunek stopu
 					if(diff == 0)
@@ -607,7 +610,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 					cl_uint diff;
 					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
-					printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
+					printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
 					// Sprawdz warunek stopu
 					if(diff == 0)
@@ -681,8 +684,9 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	// Ile czasu zajelo zczytanie danych z powrotem
 	cl_ulong readingTime = elapsedEvent(evt);
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Processing time: %.3lf ms (in which %.3lf ms was transfer time)\n",
-		totalTime, readingTime * 0.000001);
+	printf("Total time: %.5lf ms (in which %.5f was a processing time "
+		"and %.5lf ms was a transfer time)\n",
+		totalTime, elapsed * 0.000001, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
 	return totalTime;
@@ -800,7 +804,7 @@ bool MorphOpenCLBuffer::initOpenCL()
 	// Wczytaj programy
 	cl::Program perode = createProgram(dir + "erode.cl");
 	cl::Program pdilate = createProgram(dir + "dilate.cl");
-	cl::Program poutline = createProgram(dir + "outline.cl");
+	cl::Program poutline = createProgram(dir + "outline.cl", opts);
 	cl::Program putils = createProgram(dir + "utils.cl");
 	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
 	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
@@ -924,7 +928,7 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
-	printf("Transfering source image to GPU took %.3lfms\n", delta * 0.000001);
+	printf("Transfering source image to GPU took %.5lfms\n", delta * 0.000001);
 
 	delete [] ptr;	
 	src = newSrc;
@@ -1062,7 +1066,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 					cl_uint diff;
 					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
-					printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
+					printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
 					// Sprawdz warunek stopu
 					if(diff == 0)
@@ -1071,58 +1075,57 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 					elapsed += zeroAtomicCounter(clAtomicCnt);	
 
 				} while(true);
+
+				dstSizeX -= 2;
+				dstSizeY -= 2;
 			}
 			// Operacja szkieletyzacji (8-connectivity)
 			else if(opType == OT_Skeleton)
 			{
-				// Operacja szkieletyzacji
-				if(opType == OT_Skeleton)
+				iters = 0;
+
+				// Skopiuj obraz zrodlowy do docelowego i tymczasowego
+				cl::Event evt;	
+				elapsed += copyBuffer(clSrc, clTmp, evt);
+				elapsed += copyBuffer(clSrc, clDst, evt);				
+
+				// Licznik atomowy (ew. zwyczajny bufor)
+				cl_uint d_init = 0;
+				cl::Buffer clAtomicCnt(context, 
+					CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+					sizeof(cl_uint), &d_init, &err);
+				clError("Error while creating temporary OpenCL atomic counter", err);
+
+				do 
 				{
-					iters = 0;
+					iters++;
 
-					// Skopiuj obraz zrodlowy do docelowego i tymczasowego
-					cl::Event evt;	
-					elapsed += copyBuffer(clSrc, clTmp, evt);
-					elapsed += copyBuffer(clSrc, clDst, evt);				
-
-					// Licznik atomowy (ew. zwyczajny bufor)
-					cl_uint d_init = 0;
-					cl::Buffer clAtomicCnt(context, 
-						CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
-						sizeof(cl_uint), &d_init, &err);
-					clError("Error while creating temporary OpenCL atomic counter", err);
-
-					do 
+					// 8 operacji hit miss, 2 elementy strukturalnego, 4 orientacje
+					for(int i = 0; i < 8; ++i)
 					{
-						iters++;
+						elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], 
+							clTmp, clDst, &clAtomicCnt);
 
-						// 8 operacji hit miss, 2 elementy strukturalnego, 4 orientacje
-						for(int i = 0; i < 8; ++i)
-						{
-							elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], 
-								clTmp, clDst, &clAtomicCnt);
+						// Kopiowanie bufora
+						elapsed += copyBuffer(clDst, clTmp, evt);
+					}
 
-							// Kopiowanie bufora
-							elapsed += copyBuffer(clDst, clTmp, evt);
-						}
+					// Sprawdz ile pikseli zostalo zmodyfikowanych
+					cl_uint diff;
+					elapsed += readAtomicCounter(diff, clAtomicCnt);
 
-						// Sprawdz ile pikseli zostalo zmodyfikowanych
-						cl_uint diff;
-						elapsed += readAtomicCounter(diff, clAtomicCnt);
+					// Sprawdz warunek stopu
+					if(diff == 0)
+						break;
 
-						// Sprawdz warunek stopu
-						if(diff == 0)
-							break;
+					printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
-						printf("Iteration: %3d, pixel changed: %d\n", iters, diff);
+					elapsed += zeroAtomicCounter(clAtomicCnt);
 
-						elapsed += zeroAtomicCounter(clAtomicCnt);
+				} while (true);
 
-					} while (true);
-
-					dstSizeX -= 2;
-					dstSizeY -= 2;
-				}
+				dstSizeX -= 2;
+				dstSizeY -= 2;
 			}
 			else
 			{
@@ -1248,8 +1251,9 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	// Ile czasu zajelo zczytanie danych z powrotem
 	cl_ulong readingTime = elapsedEvent(evt);
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Processing time: %.3lf ms (in which %.3lf ms was transfer time)\n",
-		totalTime, readingTime * 0.000001);
+	printf("Total time: %.5lf ms (in which %.5f was a processing time "
+		"and %.5lf ms was a transfer time)\n",
+		totalTime, elapsed * 0.000001, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo
 	return totalTime;

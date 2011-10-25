@@ -60,11 +60,9 @@ __kernel void skeletonZhang_pass1(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			write_imageui(dst, gid, (uint4)(BCK));
 		}
 	}
-	
-	write_imageui(dst, gid, (uint4)(v));
 }
 
 __kernel void skeletonZhang_pass2(
@@ -90,8 +88,7 @@ __kernel void skeletonZhang_pass2(
 		{
 			// pixelRemoved++
 			atomic_inc(counter);
-			v = BCK;
+			write_imageui(dst, gid, (uint4)(BCK));
 		}
 	}
-	write_imageui(dst, gid, (uint4)(v));
 }
