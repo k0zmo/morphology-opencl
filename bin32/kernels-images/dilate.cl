@@ -1,4 +1,4 @@
-__constant uint dilateINF = 0;
+#include "common.cl"
 
 __kernel void dilate(
 	__read_only image2d_t src,
@@ -8,11 +8,6 @@ __kernel void dilate(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	uint val = dilateINF;
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;	
 	
 	for(int i = 0; i < coords_size; ++i)
 	{
@@ -32,11 +27,6 @@ __kernel void dilate_c4(
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	uint val = dilateINF;
 	int c2 = coords_size >> 1;
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;	
 	
 	for(int i = 0; i < c2; ++i)
 	{
@@ -68,11 +58,6 @@ __kernel void dilate_c4_def(
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	uint val = dilateINF;
 	int c2 = COORDS_SIZE >> 1;
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;	
 	
 	#pragma unroll
 	for(int i = 0; i < c2; ++i)

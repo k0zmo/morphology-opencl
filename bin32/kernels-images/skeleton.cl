@@ -1,3 +1,5 @@
+#include "common.cl"
+
 #ifdef USE_ATOMIC_COUNTERS
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
 #define counter_type counter32_t
@@ -7,20 +9,12 @@
 #define atomic_inc atom_inc
 #endif
 
-__constant uint OBJ = 255;
-__constant uint BCK = 0;
-
 __kernel void skeleton_iter1(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
 	
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
@@ -55,12 +49,7 @@ __kernel void skeleton_iter2(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-	
+
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
 	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
@@ -94,11 +83,6 @@ __kernel void skeleton_iter3(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
 	
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
@@ -134,11 +118,6 @@ __kernel void skeleton_iter4(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-	
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
 	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
@@ -173,11 +152,6 @@ __kernel void skeleton_iter5(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-	
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
 	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
 	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
@@ -210,11 +184,6 @@ __kernel void skeleton_iter6(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-	
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
 	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
 	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
@@ -246,12 +215,7 @@ __kernel void skeleton_iter7(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-	
+		
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
 	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
 	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
@@ -283,11 +247,6 @@ __kernel void skeleton_iter8(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
 	
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;

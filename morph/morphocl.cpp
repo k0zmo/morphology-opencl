@@ -392,13 +392,15 @@ bool MorphOpenCLImage::initOpenCL()
 			CL_IMAGE_FORMAT_NOT_SUPPORTED);
 	}
 
+	const char* opts = "-Ikernels-images/";
+
 	// Wczytaj programy
-	cl::Program perode = createProgram("kernels-images/erode.cl");
-	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
-	cl::Program poutline = createProgram("kernels-images/outline.cl");
-	cl::Program putils = createProgram("kernels-images/utils.cl");
-	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl");
-	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl");
+	cl::Program perode = createProgram("kernels-images/erode.cl", opts);
+	cl::Program pdilate = createProgram("kernels-images/dilate.cl", opts);
+	cl::Program poutline = createProgram("kernels-images/outline.cl", opts);
+	cl::Program putils = createProgram("kernels-images/utils.cl", opts);
+	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl", opts);
+	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl", opts);
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 
@@ -802,10 +804,10 @@ bool MorphOpenCLBuffer::initOpenCL()
 	QString opts = "-I " + dir;
 
 	// Wczytaj programy
-	cl::Program perode = createProgram(dir + "erode.cl");
-	cl::Program pdilate = createProgram(dir + "dilate.cl");
+	cl::Program perode = createProgram(dir + "erode.cl", opts);
+	cl::Program pdilate = createProgram(dir + "dilate.cl", opts);
 	cl::Program poutline = createProgram(dir + "outline.cl", opts);
-	cl::Program putils = createProgram(dir + "utils.cl");
+	cl::Program putils = createProgram(dir + "utils.cl", opts);
 	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
 	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
 

@@ -1,16 +1,10 @@
-__constant uint OBJ = 255;
-__constant uint BCK = 0;
+#include "common.cl"
 
 __kernel void outline(
 	__read_only image2d_t src,
 	__write_only image2d_t dst)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
 	
 	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
 	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;

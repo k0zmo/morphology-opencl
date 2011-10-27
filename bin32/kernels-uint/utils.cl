@@ -1,5 +1,4 @@
-__constant uint OBJ = 255;
-__constant uint BCK = 0;
+#include "common.cl"
 
 __kernel void subtract(
 	__global uint* a,
