@@ -1,3 +1,5 @@
+#include "common.cl"
+
 #ifdef USE_ATOMIC_COUNTERS
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
 #define counter_type counter32_t
@@ -6,9 +8,6 @@
 #define counter_type __global uint*
 #define atomic_inc atom_inc
 #endif
-
-__constant uint OBJ = 255;
-__constant uint BCK = 0;
 
 __attribute__((always_inline))
 uint getCode(
@@ -44,12 +43,6 @@ __kernel void skeletonZhang_pass1(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-		
 	uint v = read_imageui(src, smp, gid).x;
 	
 	if(v != BCK)
@@ -72,12 +65,6 @@ __kernel void skeletonZhang_pass2(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	
-	const sampler_t smp = 
-		CLK_NORMALIZED_COORDS_FALSE | 
-		CLK_FILTER_NEAREST | 
-		CLK_ADDRESS_CLAMP_TO_EDGE;
-		
 	uint v = read_imageui(src, smp, gid).x;
 	
 	if(v != BCK)

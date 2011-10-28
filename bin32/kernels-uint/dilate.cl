@@ -1,4 +1,4 @@
-__constant uint dilateINF = 0;
+#include "common.cl"
 
 __kernel void dilate(
 	__global uint* input,
@@ -58,25 +58,8 @@ __kernel void dilate_local(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	int2 lid = (int2)(get_local_id(0), get_local_id(1));
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
-		
-	// Zaladuj obszar roboczy obrazu zrodlowego do pamieci lokalnej
-	for(int y = lid.y; y < sharedSize.y; y += localSize.y)
-	{
-		int r = groupStartId.y + y; // indeks.y bajtu z wejsca
-		for(int x = lid.x; x < sharedSize.x; x += localSize.x)
-		{
-			int c = groupStartId.x + x; // indeks.x bajtu z wejscia
-			
-			if(c < imageSize.x && r < imageSize.y)
-			{
-				sharedBlock[x + y * sharedSize.x] = input[c + r * imageSize.x];
-			}
-		}
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	cacheToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -108,25 +91,8 @@ __kernel void dilate_c4_local(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	int2 lid = (int2)(get_local_id(0), get_local_id(1));
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
-		
-	// Zaladuj obszar roboczy obrazu zrodlowego do pamieci lokalnej
-	for(int y = lid.y; y < sharedSize.y; y += localSize.y)
-	{
-		int r = groupStartId.y + y; // indeks.y bajtu z wejsca
-		for(int x = lid.x; x < sharedSize.x; x += localSize.x)
-		{
-			int c = groupStartId.x + x; // indeks.x bajtu z wejscia
-			
-			if(c < imageSize.x && r < imageSize.y)
-			{
-				sharedBlock[x + y * sharedSize.x] = input[c + r * imageSize.x];
-			}
-		}
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	cacheToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -157,7 +123,8 @@ __kernel void dilate_c4_local(
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
-__kernel __attribute__((reqd_work_group_size(16,16,1))) 
+__kernel
+__attribute__((reqd_work_group_size(16,16,1))) 
 void dilate4_local(
 	__global uint4* input,
 	__global uint* output,
@@ -167,32 +134,10 @@ void dilate4_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	
-	// Przebiega od 0 do 255
-	int flatLid = get_local_id(0) + get_local_id(1) * localSize.x;
-	
-	int2 lid;
-	lid.x = (flatLid % (sharedSize.x/4));
-	lid.y = (flatLid / (sharedSize.x/4));	
-	
-	int2 gid;
-	gid.x = groupStartId.x/4 + lid.x;
-	gid.y = groupStartId.y   + lid.y;
-		
-	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
-	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
-		lid.y < sharedSize.y)
-	{
-		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	gid = (int2)(get_global_id(0), get_global_id(1));
+	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -200,9 +145,7 @@ void dilate4_local(
 		return;
 		
 	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-		
-	lid = (int2)(get_local_id(0), get_local_id(1));
+		return;	
 	
 	// Filtracja wlasciwa
 	uint val = dilateINF;
@@ -216,7 +159,8 @@ void dilate4_local(
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
-__kernel __attribute__((reqd_work_group_size(16,16,1))) 
+__kernel
+__attribute__((reqd_work_group_size(16,16,1))) 
 void dilate4_c4_local(
 	__global uint4* input,
 	__global uint* output,
@@ -226,32 +170,10 @@ void dilate4_c4_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	
-	// Przebiega od 0 do 255
-	int flatLid = get_local_id(0) + get_local_id(1) * localSize.x;
-	
-	int2 lid;
-	lid.x = (flatLid % (sharedSize.x/4));
-	lid.y = (flatLid / (sharedSize.x/4));	
-	
-	int2 gid;
-	gid.x = groupStartId.x/4 + lid.x;
-	gid.y = groupStartId.y   + lid.y;
-		
-	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
-	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
-		lid.y < sharedSize.y)
-	{
-		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	gid = (int2)(get_global_id(0), get_global_id(1));
+	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -260,8 +182,6 @@ void dilate4_c4_local(
 		
 	if(gid.x >= imageSize.x - seSize.x*2)
 		return;
-		
-	lid = (int2)(get_local_id(0), get_local_id(1));
 	
 	// Filtracja wlasciwa
 	uint val = dilateINF;	
@@ -284,12 +204,12 @@ void dilate4_c4_local(
 	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 }
 
-
 #ifndef COORDS_SIZE
 #define COORDS_SIZE 169
 #endif
 
-__kernel __attribute__((work_group_size_hint(16,16,1))) 
+__kernel
+__attribute__((work_group_size_hint(16,16,1))) 
 void dilate4_c4_local_def(
 	__global uint4* input,
 	__global uint* output,
@@ -299,32 +219,10 @@ void dilate4_c4_local_def(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	
-	// Przebiega od 0 do 255
-	int flatLid = get_local_id(0) + get_local_id(1) * localSize.x;
-	
-	int2 lid;
-	lid.x = (flatLid % (sharedSize.x/4));
-	lid.y = (flatLid / (sharedSize.x/4));	
-	
-	int2 gid;
-	gid.x = groupStartId.x/4 + lid.x;
-	gid.y = groupStartId.y   + lid.y;
-		
-	__local uint4* sharedBlock4 = (__local uint4*)(&sharedBlock[lid.x*4 + lid.y*sharedSize.x]);
-	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
-		lid.y < sharedSize.y)
-	{
-		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	gid = (int2)(get_global_id(0), get_global_id(1));
+	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -334,8 +232,6 @@ void dilate4_c4_local_def(
 	if(gid.x >= imageSize.x - seSize.x*2)
 		return;
 		
-	lid = (int2)(get_local_id(0), get_local_id(1));
-	
 	// Filtracja wlasciwa
 	uint val = dilateINF;	
 	int c2 = COORDS_SIZE / 2;

@@ -1,9 +1,4 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
-#include "cache16x16.cl"
-
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
+#include "common.cl"
 
 __kernel void outline(
 	__global uchar* input,
@@ -27,9 +22,8 @@ __kernel void outline(
 	}
 }
 
-#define WORK_GROUP_SIZE 16
-
-__kernel __attribute__((reqd_work_group_size(16,16,1)))
+__kernel
+__attribute__((reqd_work_group_size(16,16,1)))
 void outline_local(
 	__global uchar* input,
 	__global uchar* output,
@@ -37,14 +31,15 @@ void outline_local(
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
 	int2 lid = (int2)(get_local_id(0), get_local_id(1));
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
 	
+	#define WORK_GROUP_SIZE 16
 	__local uchar sharedBlock[WORK_GROUP_SIZE+2][WORK_GROUP_SIZE+2];
 	
 	if(gid.x < imageSize.x && gid.y < imageSize.y)
 	{
 		// Wczytaj piksel do pamieci lokalnej odpowiadajacy temu w pamieci globalnej
 		sharedBlock[lid.y][lid.x] = input[gid.y*imageSize.x + gid.x];
+		int2 localSize = (int2)(get_local_size(0), get_local_size(1));
 		
 		// Wczytaj piksele z 'apron'
 		if(lid.x < 2)
@@ -69,7 +64,7 @@ void outline_local(
 			if(x < imageSize.x && y < imageSize.y)
 				sharedBlock[lid.y + 2][lid.x + 2] = input[y*imageSize.x + x];
 		}
-	}		
+	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
@@ -102,16 +97,18 @@ void outline_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16,16,1)))
+__kernel
+__attribute__((reqd_work_group_size(16,16,1)))
 void outline4_local(
 	__global uchar4* input,
 	__global uchar* output,
 	const int2 imageSize)
 {
-	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -119,9 +116,8 @@ void outline4_local(
 		return;
 		
 	if(gid.x >= imageSize.x - 2)
-		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+		return;	
+	
 	uchar v1 = sharedBlock[lid.y    ][lid.x    ];
 	uchar v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uchar v3 = sharedBlock[lid.y    ][lid.x + 2];

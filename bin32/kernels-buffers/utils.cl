@@ -1,7 +1,4 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
+#include "common.cl"
 
 __kernel void subtract(
 	__global uchar* a,

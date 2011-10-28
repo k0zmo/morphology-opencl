@@ -1,3 +1,5 @@
+#include "common.cl"
+
 #ifdef USE_ATOMIC_COUNTERS
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
 #define counter_type counter32_t
@@ -7,12 +9,8 @@
 #define atomic_inc atom_inc
 #endif
 
-__constant uint OBJ = 255;
-__constant uint BCK = 0;
-
-#include "cache16x16.cl"
-
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter1_local(
 	__global uint4* input,
 	__global uint* output,
@@ -24,20 +22,21 @@ void skeleton4_iter1_local(
 	// X|1|X
 	// 0|0|0
 	//
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
 	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
+
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
 	if(gid.y >= imageSize.y - 2)
 		return;
 		
 	if(gid.x >= imageSize.x - 2)
-		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+		return;		
+	
 	uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -61,7 +60,8 @@ void skeleton4_iter1_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter2_local(
 	__global uint4* input,
 	__global uint* output,
@@ -73,10 +73,12 @@ void skeleton4_iter2_local(
 	// 1|1|0
 	// 1|x|0
 	//
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
 	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -86,7 +88,6 @@ void skeleton4_iter2_local(
 	if(gid.x >= imageSize.x - 2)
 		return;
 		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
 	uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	//uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -110,7 +111,8 @@ void skeleton4_iter2_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter3_local(
 	__global uint4* input,
 	__global uint* output,
@@ -123,10 +125,11 @@ void skeleton4_iter3_local(
 	// 1|1|1
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -135,8 +138,7 @@ void skeleton4_iter3_local(
 		
 	if(gid.x >= imageSize.x - 2)
 		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+
 	uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -160,7 +162,8 @@ void skeleton4_iter3_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter4_local(
 	__global uint4* input,
 	__global uint* output,
@@ -173,10 +176,11 @@ void skeleton4_iter4_local(
 	// 0|X|1
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -185,8 +189,7 @@ void skeleton4_iter4_local(
 		
 	if(gid.x >= imageSize.x - 2)
 		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+
 	uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	//uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -210,7 +213,8 @@ void skeleton4_iter4_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter5_local(
 	__global uint4* input,
 	__global uint* output,
@@ -223,10 +227,11 @@ void skeleton4_iter5_local(
 	// 0|0|X
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -235,8 +240,7 @@ void skeleton4_iter5_local(
 		
 	if(gid.x >= imageSize.x - 2)
 		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+
 	//uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	//uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -259,7 +263,8 @@ void skeleton4_iter5_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter6_local(
 	__global uint4* input,
 	__global uint* output,
@@ -272,10 +277,11 @@ void skeleton4_iter6_local(
 	// X|0|0
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -285,7 +291,6 @@ void skeleton4_iter6_local(
 	if(gid.x >= imageSize.x - 2)
 		return;
 		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
 	//uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	//uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -308,7 +313,8 @@ void skeleton4_iter6_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter7_local(
 	__global uint4* input,
 	__global uint* output,
@@ -321,10 +327,11 @@ void skeleton4_iter7_local(
 	// X|1|X
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -333,8 +340,7 @@ void skeleton4_iter7_local(
 		
 	if(gid.x >= imageSize.x - 2)
 		return;
-		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
+
 	//uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
@@ -357,7 +363,8 @@ void skeleton4_iter7_local(
 	}
 }
 
-__kernel __attribute__((reqd_work_group_size(16, 16, 1)))
+__kernel
+__attribute__((reqd_work_group_size(16, 16, 1)))
 void skeleton4_iter8_local(
 	__global uint4* input,
 	__global uint* output,
@@ -370,10 +377,11 @@ void skeleton4_iter8_local(
 	// X|1|X
 	//
 	
-	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -383,7 +391,6 @@ void skeleton4_iter8_local(
 	if(gid.x >= imageSize.x - 2)
 		return;
 		
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));	
 	uint v1 = sharedBlock[lid.y    ][lid.x    ];
 	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
 	//uint v3 = sharedBlock[lid.y    ][lid.x + 2];

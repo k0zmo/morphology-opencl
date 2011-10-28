@@ -1,4 +1,4 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+#include "common.cl"
 
 #ifdef USE_ATOMIC_COUNTERS
 #pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
@@ -8,11 +8,6 @@
 #define counter_type __global uint*
 #define atomic_inc atom_inc
 #endif
-
-#include "cache16x16.cl"
-
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
 
 __attribute__((always_inline)) 
 uint getCode(
@@ -49,7 +44,7 @@ __kernel void skeletonZhang_pass1(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uint v = input[gid.x + gid.y * rowPitch];
+	uchar v = input[gid.x + gid.y * rowPitch];
 	
 	if(v != BCK)
 	{
@@ -72,7 +67,7 @@ __kernel void skeletonZhang_pass2(
 	counter_type counter)
 {
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	uint v = input[gid.x + gid.y * rowPitch];
+	uchar v = input[gid.x + gid.y * rowPitch];
 	
 	if(v != BCK)
 	{
@@ -125,10 +120,11 @@ void skeletonZhang4_pass1_local(
 	__constant uint* table,
 	counter_type counter)
 {
-	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -139,7 +135,6 @@ void skeletonZhang4_pass1_local(
 		return;
 	
 	// Pobierz srodkowy piksle z pamieci lokalnej
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	uchar v = sharedBlock[lid.y + 1][lid.x + 1];
 	
 	if(v != BCK)
@@ -153,7 +148,7 @@ void skeletonZhang4_pass1_local(
 			atomic_inc(counter);
 			output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
 		}
-	}	
+	}
 }	
 
 __kernel 
@@ -165,10 +160,11 @@ void skeletonZhang4_pass2_local(
 	__constant uint* table,
 	counter_type counter)
 {
-	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
-	cacheNeighbours(input, imageSize, sharedBlock);
-	
 	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	
+	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
 	// musimy sprawdzic ponizsze warunki
@@ -179,7 +175,6 @@ void skeletonZhang4_pass2_local(
 		return;
 	
 	// Pobierz srodkowy piksle z pamieci lokalnej
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
 	uchar v = sharedBlock[lid.y + 1][lid.x + 1];
 	
 	if(v != BCK)
@@ -195,4 +190,3 @@ void skeletonZhang4_pass2_local(
 		}
 	}
 }
-
