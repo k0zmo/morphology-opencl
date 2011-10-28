@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <unordered_map>
 
 #include <CL/cl.hpp>
 #include <QString>
@@ -30,10 +29,6 @@ protected:
 	cl::Context context;
 	cl::Device dev;
 	cl::CommandQueue cq;
-
-	// Hash-map'a zbudowanych programow 
-	// (kluczem jest sciezka do pliku, z ktorego program zbudowano)
-	std::unordered_map<std::string, cl::Program> programs;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
 	cl::Buffer clSeCoords;

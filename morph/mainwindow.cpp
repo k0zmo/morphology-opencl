@@ -62,9 +62,15 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.pbRun, SIGNAL(pressed()), this, SLOT(runPressed()));
 
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
+	
+	int method;
+	printf("There are 2 methods implemented:\n"
+		"\t1) Images\n"
+		"\t2) Buffers\n"
+		"Choose method: ");
+	scanf("%d", &method);
 
-	int method = settings.value("opencl/method", 0).toInt();
-	if(method == 0) ocl = new MorphOpenCLImage();
+	if(method == 1) ocl = new MorphOpenCLImage();
 	else ocl = new MorphOpenCLBuffer();
 
 	ocl->errorCallback = [this](const QString& message, cl_int err)

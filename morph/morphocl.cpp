@@ -34,10 +34,10 @@ kradiusy(0)
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 
 	// Wczytaj opcje z pliku konfiguracyjnego
-	workGroupSizeX = settings.value("misc/workgroupsizex", 16).toInt();
-	workGroupSizeY = settings.value("misc/workgroupsizey", 16).toInt();
+	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
+	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
 	readingMethod = static_cast<EReadingMethod>(
-		settings.value("misc/readingmethod", 0).toInt());
+		settings.value("opencl/readingmethod", 0).toInt());
 	local = settings.value("kernel/local", false).toBool();
 }
 // -------------------------------------------------------------------------
@@ -202,57 +202,46 @@ cl::Program MorphOpenCL::createProgram(const QString& progFile,
 // -------------------------------------------------------------------------
 cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
 {
-	auto it = programs.find(progFile);
-
-	if(it == programs.end())
+	QFile file(progFile);
+	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		QFile file(progFile);
-		if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-		{
-			clError("Can't read " + 
-				QString(progFile) + 
-				" file!", -1);
-		}
-
-		QTextStream in(&file);
-		QString contents = in.readAll();
-
-		QByteArray w = contents.toLocal8Bit();
-		const char* src = w.data();
-		size_t len = contents.length();
-
-		cl_int err;
-		cl::Program::Sources sources(1, std::make_pair(src, len));
-		cl::Program program = cl::Program(context, sources, &err);
-		clError("Failed to create compute program from" + QString(progFile), err);
-
-		std::vector<cl::Device> devs(1);
-		devs[0] = (dev);
-
-		printf("Building %s program...", progFile);
-		err = program.build(devs, options);
-		QString log(QString::fromStdString(
-			program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
-		if(err != CL_SUCCESS)
-			clError(log, err);
-		printf("[OK]\n");
-
-		if(log.size() > 0)
-		{
-			std::string slog = log.toStdString();
-			printf("log: %s\n", slog.c_str());
-		}
-
-		// get binaries
-		//std::vector<char*> binary = program.getInfo<CL_PROGRAM_BINARIES>(&err);
-
-		programs[progFile] = program;
-		return program;
+		clError("Can't read " + 
+			QString(progFile) + 
+			" file!", -1);
 	}
-	else
+
+	QTextStream in(&file);
+	QString contents = in.readAll();
+
+	QByteArray w = contents.toLocal8Bit();
+	const char* src = w.data();
+	size_t len = contents.length();
+
+	cl_int err;
+	cl::Program::Sources sources(1, std::make_pair(src, len));
+	cl::Program program = cl::Program(context, sources, &err);
+	clError("Failed to create compute program from" + QString(progFile), err);
+
+	std::vector<cl::Device> devs(1);
+	devs[0] = (dev);
+
+	printf("Building %s program...", progFile);
+	err = program.build(devs, options);
+	QString log(QString::fromStdString(
+		program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
+	if(err != CL_SUCCESS)
+		clError(log, err);
+	printf("[OK]\n");
+
+	if(log.size() > 0)
 	{
-		return it->second;
-	}	
+		std::string slog = log.toStdString();
+		printf("log: %s\n", slog.c_str());
+	}
+
+	// get binaries
+	//std::vector<char*> binary = program.getInfo<CL_PROGRAM_BINARIES>(&err);
+	return program;
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
@@ -392,13 +381,15 @@ bool MorphOpenCLImage::initOpenCL()
 			CL_IMAGE_FORMAT_NOT_SUPPORTED);
 	}
 
+	const char* opts = "-Ikernels-images/";
+
 	// Wczytaj programy
-	cl::Program perode = createProgram("kernels-images/erode.cl");
-	cl::Program pdilate = createProgram("kernels-images/dilate.cl");
-	cl::Program poutline = createProgram("kernels-images/outline.cl");
-	cl::Program putils = createProgram("kernels-images/utils.cl");
-	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl");
-	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl");
+	cl::Program perode = createProgram("kernels-images/erode.cl", opts);
+	cl::Program pdilate = createProgram("kernels-images/dilate.cl", opts);
+	cl::Program poutline = createProgram("kernels-images/outline.cl", opts);
+	cl::Program putils = createProgram("kernels-images/utils.cl", opts);
+	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl", opts);
+	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl", opts);
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 
@@ -703,17 +694,22 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 
-	//cl::NDRange offset(kradiusx, kradiusy);
-	//cl::NDRange gridDim(src->cols - 2*kradiusx, src->rows - 2*kradiusy);
-
-	cl::NDRange offset(0, 0);
-	cl::NDRange gridDim(src->cols, src->rows);
+#if 0
+	cl::NDRange offset(kradiusx, kradiusy);
+	cl::NDRange gridDim(src->cols - 2*kradiusx, src->rows - 2*kradiusy,);
+	cl::NDRange blockDim = cl::NullRange;
+#else
+	cl::NDRange offset(kradiusx, kradiusy);
+	cl::NDRange gridDim(
+		roundUp(src->cols - 2*kradiusx, workGroupSizeX),
+		roundUp(src->rows - 2*kradiusy, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+#endif
 
 	// Odpal kernela
 	cl::Event evt;	
 	err |= cq.enqueueNDRangeKernel(*kernel,
-		offset, gridDim,
-		cl::NullRange, 
+		offset, gridDim, blockDim,
 		nullptr, &evt);
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
@@ -739,12 +735,12 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 
 	cl::NDRange offset(1, 1);
 	cl::NDRange gridDim(src->cols - 2, src->rows - 2);
+	cl::NDRange blockDim = cl::NullRange;
 
 	// Odpal kernela
 	cl::Event evt;
 	err |= cq.enqueueNDRangeKernel(*kernel,
-		offset, gridDim,
-		cl::NullRange,
+		offset, gridDim, blockDim, 
 		nullptr, &evt);
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
@@ -762,13 +758,15 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	err |= kernelSubtract.setArg(1, clBImage);
 	err |= kernelSubtract.setArg(2, clDstImage);
 	clError("Error while setting kernel arguments", err);
+	
+	cl::NDRange offset = cl::NullRange;
+	cl::NDRange gridDim(src->cols, src->rows);
+	cl::NDRange blockDim = cl::NullRange;
 
 	// Odpal kernela
 	cl::Event evt;	
 	err |= cq.enqueueNDRangeKernel(kernelSubtract,
-		cl::NullRange,
-		cl::NDRange(src->cols, src->rows),
-		cl::NullRange, 
+		offset, gridDim, blockDim, 
 		nullptr, &evt);
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
@@ -802,10 +800,10 @@ bool MorphOpenCLBuffer::initOpenCL()
 	QString opts = "-I " + dir;
 
 	// Wczytaj programy
-	cl::Program perode = createProgram(dir + "erode.cl");
-	cl::Program pdilate = createProgram(dir + "dilate.cl");
+	cl::Program perode = createProgram(dir + "erode.cl", opts);
+	cl::Program pdilate = createProgram(dir + "dilate.cl", opts);
 	cl::Program poutline = createProgram(dir + "outline.cl", opts);
-	cl::Program putils = createProgram(dir + "utils.cl");
+	cl::Program putils = createProgram(dir + "utils.cl", opts);
 	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
 	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
 
@@ -1231,7 +1229,6 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 		// .. a nastepnie zrzutowac do uchar'ow
 		uchar* dptr = dst.ptr<uchar>();
 		for(int i = 0; i < dst.cols * dst.rows; ++i)
-			//dptr[i] = cv::saturate_cast<uchar>(dstTmp[i]);
 			dptr[i] = static_cast<uchar>(dstTmp[i]);
 
 		delete [] dstTmp;
@@ -1267,6 +1264,12 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 
 	cl_int4 seSize = { kradiusx, kradiusy, (int)(csize), 0 };
 	cl_int2 imageSize = { deviceWidth, deviceHeight };
+	
+	int apronX = kradiusx * 2;
+	int apronY = kradiusy * 2;
+	
+	cl::NDRange offset(0, 0, 0);
+	cl::NDRange gridDim, blockDim;
 
 	if(!local)
 	{
@@ -1277,22 +1280,12 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		err |= kernel->setArg(3, seSize);
 		err |= kernel->setArg(4, imageSize);
 		clError("Error while setting kernel arguments", err);
-
-		// Odpal kernela
-		err = cq.enqueueNDRangeKernel(*kernel,
-			cl::NullRange,
-			cl::NDRange(src->cols - kradiusx*2, src->rows - kradiusy*2),
-			cl::NullRange, 
-			nullptr, &evt);
+		
+		gridDim = cl::NDRange(src->cols - apronX, src->rows - apronY);
+		blockDim = cl::NullRange;
 	}
-	else
+	if(local)
 	{
-		int apronX = kradiusx * 2;
-		int apronY = kradiusy * 2;
-
-		int globalItemsX = roundUp(src->cols - apronX, workGroupSizeX);
-		int globalItemsY = roundUp(src->rows - apronY, workGroupSizeX);	
-
 		cl_int2 sharedSize = {
 			roundUp(workGroupSizeX + apronX, 4),
 			workGroupSizeY + apronY
@@ -1300,23 +1293,22 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
 		if(useUint) sharedBlockSize *= sizeof(cl_uint);
 
-		// Ustaw argumenty kernela
-		err  = kernel->setArg(0, clSrcBuffer);
-		err |= kernel->setArg(1, clDstBuffer);
-		err |= kernel->setArg(2, clSeCoords);
-		err |= kernel->setArg(3, seSize);
-		err |= kernel->setArg(4, imageSize);
+		// Trzeba ustawic dodatkowe argumenty kernela
 		err |= kernel->setArg(5, sharedBlockSize, nullptr);
 		err |= kernel->setArg(6, sharedSize);
 		clError("Error while setting kernel arguments", err);
-
-		// Odpal kernela
-		err = cq.enqueueNDRangeKernel(*kernel,
-			cl::NullRange,
-			cl::NDRange(globalItemsX, globalItemsY),
-			cl::NDRange(workGroupSizeX, workGroupSizeY), 
-			nullptr, &evt);
+		
+		int globalItemsX = roundUp(src->cols - apronX, workGroupSizeX);
+		int globalItemsY = roundUp(src->rows - apronY, workGroupSizeX);	
+		
+		gridDim = cl::NDRange(globalItemsX, globalItemsY);
+		blockDim = cl::NDRange(workGroupSizeX, workGroupSizeY);
 	}
+
+	// Odpal kernela
+	err = cq.enqueueNDRangeKernel(*kernel,
+		cl::NullRange, gridDim, blockDim,
+		nullptr, &evt);
 
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
@@ -1338,6 +1330,8 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	if(clLut) err |= kernel->setArg(3, *clLut);
 	if(clAtomicCounter && clLut) err |= kernel->setArg(4, *clAtomicCounter);
 	else if (clAtomicCounter) err |= kernel->setArg(3, *clAtomicCounter);
+	
+	cl::NDRange offset, gridDim, blockDim;
 
 	if(!local)
 	{
@@ -1345,12 +1339,9 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 		err |= kernel->setArg(2, deviceWidth);
 		clError("Error while setting kernel arguments", err);
 
-		// Odpal kernela
-		err = cq.enqueueNDRangeKernel(*kernel,
-			cl::NDRange(1, 1),
-			cl::NDRange(src->cols - 2, src->rows - 2),
-			cl::NullRange,
-			nullptr, &evt);
+		offset = cl::NDRange(1, 1);
+		gridDim = cl::NDRange(src->cols - 2, src->rows - 2);
+		blockDim = cl::NullRange;
 	}
 	else
 	{
@@ -1361,13 +1352,17 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 		err |= kernel->setArg(2, imageSize);
 		clError("Error while setting kernel arguments", err);
 
-		// Odpal kernela
-		err = cq.enqueueNDRangeKernel(*kernel,
-			cl::NullRange,
-			cl::NDRange(roundUp(src->cols - 2, lsize), roundUp(src->rows - 2, lsize)),
-			cl::NDRange(lsize, lsize), 
-			nullptr, &evt);
+		offset = cl::NullRange;
+		gridDim = cl::NDRange(
+			roundUp(src->cols - 2, lsize),
+			roundUp(src->rows - 2, lsize));
+		blockDim = cl::NDRange(lsize, lsize);
 	}
+		
+	// Odpal kernela
+	err = cq.enqueueNDRangeKernel(*kernel,
+		offset, gridDim, blockDim,
+		nullptr, &evt);	
 
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
