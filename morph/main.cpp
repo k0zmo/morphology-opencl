@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 #else
-	QString filename = "bin1.png";
-	//QString filename = "lena.jpg";
+	//QString filename = "bin1.png";
+	QString filename = "lena.jpg";
 #endif
 
 

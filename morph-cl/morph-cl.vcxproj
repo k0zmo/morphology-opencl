@@ -32,13 +32,13 @@
   <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
-    <Import Project="..\..\OpenCV_Debug.props" />
-    <Import Project="..\..\OpenCL.props" />
+    <Import Project="..\OpenCL.props" />
+    <Import Project="..\OpenCV_Debug.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
-    <Import Project="..\..\OpenCV_Release.props" />
-    <Import Project="..\..\OpenCL.props" />
+    <Import Project="..\OpenCL.props" />
+    <Import Project="..\OpenCV_Release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
