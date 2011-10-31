@@ -59,6 +59,12 @@
     <ClCompile Include="morphop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="morphoclimage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="morphoclbuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompiled.h">
@@ -75,6 +81,12 @@
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_sepreview.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="morphoclimage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="morphoclbuffer.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

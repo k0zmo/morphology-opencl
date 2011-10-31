@@ -1,6 +1,7 @@
 #include "mainwindow.h"
-#include "morphop.h"
-#include "morphocl.h"
+
+#include "morphoclimage.h"
+#include "morphoclbuffer.h"
 
 #include <QElapsedTimer>
 #include <QFileDialog>

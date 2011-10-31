@@ -1,0 +1,685 @@
+#include "morphoclbuffer.h"
+
+MorphOpenCLBuffer::MorphOpenCLBuffer()
+	: MorphOpenCL()
+{
+	QSettings settings("./settings.cfg", QSettings::IniFormat);
+
+	// Wczytaj opcje z pliku konfiguracyjnego
+	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
+	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
+	readingMethod = static_cast<EReadingMethod>(
+		settings.value("opencl/readingmethod", 0).toInt());
+	local = settings.value("kernel/local", false).toBool();
+}
+// -------------------------------------------------------------------------
+bool MorphOpenCLBuffer::initOpenCL()
+{
+	MorphOpenCL::initOpenCL();
+
+	QSettings s("./settings.cfg", QSettings::IniFormat);
+
+	// Typ danych (uchar czy uint)
+	QString dir;
+	if(s.value("opencl/datatype", "0").toInt() == 0)
+	{
+		dir = "kernels-buffers/";
+		useUint = false;
+	}
+	else
+	{
+		dir = "kernels-uint/";
+		useUint = true;
+	}
+	QString opts = "-I " + dir;
+
+	// do ewentualnej rekompilacji z podaniem innego parametry -D
+	erodeParams.programName = dir + "erode.cl";
+	erodeParams.options = opts;
+	erodeParams.kernelName = s.value("kernel/erode", "erode").toString();
+
+	dilateParams.programName = dir + "dilate.cl";
+	dilateParams.options = opts;
+	dilateParams.kernelName = s.value("kernel/dilate", "dilate").toString();
+
+	// Wczytaj programy (rekompilowalne)
+	cl::Program perode = createProgram(erodeParams.programName, opts);
+	cl::Program pdilate = createProgram(dilateParams.programName, opts);
+
+	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
+	cl::Program poutline = createProgram(dir + "outline.cl", opts);
+	cl::Program putils = createProgram(dir + "utils.cl", opts);
+	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
+	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
+
+	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
+	kernelErode = createKernel(perode, erodeParams.kernelName);
+	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
+	kernelOutline = createKernel(poutline, s.value("kernel/outline", "outline").toString());
+	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
+
+	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
+	QString sub = s.value("kernel/subtract", "subtract").toString();
+	if(sub.endsWith("4")) sub4 = true;
+	else sub4 = false;
+
+	int local = s.value("kernel/local", "0").toInt();
+	for(int i = 0; i < 8; ++i)
+	{
+		if(local == 0)
+		{
+			QString kernelName = "skeleton_iter" + QString::number(i+1);
+			kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		}
+		else
+		{
+			QString kernelName = "skeleton4_iter" + QString::number(i+1) + "_local";
+			kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		}
+	}
+
+	if(local == 0)
+	{
+		kernelSkeleton_pass[0] = createKernel(pskeletonz, "skeletonZhang_pass1");
+		kernelSkeleton_pass[1] = createKernel(pskeletonz, "skeletonZhang_pass2");
+	}
+	else
+	{
+		kernelSkeleton_pass[0] = createKernel(pskeletonz, "skeletonZhang4_pass1_local");
+		kernelSkeleton_pass[1] = createKernel(pskeletonz, "skeletonZhang4_pass2_local");
+	}
+
+	return true;
+}
+// -------------------------------------------------------------------------
+void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
+{
+	cl_int err;
+	sourceBuffer.cpu = newSrc;
+
+	// Czy chcemy aby bufor mial wyrownane wiersze danych do rozmiary grupy roboczej
+	if(readingMethod == RM_NotOptimized)
+		sourceBuffer.gpuWidth = newSrc->cols;
+	else
+		sourceBuffer.gpuWidth = roundUp(newSrc->cols, workGroupSizeX);
+	sourceBuffer.gpuHeight = newSrc->rows;
+
+	sourceBuffer.gpu = cl::Buffer(context, CL_MEM_READ_ONLY,
+		bufferSize(), nullptr, &err);
+	clError("Error while creating OpenCL source buffer", err);
+
+	void* srcptr = const_cast<uchar*>(newSrc->ptr<uchar>());
+	uint* ptr = nullptr;
+
+	// Konwersja uchar -> uint
+	if(useUint)
+	{
+		ptr = new uint[newSrc->cols * newSrc->rows];
+		const uchar* uptr = newSrc->ptr<uchar>();
+		for(int i = 0; i < newSrc->cols * newSrc->rows; ++i)
+			ptr[i] = (int)(uptr[i]);
+
+		srcptr = ptr;
+	}
+
+	cl::Event evt;
+
+	// Skopiuj dane 1:1
+	if(readingMethod == RM_NotOptimized)
+	{
+		err = cq.enqueueWriteBuffer(sourceBuffer.gpu, CL_TRUE, 0, 
+			bufferSize(), srcptr, 0, &evt);
+	}
+	// Skopiuj dane tak by byly odpowiednio wyrownane
+	else
+	{
+		cl::size_t<3> origin;
+		origin[0] = 0;
+		origin[1] = 0;
+		origin[2] = 0;
+
+		cl::size_t<3> region;
+		region[0] = newSrc->cols;
+		region[1] = newSrc->rows;
+		region[2] = 1;
+
+		size_t buffer_row_pitch = sourceBuffer.gpuWidth;
+		size_t host_row_pitch = newSrc->cols;
+
+		if(useUint)
+		{
+			region[0] *= sizeof(uint);
+
+			buffer_row_pitch *= sizeof(uint);
+			host_row_pitch *= sizeof(uint);
+		}
+
+		err = cq.enqueueWriteBufferRect(sourceBuffer.gpu, CL_TRUE, 
+			origin, origin, region, 
+			buffer_row_pitch, 0, 
+			host_row_pitch, 0, 
+			srcptr, 0, &evt);
+	}
+
+	evt.wait();
+	clError("Error while writing new data to OpenCL source buffer!", err);
+
+	// Podaj czas trwania transferu
+	cl_ulong delta = elapsedEvent(evt);
+	printf("Transfering source image to GPU took %.5lfms\n", delta * 0.000001);
+
+	delete [] ptr;
+}
+// -------------------------------------------------------------------------
+double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& iters)
+{
+	int dstSizeX = sourceBuffer.cpu->cols;
+	int dstSizeY = sourceBuffer.cpu->rows;
+
+	iters = 1;
+	cl_ulong elapsed = 0;
+
+	// Bufor docelowy
+	cl_int err;
+	cl::Buffer clDst = createBuffer(CL_MEM_WRITE_ONLY);
+
+	switch(opType)
+	{
+	case OT_Erode:
+		morphologyErode(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*2;
+		dstSizeY -= kradiusy*2;
+		break;
+	case OT_Dilate:
+		morphologyDilate(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*2;
+		dstSizeY -= kradiusy*2;
+		break;
+	case OT_Open:
+		morphologyOpen(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*4;
+		dstSizeY -= kradiusy*4;
+		break;
+	case OT_Close:
+		morphologyClose(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*4;
+		dstSizeY -= kradiusy*4;
+		break;
+	case OT_Gradient:
+		morphologyGradient(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*2;
+		dstSizeY -= kradiusy*2;
+		break;
+	case OT_TopHat:
+		morphologyTopHat(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*4;
+		dstSizeY -= kradiusy*4;
+		break;
+	case OT_BlackHat:
+		morphologyBlackHat(sourceBuffer.gpu, clDst);
+		dstSizeX -= kradiusx*4;
+		dstSizeY -= kradiusy*4;
+		break;
+	case OT_Outline:
+		morphologyOutline(sourceBuffer.gpu, clDst);
+		dstSizeX -= 2;
+		dstSizeY -= 2;
+		break;
+	case OT_Skeleton:
+		morphologySkeleton(sourceBuffer.gpu, clDst, iters);
+		dstSizeX -= 2;
+		dstSizeY -= 2;
+		break;
+	case OT_Skeleton_ZhangSuen:
+		morphologySkeletonZhangSuen(sourceBuffer.gpu, clDst, iters);
+		dstSizeX -= 2;
+		dstSizeY -= 2;
+		break;
+	}
+
+	// Zczytaj wynik z karty
+	cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
+
+	// Ile czasu to zajelo
+	double totalTime = (elapsed + readingTime) * 0.000001;
+	printf("Total time: %.5lf ms (in which %.5f was a processing time "
+		"and %.5lf ms was a transfer time)\n",
+		totalTime, elapsed * 0.000001, readingTime * 0.000001);
+
+	// Ile czasu wszystko zajelo
+	return totalTime;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::readBack(const cl::Buffer& source,
+	cv::Mat &dst, int dstSizeX, int dstSizeY)
+{
+	dst = cv::Mat(sourceBuffer.cpu->size(), CV_8U, cv::Scalar(0));
+	cl::Event evt;
+
+	cl::size_t<3> origin;
+	cl::size_t<3> region;
+
+	origin[0] = (sourceBuffer.cpu->cols - dstSizeX)/2;
+	origin[1] = (sourceBuffer.cpu->rows - dstSizeY)/2;
+	origin[2] = 0;
+
+	region[0] = dstSizeX;
+	region[1] = dstSizeY;
+	region[2] = 1;
+
+	size_t buffer_row_pitch = sourceBuffer.gpuWidth;
+	size_t host_row_pitch = sourceBuffer.cpu->cols;
+
+	if(useUint)
+	{
+		// Musimy wczytac wiecej danych
+		origin[0] *= sizeof(uint);
+		region[0] *= sizeof(uint);
+
+		buffer_row_pitch *= sizeof(uint);
+		host_row_pitch *= sizeof(uint);
+
+		// .. do tymczasowego bufora uint'ow
+		uint* dstTmp = new uint[sourceBuffer.cpu->size().area()];
+
+		cl_int err = cq.enqueueReadBufferRect(source, CL_FALSE, 
+			origin, origin, region, 
+			buffer_row_pitch, 0, 
+			host_row_pitch, 0, 
+			dstTmp, nullptr, &evt);
+
+		clError("Error while reading result to buffer!", err);
+		evt.wait();
+
+		// .. a nastepnie zrzutowac do uchar'ow
+		uchar* dptr = dst.ptr<uchar>();
+		for(int i = 0; i < dst.cols * dst.rows; ++i)
+			dptr[i] = static_cast<uchar>(dstTmp[i]);
+
+		delete [] dstTmp;
+	}
+	else
+	{
+		cl_int err = cq.enqueueReadBufferRect(source, CL_FALSE, 
+			origin, origin, region, 
+			buffer_row_pitch, 0, 
+			host_row_pitch, 0, 
+			dst.ptr<uchar>(), nullptr, &evt);
+
+		clError("Error while reading result to buffer!", err);
+		evt.wait();
+	}
+
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl::Buffer MorphOpenCLBuffer::createBuffer(cl_mem_flags memFlags)
+{
+	cl_int err;
+	cl::Buffer buffer(context,
+		memFlags, 
+		bufferSize(),
+		nullptr, &err);
+	clError("Error while creating destination OpenCL buffer!", err);
+
+	return buffer;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::copyBuffer(const cl::Buffer& src, cl::Buffer& dst)
+{
+	cl::Event evt;
+	cq.enqueueCopyBuffer(src, dst, 
+		0, 0, 
+		bufferSize(), 
+		nullptr, &evt);
+	evt.wait();
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyErode(cl::Buffer& src, cl::Buffer& dst)
+{
+	return executeMorphologyKernel(&kernelErode, src, dst);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyDilate( cl::Buffer& src, cl::Buffer& dst )
+{
+	return executeMorphologyKernel(&kernelDilate, src, dst);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyOpen(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+
+	// dst = dilate(erode(src))
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelDilate, tmpBuffer, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+
+	// dst = erode(dilate(src))
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelErode, tmpBuffer, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+	cl::Buffer tmpBuffer2 = createBuffer(CL_MEM_READ_WRITE);
+
+	//dst = dilate(src) - erode(src);
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer2);
+	elapsed += executeSubtractKernel(tmpBuffer, tmpBuffer2, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+	cl::Buffer tmpBuffer2 = createBuffer(CL_MEM_READ_WRITE);
+
+	// dst = src - dilate(erode(src))
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelDilate, tmpBuffer, tmpBuffer2);
+	elapsed += executeSubtractKernel(src, tmpBuffer2, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyBlackHat(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+	cl::Buffer tmpBuffer2 = createBuffer(CL_MEM_READ_WRITE);
+
+	// dst = close(src) - src
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelErode, tmpBuffer, tmpBuffer2);
+	elapsed += executeSubtractKernel(tmpBuffer2, src, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologyOutline(cl::Buffer& src, cl::Buffer& dst)
+{
+	// Skopiuj obraz zrodlowy do docelowego
+	cl::Event evt;
+	cl_ulong elapsed = copyBuffer(src, dst);
+
+	// Wykonaj operacje hitmiss
+	elapsed += executeHitMissKernel(&kernelOutline, src, dst);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologySkeleton(cl::Buffer& src, 
+	cl::Buffer& dst, int& iters)
+{
+	iters = 0;
+
+	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_ONLY);
+
+	// Skopiuj obraz zrodlowy do docelowego i tymczasowego
+	cl::Event evt;
+	cl_ulong elapsed = 0;
+	elapsed += copyBuffer(src, tmpBuffer);
+	elapsed += copyBuffer(src, dst);				
+
+	// Licznik atomowy (ew. zwyczajny bufor)
+	cl_int err;
+	cl_uint d_init = 0;		
+	cl::Buffer clAtomicCnt(context, 
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+		sizeof(cl_uint), &d_init, &err);
+	clError("Error while creating temporary OpenCL atomic counter", err);
+
+	do 
+	{
+		iters++;
+
+		// 8 operacji hit miss, 2 elementy strukturalnego, 4 orientacje
+		for(int i = 0; i < 8; ++i)
+		{
+			elapsed += executeHitMissKernel(&kernelSkeleton_iter[i], 
+				tmpBuffer, dst, &clAtomicCnt);
+
+			// Kopiowanie bufora
+			elapsed += copyBuffer(dst, tmpBuffer);
+		}
+
+		// Sprawdz ile pikseli zostalo zmodyfikowanych
+		cl_uint diff;
+		elapsed += readAtomicCounter(diff, clAtomicCnt);
+
+		// Sprawdz warunek stopu
+		if(diff == 0)
+			break;
+
+		printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
+
+		elapsed += zeroAtomicCounter(clAtomicCnt);
+
+	} while (true);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
+	cl::Buffer& dst, int& iters)
+{
+	iters = 0;
+
+	// Skopiuj obraz zrodlowy do docelowego
+	cl::Event evt;	
+	cl_ulong elapsed = copyBuffer(src, dst);	
+
+	// Licznik atomowy (ew. zwyczajny bufor)
+	cl_int err;
+	cl_uint d_init = 0;
+	cl::Buffer clAtomicCnt(context, 
+		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
+		sizeof(cl_uint), &d_init, &err);
+	clError("Error while creating temporary OpenCL atomic counter", err);
+
+	cl::Buffer clLut(context, 
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		sizeof(lutTable), lutTable, &err);
+	clError("Error while creating temporary OpenCL atomic counter", err);
+
+	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_ONLY);
+
+	do 
+	{
+		iters++;
+
+		// odd pass
+		elapsed += copyBuffer(dst, tmpBuffer);
+		elapsed += executeHitMissKernel(&kernelSkeleton_pass[0], 
+			tmpBuffer, dst, &clLut, &clAtomicCnt);
+
+		// even pass
+		elapsed += copyBuffer(dst, tmpBuffer);
+		elapsed += executeHitMissKernel(&kernelSkeleton_pass[1], 
+			tmpBuffer, dst, &clLut, &clAtomicCnt);
+
+		// Sprawdz ile pikseli zostalo zmodyfikowanych
+		cl_uint diff;
+		elapsed += readAtomicCounter(diff, clAtomicCnt);
+
+		printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
+
+		// Sprawdz warunek stopu
+		if(diff == 0)
+			break;
+
+		elapsed += zeroAtomicCounter(clAtomicCnt);	
+
+	} while(true);
+
+	return elapsed;
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
+	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
+{
+	cl::Event evt;
+	cl_int err;
+
+	cl_int4 seSize = { kradiusx, kradiusy, (int)(csize), 0 };
+	cl_int2 imageSize = { sourceBuffer.gpuWidth, sourceBuffer.gpuHeight };
+
+	int apronX = kradiusx * 2;
+	int apronY = kradiusy * 2;
+
+	// Ustaw argumenty kernela
+	err  = kernel->setArg(0, clSrcBuffer);
+	err |= kernel->setArg(1, clDstBuffer);
+	err |= kernel->setArg(2, clStructureElementCoords);
+	err |= kernel->setArg(3, seSize);
+	err |= kernel->setArg(4, imageSize);
+	clError("Error while setting kernel arguments", err);
+
+	cl::NDRange offset = cl::NullRange;
+	cl::NDRange gridDim, blockDim;
+
+	if(!local)
+	{
+		gridDim = cl::NDRange(sourceBuffer.cpu->cols - apronX,
+			sourceBuffer.cpu->rows - apronY);
+		blockDim = cl::NullRange;
+	}
+	if(local)
+	{
+		cl_int2 sharedSize = {
+			roundUp(workGroupSizeX + apronX, 4),
+			workGroupSizeY + apronY
+		};
+		size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
+		if(useUint) sharedBlockSize *= sizeof(cl_uint);
+
+		// Trzeba ustawic dodatkowe argumenty kernela
+		err |= kernel->setArg(5, sharedBlockSize, nullptr);
+		err |= kernel->setArg(6, sharedSize);
+		clError("Error while setting kernel arguments", err);
+
+		int globalItemsX = roundUp(sourceBuffer.cpu->cols - apronX, workGroupSizeX);
+		int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, workGroupSizeX);	
+
+		gridDim = cl::NDRange(globalItemsX, globalItemsY);
+		blockDim = cl::NDRange(workGroupSizeX, workGroupSizeY);
+	}
+
+	// Odpal kernela
+	err = cq.enqueueNDRangeKernel(*kernel,
+		cl::NullRange, gridDim, blockDim,
+		nullptr, &evt);
+
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel, 
+	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer, 
+	const cl::Buffer* clLut, cl::Buffer* clAtomicCounter)
+{
+	cl::Event evt;
+	cl_int err;
+
+	// Ustaw argumenty kernela
+	err  = kernel->setArg(0, clSrcBuffer);
+	err |= kernel->setArg(1, clDstBuffer);
+	if(clLut) err |= kernel->setArg(3, *clLut);
+	if(clAtomicCounter && clLut) err |= kernel->setArg(4, *clAtomicCounter);
+	else if (clAtomicCounter) err |= kernel->setArg(3, *clAtomicCounter);
+
+	cl::NDRange offset, gridDim, blockDim;
+
+	if(!local)
+	{
+		// Ustaw pozostale argumenty kernela
+		err |= kernel->setArg(2, sourceBuffer.gpuWidth);
+		clError("Error while setting kernel arguments", err);
+
+		offset = cl::NDRange(1, 1);
+		gridDim = cl::NDRange(sourceBuffer.cpu->cols - 2, 
+			sourceBuffer.cpu->rows - 2);
+		blockDim = cl::NullRange;
+	}
+	else
+	{
+		cl_int2 imageSize = { sourceBuffer.gpuWidth, sourceBuffer.gpuHeight };
+		const int lsize = 16;
+
+		// Ustaw pozostale argumenty kernela
+		err |= kernel->setArg(2, imageSize);
+		clError("Error while setting kernel arguments", err);
+
+		offset = cl::NullRange;
+		gridDim = cl::NDRange(
+			roundUp(sourceBuffer.cpu->cols - 2, lsize),
+			roundUp(sourceBuffer.cpu->rows - 2, lsize));
+		blockDim = cl::NDRange(lsize, lsize);
+	}
+
+	// Odpal kernela
+	err = cq.enqueueNDRangeKernel(*kernel,
+		offset, gridDim, blockDim,
+		nullptr, &evt);	
+
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
+	const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer)
+{
+	cl_int err;
+	cl::Event evt;
+
+	// Ustaw argumenty kernela
+	err  = kernelSubtract.setArg(0, clABuffer);
+	err |= kernelSubtract.setArg(1, clBBuffer);
+	err |= kernelSubtract.setArg(2, clDstBuffer);
+	clError("Error while setting kernel arguments", err);
+
+	int xitems = sourceBuffer.gpuWidth;
+	if(sub4) xitems /= 4;
+
+	// Odpal kernela
+	err = cq.enqueueNDRangeKernel(kernelSubtract,
+		cl::NullRange,
+		cl::NDRange(xitems * sourceBuffer.gpuHeight),
+		cl::NullRange, 
+		nullptr, &evt);
+
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}

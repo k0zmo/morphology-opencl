@@ -107,6 +107,8 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainwindow.cpp" />
     <ClCompile Include="morphocl.cpp" />
+    <ClCompile Include="morphoclbuffer.cpp" />
+    <ClCompile Include="morphoclimage.cpp" />
     <ClCompile Include="morphop.cpp" />
     <ClCompile Include="precompiled.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -127,6 +129,8 @@
     <ClInclude Include="GeneratedFiles\ui_mainwindow.h" />
     <ClInclude Include="GeneratedFiles\ui_sepreview.h" />
     <ClInclude Include="morphocl.h" />
+    <ClInclude Include="morphoclbuffer.h" />
+    <ClInclude Include="morphoclimage.h" />
     <ClInclude Include="morphop.h" />
     <ClInclude Include="precompiled.h" />
   </ItemGroup>

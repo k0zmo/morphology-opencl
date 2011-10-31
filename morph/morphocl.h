@@ -18,19 +18,18 @@ public:
 	// Inicjalizuje OpenCL'a
 	virtual bool initOpenCL();	
 
-	// Ustawia obraz zrodlowy
+	// Ustawia obraz zrodlowy do operacji morfologicznych
 	virtual void setSourceImage(const cv::Mat* src) = 0;
+
 	// Ustawia element strukturalny
 	int setStructureElement(const cv::Mat& selement);
-
-	void recompile(EOperationType opType, int coordsSize);
 
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
 	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
 
-	// Zczytuje wynik z urzadzenia
-	virtual double readBack(cv::Mat &dst, int dstSizeX,
-		int dstSizeY, cl_ulong elapsed) = 0;
+	// Rekompiluje kod kernela odpowiedzialny za wskazana operacje
+	// (Ma sens dla dylatacji i erozji)
+	void recompile(EOperationType opType, int coordsSize);
 
 protected:
 	cl::Context context;
@@ -38,11 +37,10 @@ protected:
 	cl::CommandQueue cq;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
-	cl::Buffer clSeCoords;
+	cl::Buffer clStructureElementCoords;
 	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
 	int csize;
 
-	const cv::Mat* src;
 	int kradiusx, kradiusy;
 
 	struct SKernelParameters
@@ -94,95 +92,4 @@ protected:
 		const QString& kernelName);
 };
 
-class MorphOpenCLImage : public MorphOpenCL
-{
-public:
-	MorphOpenCLImage()
-		: MorphOpenCL()
-	{ }
-
-	/*override*/ virtual bool initOpenCL();
-	/*override*/ virtual void setSourceImage(const cv::Mat* src);
-	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
-	/*override*/ virtual double readBack(cv::Mat &dst, int dstSizeX,
-		int dstSizeY, cl_ulong elapsed);
-
-private:
-	// Obraz wejsciowy
-	cl::Image2D clSrcImage;
-	// Obraz wyjsciowy
-	cl::Image2D clDstImage;
-	// Tymczasowe obrazy (ping-pong)
-	cl::Image2D clTmpImage;
-	cl::Image2D clTmp2Image;
-
-	cl::ImageFormat imageFormat;
-
-private:
-	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
-	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
-		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage);
-
-	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
-	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
-		const cl::Image2D& clSrcImage, cl::Image2D& clDstImage,
-		const cl::Buffer* clLut = nullptr,
-		cl::Buffer* clAtomicCounter = nullptr);
-
-	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
-	cl_ulong executeSubtractKernel(const cl::Image2D& clAImage, 
-		const cl::Image2D& clBImage, cl::Image2D& clDstImage);
-};
-
-class MorphOpenCLBuffer : public MorphOpenCL
-{
-public:
-	MorphOpenCLBuffer();
-
-	/*override*/ virtual bool initOpenCL();
-	/*override*/ virtual void setSourceImage(const cv::Mat* src);
-	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
-	/*override*/ virtual double readBack(cv::Mat &dst, int dstSizeX,
-		int dstSizeY, cl_ulong elapsed);	
-
-private:
-	// Bufor z danymi wejsciowymi
-	cl::Buffer clSrc;
-	// Bufor z danymi wyjsciowymi
-	cl::Buffer clDst;
-
-	// Tymczasowe bufory (ping-pong)
-	cl::Buffer clTmp;
-	cl::Buffer clTmp2;
-
-	int deviceWidth, deviceHeight;
-
-	int workGroupSizeX;
-	int workGroupSizeY;
-
-	enum EReadingMethod
-	{
-		RM_NotOptimized,
-		RM_ReadAligned
-	};
-	EReadingMethod readingMethod;
-
-	bool local;
-	bool useUint;
-	bool sub4;
-
-private:
-	// Pomocnicza funkcja do odpalania kerneli do podst. operacji morfologicznych
-	cl_ulong executeMorphologyKernel(cl::Kernel* kernel, 
-		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer);
-
-	// Pomocnicza funkcja do odpalania kerneli do operacji typu Hit-Miss
-	cl_ulong executeHitMissKernel(cl::Kernel* kernel, 
-		const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer,
-		const cl::Buffer* clLut = nullptr,
-		cl::Buffer* clAtomicCounter = nullptr);
-
-	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
-	cl_ulong executeSubtractKernel(const cl::Buffer& clABuffer,
-		const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer);
-};
+int roundUp(int value, int multiple);

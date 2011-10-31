@@ -9,7 +9,7 @@ const int BCK = 0;
 #define force_inline inline __attribute__((always_inline))
 #endif
 
-static int table[]  = {
+uint lutTable[256]  = {
 	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
 	0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -543,7 +543,7 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 	dst = _src.clone();
 	int niters = 0;
 
-	auto thin = [&dst](int pass, int table[]) -> int
+	auto thin = [&dst](int pass) -> int
 	{
 		const int bgColor = 0;
 
@@ -581,7 +581,7 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 						((p3&0x01) << 2) |
 						((p2&0x01) << 1) |
 						 (p1&0x01);
-					int code = table[index];
+					uint code = lutTable[index];
 
 					//odd pass
 					if((pass & 1) == 1)
@@ -612,8 +612,8 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 	do 
 	{
 		niters++;
-		pixelsRemoved  = thin(pass++, table);
-		pixelsRemoved += thin(pass++, table);
+		pixelsRemoved  = thin(pass++);
+		pixelsRemoved += thin(pass++);
 		printf("Iteration: %3d, pixel changed: %5d\r", niters, pixelsRemoved);
 	} while (pixelsRemoved > 0);
 

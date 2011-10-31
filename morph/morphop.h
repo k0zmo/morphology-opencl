@@ -42,3 +42,6 @@ void morphologyOutline(const cv::Mat& src, cv::Mat& dst);
 int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
 // Operacja morfologiczna - Zhang and Suen
 int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst);
+
+// Tablica LUT do szkieletyzacji Zhang'a i Suen'a
+extern uint lutTable[256];
