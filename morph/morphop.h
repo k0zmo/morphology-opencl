@@ -44,4 +44,4 @@ int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
 int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst);
 
 // Tablica LUT do szkieletyzacji Zhang'a i Suen'a
-extern uint lutTable[256];
+extern int lutTable[256];

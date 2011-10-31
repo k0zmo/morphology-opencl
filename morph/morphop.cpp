@@ -9,7 +9,7 @@ const int BCK = 0;
 #define force_inline inline __attribute__((always_inline))
 #endif
 
-uint lutTable[256]  = {
+int lutTable[256]  = {
 	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
 	0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -581,7 +581,7 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 						((p3&0x01) << 2) |
 						((p2&0x01) << 1) |
 						 (p1&0x01);
-					uint code = lutTable[index];
+					int code = lutTable[index];
 
 					//odd pass
 					if((pass & 1) == 1)

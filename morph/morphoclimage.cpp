@@ -1,5 +1,7 @@
 #include "morphoclimage.h"
 
+#include <QSettings>
+
 bool MorphOpenCLImage::initOpenCL()
 {
 	MorphOpenCL::initOpenCL();

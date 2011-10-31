@@ -5,7 +5,6 @@
 #include <QTextStream>
 #include <QSettings>
 
-
 int roundUp(int value, int multiple)
 {
 	int v = value % multiple;

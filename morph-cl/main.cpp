@@ -14,7 +14,8 @@
 #include <sys/time.h>
 #endif
 
-#include "morphocl.h"
+#include "morphoclimage.h"
+#include "morphoclbuffer.h"
 #include "morphop.h"
 
 // -------------------------------------------------------------------------

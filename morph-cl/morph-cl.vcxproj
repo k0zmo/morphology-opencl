@@ -123,11 +123,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\morph\morphocl.cpp" />
+    <ClCompile Include="..\morph\morphoclbuffer.cpp" />
+    <ClCompile Include="..\morph\morphoclimage.cpp" />
     <ClCompile Include="..\morph\morphop.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\morph\morphocl.h" />
+    <ClInclude Include="..\morph\morphoclbuffer.h" />
+    <ClInclude Include="..\morph\morphoclimage.h" />
     <ClInclude Include="..\morph\morphop.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

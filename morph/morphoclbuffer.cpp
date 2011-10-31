@@ -1,5 +1,7 @@
 #include "morphoclbuffer.h"
 
+#include <QSettings>
+
 MorphOpenCLBuffer::MorphOpenCLBuffer()
 	: MorphOpenCL()
 {

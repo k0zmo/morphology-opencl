@@ -19,12 +19,24 @@
     <ClCompile Include="..\morph\morphocl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\morph\morphoclbuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\morph\morphoclimage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\morph\morphocl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\morph\morphop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\morph\morphoclbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\morph\morphoclimage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
