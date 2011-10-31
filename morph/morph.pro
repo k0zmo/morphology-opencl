@@ -9,15 +9,18 @@ QT       += core gui
 TARGET = morph
 TEMPLATE = app
 
-
 SOURCES += main.cpp \
 	mainwindow.cpp \
 	morphop.cpp \
-	morphocl.cpp
+	morphocl.cpp \
+	morphoclimage.cpp \
+	morphoclbuffer.cpp
 
 HEADERS  += mainwindow.h \
 	morphocl.h \
 	morphop.h \
+	morphoclimage.h \
+	morphoclbuffer.h \
 	precompiled.h
 
 FORMS    += mainwindow.ui \
@@ -26,6 +29,6 @@ FORMS    += mainwindow.ui \
 PRECOMPILED_HEADER = precompiled.h
 
 # For gcc only
-QMAKE_CXXFLAGS += -std=c++0x
-LIBS += -lopencv_core -lopencv_imgproc -lOpenCL
+QMAKE_CXXFLAGS += -std=c++0x -fopenmp
+LIBS += -lopencv_core -lopencv_imgproc -lOpenCL -fopenmp
 LIBS += -L$(AMDAPPSDKROOT)/lib/x86_64

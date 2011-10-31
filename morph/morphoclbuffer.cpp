@@ -182,58 +182,57 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	cl_ulong elapsed = 0;
 
 	// Bufor docelowy
-	cl_int err;
 	cl::Buffer clDst = createBuffer(CL_MEM_WRITE_ONLY);
 
 	switch(opType)
 	{
 	case OT_Erode:
-		morphologyErode(sourceBuffer.gpu, clDst);
+		elapsed += morphologyErode(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_Dilate:
-		morphologyDilate(sourceBuffer.gpu, clDst);
+		elapsed += morphologyDilate(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_Open:
-		morphologyOpen(sourceBuffer.gpu, clDst);
+		elapsed += morphologyOpen(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Close:
-		morphologyClose(sourceBuffer.gpu, clDst);
+		elapsed += morphologyClose(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Gradient:
-		morphologyGradient(sourceBuffer.gpu, clDst);
+		elapsed += morphologyGradient(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_TopHat:
-		morphologyTopHat(sourceBuffer.gpu, clDst);
+		elapsed += morphologyTopHat(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_BlackHat:
-		morphologyBlackHat(sourceBuffer.gpu, clDst);
+		elapsed += morphologyBlackHat(sourceBuffer.gpu, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Outline:
-		morphologyOutline(sourceBuffer.gpu, clDst);
+		elapsed += morphologyOutline(sourceBuffer.gpu, clDst);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
 	case OT_Skeleton:
-		morphologySkeleton(sourceBuffer.gpu, clDst, iters);
+		elapsed += morphologySkeleton(sourceBuffer.gpu, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
 	case OT_Skeleton_ZhangSuen:
-		morphologySkeletonZhangSuen(sourceBuffer.gpu, clDst, iters);
+		elapsed += morphologySkeletonZhangSuen(sourceBuffer.gpu, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
@@ -242,7 +241,6 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	// Zczytaj wynik z karty
 	cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
 
-	// Ile czasu to zajelo
 	double totalTime = (elapsed + readingTime) * 0.000001;
 	printf("Total time: %.5lf ms (in which %.5f was a processing time "
 		"and %.5lf ms was a transfer time)\n",
