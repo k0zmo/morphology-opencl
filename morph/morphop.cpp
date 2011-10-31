@@ -656,11 +656,12 @@ void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 		scanLineOut += tempx; // kolejny scanline z obrazu docelowego (kapke 'dluzszy')
 	}
 
-#if 0
+#if 1
 	// Obraz docelowy
 	dst = cv::Mat(src.size(), CV_8U, cv::Scalar(erodeINF));
 
 	// kwintesencja funkcji - filtrowanie
+	#pragma omp parallel for
 	for(int m = 0; m < element.rows; ++m)
 	{
 		for(int n = 0; n < element.cols; ++n)
@@ -707,7 +708,7 @@ void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 	delete[] tempSrc;
 #endif
 	
-#if 1
+#if 0
 	// Wydobadz wspolrzedne 'aktywne' z elementu strukturalnego
 	std::vector<cv::Point> coords;
 	for(int y = 0; y < element.rows; ++y)
@@ -773,6 +774,7 @@ void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element)
 #endif
 
 #if 0
+	struct cl_int2 { int s[2]; };
 	std::vector<cl_int2> coords;
 	for(int y = 0; y < element.rows; ++y)
 	{

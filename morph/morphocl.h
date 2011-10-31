@@ -16,14 +16,21 @@ public:
 	static QString openCLErrorCodeStr(cl_int errcode);
 
 	// Inicjalizuje OpenCL'a
-	virtual bool initOpenCL();
+	virtual bool initOpenCL();	
+
 	// Ustawia obraz zrodlowy
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 	// Ustawia element strukturalny
 	int setStructureElement(const cv::Mat& selement);
 
+	void recompile(EOperationType opType, int coordsSize);
+
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
 	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
+
+	// Zczytuje wynik z urzadzenia
+	virtual double readBack(cv::Mat &dst, int dstSizeX,
+		int dstSizeY, cl_ulong elapsed) = 0;
 
 protected:
 	cl::Context context;
@@ -37,18 +44,27 @@ protected:
 
 	const cv::Mat* src;
 	int kradiusx, kradiusy;
-	int deviceWidth, deviceHeight;
 
-	int workGroupSizeX;
-	int workGroupSizeY;
-
-	enum EReadingMethod
+	struct SKernelParameters
 	{
-		RM_NotOptimized,
-		RM_ReadAligned
+		QString programName;
+		QString options;
+		QString kernelName;
 	};
-	EReadingMethod readingMethod;
-	bool local;
+
+	SKernelParameters erodeParams;
+	SKernelParameters dilateParams;
+
+	cl::Kernel kernelSubtract;
+
+	// Standardowe ('cegielki') operacje morfologiczne
+	cl::Kernel kernelErode;
+	cl::Kernel kernelDilate;
+
+	// Hit-miss
+	cl::Kernel kernelOutline;
+	cl::Kernel kernelSkeleton_iter[8];
+	cl::Kernel kernelSkeleton_pass[2];
 
 protected:
 	// Pomocznicza funkcja do zglaszania bledow OpenCL'a
@@ -88,19 +104,10 @@ public:
 	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+	/*override*/ virtual double readBack(cv::Mat &dst, int dstSizeX,
+		int dstSizeY, cl_ulong elapsed);
 
 private:
-	cl::Kernel kernelSubtract;
-
-	// Standardowe ('cegielki') operacje morfologiczne
-	cl::Kernel kernelErode;
-	cl::Kernel kernelDilate;
-
-	// Hit-miss
-	cl::Kernel kernelOutline;
-	cl::Kernel kernelSkeleton_iter[8];
-	cl::Kernel kernelSkeleton_pass[2];
-
 	// Obraz wejsciowy
 	cl::Image2D clSrcImage;
 	// Obraz wyjsciowy
@@ -130,26 +137,15 @@ private:
 class MorphOpenCLBuffer : public MorphOpenCL
 {
 public:
-	MorphOpenCLBuffer()
-		: MorphOpenCL()
-	{ }
+	MorphOpenCLBuffer();
 
 	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+	/*override*/ virtual double readBack(cv::Mat &dst, int dstSizeX,
+		int dstSizeY, cl_ulong elapsed);	
 
 private:
-	cl::Kernel kernelSubtract;
-
-	// Standardowe ('cegielki') operacje morfologiczne
-	cl::Kernel kernelErode;
-	cl::Kernel kernelDilate;
-
-	// Hit-miss
-	cl::Kernel kernelOutline;
-	cl::Kernel kernelSkeleton_iter[8];
-	cl::Kernel kernelSkeleton_pass[2];
-
 	// Bufor z danymi wejsciowymi
 	cl::Buffer clSrc;
 	// Bufor z danymi wyjsciowymi
@@ -159,6 +155,19 @@ private:
 	cl::Buffer clTmp;
 	cl::Buffer clTmp2;
 
+	int deviceWidth, deviceHeight;
+
+	int workGroupSizeX;
+	int workGroupSizeY;
+
+	enum EReadingMethod
+	{
+		RM_NotOptimized,
+		RM_ReadAligned
+	};
+	EReadingMethod readingMethod;
+
+	bool local;
 	bool useUint;
 	bool sub4;
 
