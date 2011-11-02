@@ -50,7 +50,7 @@ __kernel void dilate_c4(
 #define COORDS_SIZE 169
 #endif
 
-__kernel void dilate_c4_def(
+__kernel void dilate_c4_unroll(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
 	__constant int4* coords)

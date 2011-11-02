@@ -194,7 +194,7 @@ void dilate4_c4_local(
 
 __kernel
 __attribute__((work_group_size_hint(16,16,1))) 
-void dilate4_c4_local_def(
+void dilate4_c4_local_unroll(
 	__global uint4* input,
 	__global uint* output,
 	__constant int4* coords,
