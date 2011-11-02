@@ -5,7 +5,7 @@ __kernel void outline(
 	__global uint* output,
 	const int rowPitch)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
 	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == OBJ &&
 		input[(gid.x    ) + (gid.y - 1) * rowPitch] == OBJ &&
@@ -29,8 +29,8 @@ void outline_local(
 	__global uint* output,
 	const int2 imageSize)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	#define WORK_GROUP_SIZE 16
 	__local uint sharedBlock[WORK_GROUP_SIZE+2][WORK_GROUP_SIZE+2];
@@ -39,7 +39,7 @@ void outline_local(
 	{
 		// Wczytaj piksel do pamieci lokalnej odpowiadajacy temu w pamieci globalnej
 		sharedBlock[lid.y][lid.x] = input[gid.y*imageSize.x + gid.x];
-		int2 localSize = (int2)(get_local_size(0), get_local_size(1));
+		int2 localSize = { get_local_size(0), get_local_size(1) };
 		
 		// Wczytaj piksele z 'apron'
 		if(lid.x < 2)
@@ -67,33 +67,29 @@ void outline_local(
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - 2)
-		return;
-		
-	if(gid.x >= imageSize.x - 2)
-		return;
-		
-	uint v1 = sharedBlock[lid.y    ][lid.x    ];
-	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
-	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
-	uint v4 = sharedBlock[lid.y + 1][lid.x    ];
-	uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
-	uint v7 = sharedBlock[lid.y + 2][lid.x    ];
-	uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
-	uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
-	
-	if (v1 == OBJ &&
-		v2 == OBJ &&
-		v3 == OBJ &&
-		v4 == OBJ &&
-		v6 == OBJ &&
-		v7 == OBJ &&
-		v8 == OBJ &&
-		v9 == OBJ)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
+		uint v1 = sharedBlock[lid.y    ][lid.x    ];
+		uint v2 = sharedBlock[lid.y    ][lid.x + 1];
+		uint v3 = sharedBlock[lid.y    ][lid.x + 2];
+		uint v4 = sharedBlock[lid.y + 1][lid.x    ];
+		uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
+		uint v7 = sharedBlock[lid.y + 2][lid.x    ];
+		uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
+		uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
+		
+		if (v1 == OBJ &&
+			v2 == OBJ &&
+			v3 == OBJ &&
+			v4 == OBJ &&
+			v6 == OBJ &&
+			v7 == OBJ &&
+			v8 == OBJ &&
+			v9 == OBJ)
+		{
+			output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
+		}
 	}
 }
 
@@ -104,38 +100,34 @@ void outline4_local(
 	__global uint* output,
 	const int2 imageSize)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	__local uint sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
 	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
-	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - 2)
-		return;
-		
-	if(gid.x >= imageSize.x - 2)
-		return;	
-	
-	uint v1 = sharedBlock[lid.y    ][lid.x    ];
-	uint v2 = sharedBlock[lid.y    ][lid.x + 1];
-	uint v3 = sharedBlock[lid.y    ][lid.x + 2];
-	uint v4 = sharedBlock[lid.y + 1][lid.x    ];
-	uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
-	uint v7 = sharedBlock[lid.y + 2][lid.x    ];
-	uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
-	uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
-	
-	if (v1 == OBJ &&
-		v2 == OBJ &&
-		v3 == OBJ &&
-		v4 == OBJ &&
-		v6 == OBJ &&
-		v7 == OBJ &&
-		v8 == OBJ &&
-		v9 == OBJ)
+
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
+		uint v1 = sharedBlock[lid.y    ][lid.x    ];
+		uint v2 = sharedBlock[lid.y    ][lid.x + 1];
+		uint v3 = sharedBlock[lid.y    ][lid.x + 2];
+		uint v4 = sharedBlock[lid.y + 1][lid.x    ];
+		uint v6 = sharedBlock[lid.y + 1][lid.x + 2];
+		uint v7 = sharedBlock[lid.y + 2][lid.x    ];
+		uint v8 = sharedBlock[lid.y + 2][lid.x + 1];
+		uint v9 = sharedBlock[lid.y + 2][lid.x + 2];
+		
+		if (v1 == OBJ &&
+			v2 == OBJ &&
+			v3 == OBJ &&
+			v4 == OBJ &&
+			v6 == OBJ &&
+			v7 == OBJ &&
+			v8 == OBJ &&
+			v9 == OBJ)
+		{
+			output[(gid.y+1)*imageSize.x + (gid.x+1)] = BCK;
+		}
 	}
 }

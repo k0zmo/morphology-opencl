@@ -7,7 +7,7 @@ __kernel void erode(
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	uint val = erodeINF;
 	
 	for(int i = 0; i < seSize.z; ++i)
@@ -26,7 +26,7 @@ __kernel void erode_c4(
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	uint val = erodeINF;
 	int c2 = seSize.z >> 1;
 	
@@ -56,28 +56,24 @@ __kernel void erode_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	cacheToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - seSize.y*2)
-		return;
-		
-	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-	
-	// Filtracja wlasciwa
-	uint val = erodeINF;
-	for(int i = 0; i < seSize.z; ++i)
+	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
+		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		int2 coord = coords[i] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		// Filtracja wlasciwa
+		uint val = erodeINF;
+		for(int i = 0; i < seSize.z; ++i)
+		{
+			int2 coord = coords[i] + lid;
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+		}
+		
+		output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 	}
-	
-	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
 __kernel void erode_c4_local(
@@ -89,38 +85,34 @@ __kernel void erode_c4_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	cacheToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - seSize.y*2)
-		return;
+	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
+		gid.x < imageSize.x - mul24(seSize.x, 2))
+	{
+		// Filtracja wlasciwa
+		uint val = erodeINF;
+		int c2 = seSize.z >> 1;
 		
-	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-	
-	// Filtracja wlasciwa
-	uint val = erodeINF;
-	int c2 = seSize.z >> 1;
-	
-	for(int i = 0; i < c2; ++i)
-	{
-		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		for(int i = 0; i < c2; ++i)
+		{
+			int4 coord = coords[i] + (int4)(lid, lid);
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+			val = min(val, sharedBlock[mad24(coord.w, sharedSize.x, coord.z)]);
+		}
+		
+		if(seSize.z % 2)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[seSize.z-1] + lid;
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+		}
+		
+		output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 	}
-	
-	if(seSize.z % 2)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-	}
-	
-	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
 __kernel
@@ -134,29 +126,25 @@ void erode4_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - seSize.y*2)
-		return;
-		
-	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-	
-	// Filtracja wlasciwa
-	uint val = erodeINF;
-
-	for(int i = 0; i < seSize.z; ++i)
+	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
+		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		int2 coord = coords[i] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
+		// Filtracja wlasciwa
+		uint val = erodeINF;
+
+		for(int i = 0; i < seSize.z; ++i)
+		{
+			int2 coord = coords[i] + lid;
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+		}
+		
+		output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 	}
-	
-	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;
 }
 
 __kernel
@@ -170,38 +158,34 @@ void erode4_c4_local(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - seSize.y*2)
-		return;
-		
-	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-		
-	// Filtracja wlasciwa
-	uint val = erodeINF;	
-	int c2 = seSize.z >> 1;
-	
-	for(int i = 0; i < c2; ++i)
+	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
+		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		// Filtracja wlasciwa
+		uint val = erodeINF;	
+		int c2 = seSize.z >> 1;
+		
+		for(int i = 0; i < c2; ++i)
+		{
+			int4 coord = coords[i] + (int4)(lid, lid);
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+			val = min(val, sharedBlock[mad24(coord.w, sharedSize.x, coord.z)]);
+		}
+		
+		if(seSize.z % 2)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[seSize.z-1] + lid;
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+		}
+		
+		output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 	}
-	
-	if(seSize.z % 2)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[seSize.z-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-	}
-	
-	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 }
 
 #ifndef COORDS_SIZE
@@ -219,37 +203,33 @@ void erode4_c4_local_def(
 	__local uint* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
-	int2 lid = (int2)(get_local_id(0), get_local_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 lid = { get_local_id(0), get_local_id(1) };
 	
 	cache4ToLocalMemory(input, imageSize, lid, sharedSize, sharedBlock);
 	
-	// Poniewaz NDRange jest wielokrotnoscia rozmiaru localSize
-	// musimy sprawdzic ponizsze warunki
-	if(gid.y >= imageSize.y - seSize.y*2)
-		return;
+	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
+		gid.x < imageSize.x - mul24(seSize.x, 2))
+	{
+		// Filtracja wlasciwa
+		uint val = erodeINF;	
+		int c2 = COORDS_SIZE / 2;
 		
-	if(gid.x >= imageSize.x - seSize.x*2)
-		return;
-	
-	// Filtracja wlasciwa
-	uint val = erodeINF;	
-	int c2 = COORDS_SIZE / 2;
-	
-	#pragma unroll
-	for(int i = 0; i < c2; ++i)
-	{
-		int4 coord = coords[i] + (int4)(lid, lid);
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-		val = min(val, sharedBlock[coord.z + coord.w * sharedSize.x]);
+		#pragma unroll
+		for(int i = 0; i < c2; ++i)
+		{
+			int4 coord = coords[i] + (int4)(lid, lid);
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+			val = min(val, sharedBlock[mad24(coord.w, sharedSize.x, coord.z)]);
+		}
+		
+		if(COORDS_SIZE % 2)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[COORDS_SIZE-1] + lid;
+			val = min(val, sharedBlock[mad24(coord.y, sharedSize.x, coord.x)]);
+		}
+		
+		output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 	}
-	
-	if(COORDS_SIZE % 2)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[COORDS_SIZE-1] + lid;
-		val = min(val, sharedBlock[coord.x + coord.y * sharedSize.x]);
-	}
-	
-	output[(gid.x + seSize.x) + (gid.y + seSize.y)* imageSize.x] = val;	
 }

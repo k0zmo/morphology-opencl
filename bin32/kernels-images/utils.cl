@@ -6,7 +6,7 @@ __kernel void subtract(
 	__read_only image2d_t b,
 	__write_only image2d_t dst)
 {
-	int2 coords = (int2)(get_global_id(0), get_global_id(1));
+	int2 coords = { get_global_id(0), get_global_id(1) };
 		
 	uint pix = sub_sat(
 		read_imageui(a, smp, coords).x,

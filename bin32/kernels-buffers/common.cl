@@ -5,6 +5,15 @@ __constant uchar erodeINF = 255;
 __constant uchar OBJ = 255;
 __constant uchar BCK = 0;
 
+#ifdef USE_ATOMIC_COUNTERS
+#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
+#define counter_type counter32_t
+#else
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#define counter_type __global uint*
+#define atomic_inc atom_inc
+#endif
+
 //
 // Cache'uje dane z pamieci globalnej do lokalnej 
 //
@@ -17,9 +26,9 @@ void cacheToLocalMemory(
 	const int2 sharedSize,
 	__local uchar* sharedBlock)
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 localSize = { get_local_size(0), get_local_size(1) };
+	int2 groupId = { get_group_id(0), get_group_id(1) };
+	int2 groupStartId = mul24(groupId, localSize); // id pierwszego bajtu w tej grupie roboczej
 		
 	// Zaladuj obszar roboczy obrazu zrodlowego do pamieci lokalnej
 	for(int y = lid.y; y < sharedSize.y; y += localSize.y)
@@ -31,7 +40,7 @@ void cacheToLocalMemory(
 			
 			if(c < imageSize.x && r < imageSize.y)
 			{
-				sharedBlock[x + y * sharedSize.x] = input[c + r * imageSize.x];
+				sharedBlock[mad24(y, sharedSize.x, x)] = input[c + r * imageSize.x];
 			}
 		}
 	}
@@ -51,12 +60,12 @@ void cache4ToLocalMemory(
 	const int2 sharedSize,
 	__local uchar* sharedBlock)
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 localSize = { get_local_size(0), get_local_size(1) };
+	int2 groupId = { get_group_id(0), get_group_id(1) };
+	int2 groupStartId = mul24(groupId, localSize); // id pierwszego bajtu w tej grupie roboczej
 	
 	// Przebiega od 0 do 255
-	int flatLid = lid.x + lid.y * localSize.x;
+	int flatLid = mad24(lid.y, localSize.x, lid.x);
 	
 	int2 tid = (int2)(
 		flatLid % (sharedSize.x/4),
@@ -66,7 +75,7 @@ void cache4ToLocalMemory(
 		groupStartId.x/4 + tid.x,
 		groupStartId.y   + tid.y);
 		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[tid.x*4 + tid.y*sharedSize.x]);
+	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
 	
 	if (gid.y < imageSize.y && 
 		gid.x < imageSize.x/4 && 
@@ -92,12 +101,12 @@ void cache4ToLocalMemory16(
 	const int2 lid,
 	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX])
 {
-	int2 localSize = (int2)(get_local_size(0), get_local_size(1));
-	int2 groupId = (int2)(get_group_id(0), get_group_id(1));
-	int2 groupStartId = groupId * localSize; // id pierwszego bajtu w tej grupie roboczej
+	int2 localSize = { get_local_size(0), get_local_size(1) };
+	int2 groupId = { get_group_id(0), get_group_id(1) };
+	int2 groupStartId = mul24(groupId, localSize); // id pierwszego bajtu w tej grupie roboczej
 	
 	// Przebiega od 0 do 255
-	int flatLid = lid.x + lid.y * localSize.x;
+	int flatLid = mad24(lid.y, localSize.x, lid.x);
 	
 	int2 tid = (int2)(
 		flatLid % (SHARED_SIZEX/4),

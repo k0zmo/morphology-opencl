@@ -1,27 +1,18 @@
 #include "common.cl"
 
-#ifdef USE_ATOMIC_COUNTERS
-#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
-#define counter_type counter32_t
-#else
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define counter_type __global uint*
-#define atomic_inc atom_inc
-#endif
-
 __attribute__((always_inline))
 uint getCode(
 	__read_only image2d_t src, const sampler_t smp, 
 	int2 gid, __constant uint* table)
 {
-	uint p1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint p2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint p3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint p4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint p6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint p7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint p8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
-	uint p9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint p1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint p2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint p3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint p4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint p6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint p7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint p8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+	uint p9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 	
 	// lut index
 	uint index = 
@@ -42,7 +33,7 @@ __kernel void skeletonZhang_pass1(
 	__constant uint* table,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	uint v = read_imageui(src, smp, gid).x;
 	
 	if(v != BCK)
@@ -64,7 +55,7 @@ __kernel void skeletonZhang_pass2(
 	__constant uint* table,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	uint v = read_imageui(src, smp, gid).x;
 	
 	if(v != BCK)

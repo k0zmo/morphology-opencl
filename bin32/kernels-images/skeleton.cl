@@ -1,28 +1,19 @@
 #include "common.cl"
 
-#ifdef USE_ATOMIC_COUNTERS
-#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
-#define counter_type counter32_t
-#else
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define counter_type __global uint*
-#define atomic_inc atom_inc
-#endif
-
 __kernel void skeleton_iter1(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
-	uint v9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+	uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 	
 	// Element strukturalny pierwszy
 	// 1|1|1
@@ -48,15 +39,15 @@ __kernel void skeleton_iter2(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 
-	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint v9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 		
 	// Element strukturalny pierwszy - 90 w lewo
 	// 1|X|0
@@ -82,15 +73,15 @@ __kernel void skeleton_iter3(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
-	uint v9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+	uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 
 	// Element strukturalny pierwszy - 180 w lewo
 	// 0|0|0
@@ -116,15 +107,15 @@ __kernel void skeleton_iter4(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint v9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 
 	// Element strukturalny pierwszy - 270 w lewo
 	// 0|X|1
@@ -150,14 +141,14 @@ __kernel void skeleton_iter5(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v7 = read_imageui(src, smp, gid + (int2)(-1,  1)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
 	
 	// Element strukturalny drugi
 	// X|1|X
@@ -182,14 +173,14 @@ __kernel void skeleton_iter6(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
-	uint v9 = read_imageui(src, smp, gid + (int2)( 1,  1)).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+	uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
 		
 	// Element strukturalny drugi - 90 stopni w lewo
 	// X|1|X
@@ -214,14 +205,14 @@ __kernel void skeleton_iter7(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 		
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v3 = read_imageui(src, smp, gid + (int2)( 1, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
 		
 	// Element strukturalny drugi - 180 stopni w lewo
 	// X|0|0
@@ -246,14 +237,14 @@ __kernel void skeleton_iter8(
 	__write_only image2d_t dst,
 	counter_type counter)
 {
-	int2 gid = (int2)(get_global_id(0), get_global_id(1));
+	int2 gid = { get_global_id(0), get_global_id(1) };
 	
-	uint v1 = read_imageui(src, smp, gid + (int2)(-1, -1)).x;
-	uint v2 = read_imageui(src, smp, gid + (int2)( 0, -1)).x;
-	uint v4 = read_imageui(src, smp, gid + (int2)(-1,  0)).x;
-	uint v5 = read_imageui(src, smp, gid + (int2)( 0,  0)).x;
-	uint v6 = read_imageui(src, smp, gid + (int2)( 1,  0)).x;
-	uint v8 = read_imageui(src, smp, gid + (int2)( 0,  1)).x;
+	uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
+	uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
+	uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+	uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
+	uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
+	uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
 		
 	// Element strukturalny drugi - 270 stopni w lewo
 	// 0|0|X
