@@ -25,6 +25,9 @@ private:
 	int kradiusy;
 	int krotation;
 
+	int maxImageWidth;
+	int maxImageHeight;
+
 	MorphOpenCL* ocl;
 	bool oclSupported;
 

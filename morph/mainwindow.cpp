@@ -63,6 +63,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.pbRun, SIGNAL(pressed()), this, SLOT(runPressed()));
 
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
+	maxImageWidth = settings.value("gui/maximagewidth", 512).toInt();
+	maxImageHeight = settings.value("gui/maximageheight", 512).toInt();
 	
 	int method;
 	printf("There are 2 methods implemented:\n"
@@ -141,7 +143,7 @@ void MainWindow::openTriggered()
 		else
 			ui.rbNone->setChecked(true);
 
-		this->resize(0,0);
+		resize(1, 1);
 	}
 }
 // -------------------------------------------------------------------------
@@ -366,8 +368,8 @@ void MainWindow::showCvImage(const cv::Mat& image)
 			QImage::Format_Indexed8);
 	};
 
-	const int maxWidth = 1024;
-	const int maxHeight = 1024;
+	const int maxWidth = 512;
+	const int maxHeight = 512;
 
 	cv::Mat img = image;
 	if(img.rows > maxHeight ||img.cols > maxWidth)
@@ -403,8 +405,6 @@ void MainWindow::openFile(const QString& filename)
 	src = toCvMat(qsrc);
 	if(oclSupported)
 		ocl->setSourceImage(&src);
-
-	this->resize(0, 0);
 }
 // -------------------------------------------------------------------------
 void MainWindow::refresh()
@@ -477,15 +477,7 @@ void MainWindow::morphologyOpenCV()
 		}
 
 		cv::Mat element = standardStructuringElement();
-
-		//if(opType == OT_Erode)
-		//{			
-		//	morphologyErode(src, dst, element);
-		//}
-		//else
-		{
-			cv::morphologyEx(src, dst, op_type, element);
-		}
+		cv::morphologyEx(src, dst, op_type, element);
 	}
 
 	showCvImage(dst);
@@ -552,5 +544,4 @@ EOperationType MainWindow::operationType()
 	else if(ui.rbSkeleton->isChecked()) { return OT_Skeleton; }
 	else if(ui.rbSkeletonZhang->isChecked()) { return OT_Skeleton_ZhangSuen; }
 	else { return OT_Erode; }
-
 }
