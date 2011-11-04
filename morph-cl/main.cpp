@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	EOperationType opType = OT_Erode;
 	cv::Mat dst;
 
-	for(int radius = 1; radius <= 10; ++radius)
+	for(int radius = 1; radius <= 7; ++radius)
 	{
 		//int radius = 7;
 		cv::Mat element = standardStructuringElement(radius, radius, SET_Ellipse);

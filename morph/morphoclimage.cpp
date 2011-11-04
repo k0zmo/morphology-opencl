@@ -104,7 +104,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
-	printf("Transfering source image to GPU took %.5lf ms\n", delta * 0.000001);
+	printf("Transfering source image to GPU took %.05lf ms\n", delta * 0.000001);
 	clError("Error while writing new data to OpenCL source image!", err);
 }
 // -------------------------------------------------------------------------
@@ -154,8 +154,8 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	cl_ulong readingTime = readBack(clDstImage, dst);
 
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Total time: %.5lf ms (in which %.5f was a processing time "
-		"and %.5lf ms was a transfer time)\n",
+	printf("Total time: %.05lf ms (in which %.05f was a processing time "
+		"and %.05lf ms was a transfer time)\n",
 		totalTime, elapsed * 0.000001, readingTime * 0.000001);
 
 	// Ile czasu wszystko zajelo

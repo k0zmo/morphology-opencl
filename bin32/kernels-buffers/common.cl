@@ -38,7 +38,7 @@ void cacheToLocalMemory(
 		{
 			int c = groupStartId.x + x; // indeks.x bajtu z wejscia
 			
-			if(c < imageSize.x && r < imageSize.y)
+			//if(c < imageSize.x && r < imageSize.y)
 			{
 				sharedBlock[mad24(y, sharedSize.x, x)] = input[c + r * imageSize.x];
 			}
@@ -74,13 +74,12 @@ void cache4ToLocalMemory(
 	int2 gid = (int2)(
 		groupStartId.x/4 + tid.x,
 		groupStartId.y   + tid.y);
-		
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
 	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
+	if (//gid.y < imageSize.y && 
+		//gid.x < imageSize.x/4 && 
 		tid.y < sharedSize.y)
 	{
+		__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
 		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
@@ -116,12 +115,11 @@ void cache4ToLocalMemory16(
 		groupStartId.x/4 + tid.x,
 		groupStartId.y   + tid.y);	
 	
-	__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[tid.y][tid.x*4]);
-	
-	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
+	if (//gid.y < imageSize.y && 
+		//gid.x < imageSize.x/4 && 
 		tid.y < SHARED_SIZEY)
 	{
+		__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[tid.y][tid.x*4]);
 		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);

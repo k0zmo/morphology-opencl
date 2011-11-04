@@ -151,7 +151,7 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
-	printf("Transfering source image to GPU took %.5lfms\n", delta * 0.000001);
+	printf("Transfering source image to GPU took %.05lfms\n", delta * 0.000001);
 
 	delete [] ptr;
 }
@@ -225,9 +225,12 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
 
 	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Total time: %.5lf ms (in which %.5f was a processing time "
-		"and %.5lf ms was a transfer time)\n",
+	//FILE* fp = fopen("oo.txt", "a");
+	printf("Total time: %.05lf ms (in which %.05lf was a processing time "
+		"and %.05lf ms was a transfer time)\n",
 		totalTime, elapsed * 0.000001, readingTime * 0.000001);
+	//fprintf(fp, "%.05lf\n", elapsed*0.000001);
+	//fclose(fp);
 
 	// Ile czasu wszystko zajelo
 	return totalTime;
