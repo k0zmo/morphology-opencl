@@ -8,7 +8,9 @@
 int roundUp(int value, int multiple)
 {
 	int v = value % multiple;
-	return value + (multiple - v);
+	if (v)
+		return value + (multiple - v);
+	return value;
 }
 
 MorphOpenCL::MorphOpenCL()

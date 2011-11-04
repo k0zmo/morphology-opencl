@@ -29,14 +29,6 @@ private:
 	int workGroupSizeX;
 	int workGroupSizeY;
 
-	// Czy wyrownac dane wejsciowe
-	enum EReadingMethod
-	{
-		RM_NotOptimized,
-		RM_ReadAligned
-	};
-	EReadingMethod readingMethod;
-
 	// Czy uzyc pamieci lokalnej
 	bool local;
 	// Czy uzyc typu uint zamiast uchar

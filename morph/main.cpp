@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 #else
-	//QString filename = "bin1.png";
-	QString filename = "lena.jpg";
+	QSettings settings("./settings.cfg", QSettings::IniFormat);
+	QString filename = settings.value("gui/defaultimage", "lena.jpg").toString();
 #endif
 
 

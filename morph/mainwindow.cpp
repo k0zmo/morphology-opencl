@@ -368,17 +368,14 @@ void MainWindow::showCvImage(const cv::Mat& image)
 			QImage::Format_Indexed8);
 	};
 
-	const int maxWidth = 512;
-	const int maxHeight = 512;
-
 	cv::Mat img = image;
-	if(img.rows > maxHeight ||img.cols > maxWidth)
+	if(img.rows > maxImageHeight ||img.cols > maxImageWidth)
 	{
 		double fx;
 		if(img.rows > img.cols)
-			fx = static_cast<double>(maxHeight) / img.rows;
+			fx = static_cast<double>(maxImageHeight) / img.rows;
 		else
-			fx = static_cast<double>(maxWidth) / img.cols;
+			fx = static_cast<double>(maxImageWidth) / img.cols;
 		cv::resize(img, img, cv::Size(0,0), fx, fx, cv::INTER_LINEAR);
 	}
 

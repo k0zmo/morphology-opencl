@@ -10,8 +10,6 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 	// Wczytaj opcje z pliku konfiguracyjnego
 	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
 	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
-	readingMethod = static_cast<EReadingMethod>(
-		settings.value("opencl/readingmethod", 0).toInt());
 	local = settings.value("kernel/local", false).toBool();
 }
 // -------------------------------------------------------------------------
@@ -99,13 +97,8 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 	cl_int err;
 	sourceBuffer.cpu = newSrc;
 
-	// Czy chcemy aby bufor mial wyrownane wiersze danych do rozmiary grupy roboczej
-	if(readingMethod == RM_NotOptimized)
-		sourceBuffer.gpuWidth = newSrc->cols;
-	else
-		sourceBuffer.gpuWidth = roundUp(newSrc->cols, workGroupSizeX);
-	sourceBuffer.gpuHeight = newSrc->rows;
-
+	sourceBuffer.gpuWidth = roundUp(newSrc->cols, workGroupSizeX);
+	sourceBuffer.gpuHeight = roundUp(newSrc->rows, workGroupSizeY);
 	sourceBuffer.gpu = cl::Buffer(context, CL_MEM_READ_ONLY,
 		bufferSize(), nullptr, &err);
 	clError("Error while creating OpenCL source buffer", err);
@@ -126,42 +119,32 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 
 	cl::Event evt;
 
-	// Skopiuj dane 1:1
-	if(readingMethod == RM_NotOptimized)
-	{
-		err = cq.enqueueWriteBuffer(sourceBuffer.gpu, CL_TRUE, 0, 
-			bufferSize(), srcptr, 0, &evt);
-	}
 	// Skopiuj dane tak by byly odpowiednio wyrownane
-	else
+	cl::size_t<3> origin;
+	origin[0] = 0;
+	origin[1] = 0;
+	origin[2] = 0;
+
+	cl::size_t<3> region;
+	region[0] = newSrc->cols;
+	region[1] = newSrc->rows;
+	region[2] = 1;
+
+	size_t buffer_row_pitch = sourceBuffer.gpuWidth;
+	size_t host_row_pitch = newSrc->cols;
+
+	if(useUint)
 	{
-		cl::size_t<3> origin;
-		origin[0] = 0;
-		origin[1] = 0;
-		origin[2] = 0;
-
-		cl::size_t<3> region;
-		region[0] = newSrc->cols;
-		region[1] = newSrc->rows;
-		region[2] = 1;
-
-		size_t buffer_row_pitch = sourceBuffer.gpuWidth;
-		size_t host_row_pitch = newSrc->cols;
-
-		if(useUint)
-		{
-			region[0] *= sizeof(uint);
-
-			buffer_row_pitch *= sizeof(uint);
-			host_row_pitch *= sizeof(uint);
-		}
-
-		err = cq.enqueueWriteBufferRect(sourceBuffer.gpu, CL_TRUE, 
-			origin, origin, region, 
-			buffer_row_pitch, 0, 
-			host_row_pitch, 0, 
-			srcptr, 0, &evt);
+		region[0] *= sizeof(uint);
+		buffer_row_pitch *= sizeof(uint);
+		host_row_pitch *= sizeof(uint);
 	}
+
+	err = cq.enqueueWriteBufferRect(sourceBuffer.gpu, CL_TRUE, 
+		origin, origin, region, 
+		buffer_row_pitch, 0, 
+		host_row_pitch, 0, 
+		srcptr, 0, &evt);
 
 	evt.wait();
 	clError("Error while writing new data to OpenCL source buffer!", err);
@@ -558,15 +541,13 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(4, imageSize);
 	clError("Error while setting kernel arguments", err);
 
-	cl::NDRange offset = cl::NullRange;
-	cl::NDRange gridDim, blockDim;
+	int globalItemsX = roundUp(sourceBuffer.cpu->cols - apronX, workGroupSizeX);
+	int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, workGroupSizeX);
 
-	if(!local)
-	{
-		gridDim = cl::NDRange(sourceBuffer.cpu->cols - apronX,
-			sourceBuffer.cpu->rows - apronY);
-		blockDim = cl::NullRange;
-	}
+	cl::NDRange offset = cl::NullRange;
+	cl::NDRange gridDim = cl::NDRange(globalItemsX, globalItemsY);
+	cl::NDRange blockDim = cl::NDRange(workGroupSizeX, workGroupSizeY);
+
 	if(local)
 	{
 		cl_int2 sharedSize = {
@@ -580,12 +561,6 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		err |= kernel->setArg(5, sharedBlockSize, nullptr);
 		err |= kernel->setArg(6, sharedSize);
 		clError("Error while setting kernel arguments", err);
-
-		int globalItemsX = roundUp(sourceBuffer.cpu->cols - apronX, workGroupSizeX);
-		int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, workGroupSizeX);	
-
-		gridDim = cl::NDRange(globalItemsX, globalItemsY);
-		blockDim = cl::NDRange(workGroupSizeX, workGroupSizeY);
 	}
 
 	// Odpal kernela
@@ -607,41 +582,24 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	cl::Event evt;
 	cl_int err;
 
+	cl_int2 imageSize = { sourceBuffer.gpuWidth, sourceBuffer.gpuHeight };
+
 	// Ustaw argumenty kernela
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
+	err |= kernel->setArg(2, imageSize);
 	if(clLut) err |= kernel->setArg(3, *clLut);
 	if(clAtomicCounter && clLut) err |= kernel->setArg(4, *clAtomicCounter);
 	else if (clAtomicCounter) err |= kernel->setArg(3, *clAtomicCounter);
+	clError("Error while setting kernel arguments", err);
 
-	cl::NDRange offset, gridDim, blockDim;
+	const int lsize = 16;
+	int globalItemsX = roundUp(sourceBuffer.cpu->cols - 2, lsize);
+	int globalItemsY = roundUp(sourceBuffer.cpu->rows - 2, lsize);
 
-	if(!local)
-	{
-		// Ustaw pozostale argumenty kernela
-		err |= kernel->setArg(2, sourceBuffer.gpuWidth);
-		clError("Error while setting kernel arguments", err);
-
-		offset = cl::NDRange(1, 1);
-		gridDim = cl::NDRange(sourceBuffer.cpu->cols - 2, 
-			sourceBuffer.cpu->rows - 2);
-		blockDim = cl::NullRange;
-	}
-	else
-	{
-		cl_int2 imageSize = { sourceBuffer.gpuWidth, sourceBuffer.gpuHeight };
-		const int lsize = 16;
-
-		// Ustaw pozostale argumenty kernela
-		err |= kernel->setArg(2, imageSize);
-		clError("Error while setting kernel arguments", err);
-
-		offset = cl::NullRange;
-		gridDim = cl::NDRange(
-			roundUp(sourceBuffer.cpu->cols - 2, lsize),
-			roundUp(sourceBuffer.cpu->rows - 2, lsize));
-		blockDim = cl::NDRange(lsize, lsize);
-	}
+	cl::NDRange offset = cl::NullRange;
+	cl::NDRange gridDim(globalItemsX, globalItemsY);
+	cl::NDRange blockDim(lsize, lsize);
 
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(*kernel,
@@ -670,13 +628,14 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	int xitems = sourceBuffer.gpuWidth;
 	if(sub4) xitems /= 4;
 
+	cl::NDRange offset = cl::NullRange;
+	cl::NDRange gridDim = cl::NDRange(xitems * sourceBuffer.gpuHeight);
+	cl::NDRange blockDim = cl::NDRange(workGroupSizeX * workGroupSizeY);
+
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(kernelSubtract,
-		cl::NullRange,
-		cl::NDRange(xitems * sourceBuffer.gpuHeight),
-		cl::NullRange, 
+		offset, gridDim, blockDim,
 		nullptr, &evt);
-
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
 

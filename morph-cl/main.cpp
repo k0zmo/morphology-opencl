@@ -49,8 +49,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	QSettings settings("./settings.cfg", QSettings::IniFormat);
 	qout << "Loading image..." << endl;
-	QString filename = "lena.jpg";
+	QString filename = settings.value("gui/defaultimage", "lena.jpg").toString();
 	cv::Mat src = cv::imread(filename.toStdString(), CV_LOAD_IMAGE_GRAYSCALE);
 
 	ocl->setSourceImage(&src);
@@ -62,23 +63,21 @@ int main(int argc, char *argv[])
 		exit(1);
 	QTextStream fout(&data);
 
-	QSettings settings("./settings.cfg", QSettings::IniFormat);
 	fout << "method: " << settings.value("opencl/method", 0).toInt() << endl;
 	fout << "workgroupsizex: " << settings.value("opencl/workgroupsizex", 0).toInt() << endl;
 	fout << "workgroupsizey: " << settings.value("opencl/workgroupsizey", 0).toInt() << endl;
-	fout << "readingmethod: " << settings.value("opencl/readingmethod", 0).toInt() << endl;
 	fout << "kernel: " << settings.value("kernel/erode", "").toString() << endl;
 	
 	EOperationType opType = OT_Erode;
 	cv::Mat dst;
 
-	//for(int radius = 1; radius <= 35; ++radius)
+	for(int radius = 1; radius <= 10; ++radius)
 	{
-		int radius = 7;
+		//int radius = 7;
 		cv::Mat element = standardStructuringElement(radius, radius, SET_Ellipse);
 #if 1
 		int coords_size = ocl->setStructureElement(element);
-		ocl->recompile(OT_Erode, coords_size);
+		//ocl->recompile(OT_Erode, coords_size);
 		
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 		fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
