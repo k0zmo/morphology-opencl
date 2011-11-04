@@ -189,7 +189,7 @@ void erode4_c4_local(
 }
 
 #ifndef COORDS_SIZE
-#define COORDS_SIZE 169
+#define COORDS_SIZE 4
 #endif
 
 __kernel

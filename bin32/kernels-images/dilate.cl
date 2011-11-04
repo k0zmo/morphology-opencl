@@ -47,7 +47,7 @@ __kernel void dilate_c4(
 }
 
 #ifndef COORDS_SIZE
-#define COORDS_SIZE 169
+#define COORDS_SIZE 4
 #endif
 
 __kernel void dilate_c4_unroll(
