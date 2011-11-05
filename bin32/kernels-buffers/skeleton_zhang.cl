@@ -30,22 +30,27 @@ uint getCode(
 __kernel void skeletonZhang_pass1(
 	__global uchar* input,
 	__global uchar* output,
-	const int rowPitch,
+	const int2 imageSize,
 	__constant uint* table,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uchar v = input[gid.x + gid.y * rowPitch];
 	
-	if(v != BCK)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		uint code = getCode(input, gid, rowPitch, table);
+		uchar v = input[gid.x + gid.y * imageSize.x];
 		
-		if(code == 2 || code == 3)
+		if(v != BCK)
 		{
-			// pixelRemoved++
-			atomic_inc(counter);
-			output[gid.x+ + gid.y * rowPitch] = BCK;
+			uint code = getCode(input, gid, imageSize.x, table);
+			
+			if(code == 2 || code == 3)
+			{
+				// pixelRemoved++
+				atomic_inc(counter);
+				output[gid.x+ + gid.y * imageSize.x] = BCK;
+			}
 		}
 	}
 }
@@ -53,22 +58,27 @@ __kernel void skeletonZhang_pass1(
 __kernel void skeletonZhang_pass2(
 	__global uchar* input,
 	__global uchar* output,
-	const int rowPitch,
+	const int2 imageSize,
 	__constant uint* table,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uchar v = input[gid.x + gid.y * rowPitch];
 	
-	if(v != BCK)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		uint code = getCode(input, gid, rowPitch, table);
+		uchar v = input[gid.x + gid.y * imageSize.x];
 		
-		if(code == 1 || code == 3)
+		if(v != BCK)
 		{
-			// pixelRemoved++
-			atomic_inc(counter);
-			output[gid.x+ + gid.y * rowPitch] = BCK;
+			uint code = getCode(input, gid, imageSize.x, table);
+			
+			if(code == 1 || code == 3)
+			{
+				// pixelRemoved++
+				atomic_inc(counter);
+				output[gid.x+ + gid.y * imageSize.x] = BCK;
+			}
 		}
 	}
 }
@@ -154,7 +164,7 @@ void skeletonZhang4_pass2_local(
 	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	if (gid.y < imageSize.y - 2 &&
-		gid.x >= imageSize.x - 2)
+		gid.x < imageSize.x - 2)
 	{
 		// Pobierz srodkowy piksel z pamieci lokalnej
 		uchar v = sharedBlock[lid.y + 1][lid.x + 1];

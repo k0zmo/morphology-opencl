@@ -40,11 +40,11 @@ bool MorphOpenCLImage::initOpenCL()
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-images/erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel/erode", "erode").toString();
+	erodeParams.kernelName = s.value("kernel-images/erode", "erode").toString();
 
 	dilateParams.programName = "kernels-images/dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel/dilate", "dilate").toString();
+	dilateParams.kernelName = s.value("kernel-images/dilate", "dilate").toString();
 
 	// Wczytaj programy (rekompilowalne)
 	cl::Program perode = createProgram(erodeParams.programName, opts);
@@ -59,8 +59,8 @@ bool MorphOpenCLImage::initOpenCL()
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
-	kernelOutline = createKernel(poutline, s.value("kernel/outline", "outline").toString());
-	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
+	kernelOutline = createKernel(poutline, s.value("kernel-images/outline", "outline").toString());
+	kernelSubtract = createKernel(putils, s.value("kernel-images/subtract", "subtract").toString());
 
 	for(int i = 0; i < 8; ++i)
 	{

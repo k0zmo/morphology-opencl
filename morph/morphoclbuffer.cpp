@@ -10,7 +10,7 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 	// Wczytaj opcje z pliku konfiguracyjnego
 	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
 	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
-	local = settings.value("kernel/local", false).toBool();
+	local = settings.value("kernel-buffers/local", false).toBool();
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCLBuffer::initOpenCL()
@@ -36,11 +36,11 @@ bool MorphOpenCLBuffer::initOpenCL()
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = dir + "erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel/erode", "erode").toString();
+	erodeParams.kernelName = s.value("kernel-buffers/erode", "erode").toString();
 
 	dilateParams.programName = dir + "dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel/dilate", "dilate").toString();
+	dilateParams.kernelName = s.value("kernel-buffers/dilate", "dilate").toString();
 
 	// Wczytaj programy (rekompilowalne)
 	cl::Program perode = createProgram(erodeParams.programName, opts);
@@ -55,15 +55,15 @@ bool MorphOpenCLBuffer::initOpenCL()
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
-	kernelOutline = createKernel(poutline, s.value("kernel/outline", "outline").toString());
-	kernelSubtract = createKernel(putils, s.value("kernel/subtract", "subtract").toString());
+	kernelOutline = createKernel(poutline, s.value("kernel-buffers/outline", "outline").toString());
+	kernelSubtract = createKernel(putils, s.value("kernel-buffers/subtract", "subtract").toString());
 
 	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
-	QString sub = s.value("kernel/subtract", "subtract").toString();
+	QString sub = s.value("kernel-buffers/subtract", "subtract").toString();
 	if(sub.endsWith("4")) sub4 = true;
 	else sub4 = false;
 
-	int local = s.value("kernel/local", "0").toInt();
+	int local = s.value("kernel-buffers/local", "0").toInt();
 	for(int i = 0; i < 8; ++i)
 	{
 		if(local == 0)
@@ -570,7 +570,6 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	err = cq.enqueueNDRangeKernel(*kernel,
 		cl::NullRange, gridDim, blockDim,
 		nullptr, &evt);
-
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);
 
@@ -622,18 +621,19 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	cl_int err;
 	cl::Event evt;
 
-	// Ustaw argumenty kernela
-	err  = kernelSubtract.setArg(0, clABuffer);
-	err |= kernelSubtract.setArg(1, clBBuffer);
-	err |= kernelSubtract.setArg(2, clDstBuffer);
-	clError("Error while setting kernel arguments", err);
-
 	int xitems = sourceBuffer.gpuWidth;
 	if(sub4) xitems /= 4;
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange gridDim = cl::NDRange(xitems * sourceBuffer.gpuHeight);
 	cl::NDRange blockDim = cl::NDRange(workGroupSizeX * workGroupSizeY);
+	cl::NDRange gridDim = cl::NDRange(roundUp(xitems * sourceBuffer.gpuHeight, blockDim[0]));
+
+	// Ustaw argumenty kernela
+	err  = kernelSubtract.setArg(0, clABuffer);
+	err |= kernelSubtract.setArg(1, clBBuffer);
+	err |= kernelSubtract.setArg(2, clDstBuffer);
+	err |= kernelSubtract.setArg(3, xitems * sourceBuffer.gpuHeight);
+	clError("Error while setting kernel arguments", err);
 
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(kernelSubtract,
