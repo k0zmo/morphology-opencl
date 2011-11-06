@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	fout << "workgroupsizex: " << settings.value("opencl/workgroupsizex", 0).toInt() << endl;
 	fout << "workgroupsizey: " << settings.value("opencl/workgroupsizey", 0).toInt() << endl;
 	fout << "kernel: " << settings.value("kernel/erode", "").toString() << endl;
-	
+
 	EOperationType opType = OT_Erode;
 	cv::Mat dst;
 

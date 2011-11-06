@@ -548,8 +548,8 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, workGroupSizeX);
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange gridDim = cl::NDRange(globalItemsX, globalItemsY);
-	cl::NDRange blockDim = cl::NDRange(workGroupSizeX, workGroupSizeY);
+	cl::NDRange gridDim(globalItemsX, globalItemsY);
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
 
 	if(local)
 	{
@@ -625,8 +625,8 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	if(sub4) xitems /= 4;
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange blockDim = cl::NDRange(workGroupSizeX * workGroupSizeY);
-	cl::NDRange gridDim = cl::NDRange(roundUp(xitems * sourceBuffer.gpuHeight, blockDim[0]));
+	cl::NDRange blockDim(workGroupSizeX * workGroupSizeY);
+	cl::NDRange gridDim(roundUp(xitems * sourceBuffer.gpuHeight, blockDim[0]));
 
 	// Ustaw argumenty kernela
 	err  = kernelSubtract.setArg(0, clABuffer);
