@@ -43,6 +43,11 @@ protected:
 
 	int kradiusx, kradiusy;
 
+
+	// Rozmiar grupy roboczej
+	int workGroupSizeX;
+	int workGroupSizeY;
+
 	struct SKernelParameters
 	{
 		QString programName;

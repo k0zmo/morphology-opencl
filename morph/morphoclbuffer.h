@@ -25,10 +25,6 @@ private:
 	// Parametry odczytane z pliku konfiguracyjnego
 	//
 
-	// Rozmiar grupy roboczej
-	int workGroupSizeX;
-	int workGroupSizeY;
-
 	// Czy uzyc pamieci lokalnej
 	bool local;
 	// Czy uzyc typu uint zamiast uchar

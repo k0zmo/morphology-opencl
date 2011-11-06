@@ -6,10 +6,6 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 	: MorphOpenCL()
 {
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
-
-	// Wczytaj opcje z pliku konfiguracyjnego
-	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
-	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
 	local = settings.value("kernel-buffers/local", false).toBool();
 }
 // -------------------------------------------------------------------------

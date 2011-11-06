@@ -34,17 +34,22 @@ __kernel void skeletonZhang_pass1(
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uint v = read_imageui(src, smp, gid).x;
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	if(v != BCK)
+	if (all(gid < size))
 	{
-		uint code = getCode(src, smp, gid, table);
+		uint v = read_imageui(src, smp, gid).x;
 		
-		if(code == 2 || code == 3)
+		if(v != BCK)
 		{
-			// pixelRemoved++
-			atomic_inc(counter);
-			write_imageui(dst, gid, (uint4)(BCK));
+			uint code = getCode(src, smp, gid, table);
+			
+			if(code == 2 || code == 3)
+			{
+				// pixelRemoved++
+				atomic_inc(counter);
+				write_imageui(dst, gid, (uint4)(BCK));
+			}
 		}
 	}
 }
@@ -56,17 +61,22 @@ __kernel void skeletonZhang_pass2(
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uint v = read_imageui(src, smp, gid).x;
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	if(v != BCK)
+	if (all(gid < size))
 	{
-		uint code = getCode(src, smp, gid, table);
+		uint v = read_imageui(src, smp, gid).x;
 		
-		if(code == 1 || code == 3)
+		if(v != BCK)
 		{
-			// pixelRemoved++
-			atomic_inc(counter);
-			write_imageui(dst, gid, (uint4)(BCK));
+			uint code = getCode(src, smp, gid, table);
+			
+			if(code == 1 || code == 3)
+			{
+				// pixelRemoved++
+				atomic_inc(counter);
+				write_imageui(dst, gid, (uint4)(BCK));
+			}
 		}
 	}
 }

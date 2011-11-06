@@ -18,6 +18,10 @@ MorphOpenCL::MorphOpenCL()
 kradiusx(0),
 kradiusy(0)
 {
+	// Wczytaj opcje z pliku konfiguracyjnego
+	QSettings settings("./settings.cfg", QSettings::IniFormat);
+	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
+	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCL::initOpenCL()

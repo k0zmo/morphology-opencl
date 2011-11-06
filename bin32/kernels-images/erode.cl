@@ -7,15 +7,20 @@ __kernel void erode(
 	const int coords_size)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uint val = erodeINF;
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	for(int i = 0; i < coords_size; ++i)
+	if (all(gid < size))
 	{
-		int2 coord = coords[i] + gid;	
-		val = min(val, read_imageui(src, smp, coord).x);
+		uint val = erodeINF;
+		
+		for(int i = 0; i < coords_size; ++i)
+		{
+			int2 coord = coords[i] + gid;	
+			val = min(val, read_imageui(src, smp, coord).x);
+		}
+		
+		write_imageui(dst, gid, (uint4)(val));
 	}
-	
-	write_imageui(dst, gid, (uint4)(val));
 }
 
 __kernel void erode_c4(
@@ -25,25 +30,30 @@ __kernel void erode_c4(
 	const int coords_size)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uint val = erodeINF;
-	int c2 = coords_size >> 1;
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	for(int i = 0; i < c2; ++i)
+	if (all(gid < size))
 	{
-		int4 coord = coords[i] + (int4)(gid, gid);	
+		uint val = erodeINF;
+		int c2 = coords_size >> 1;
 		
-		val = min(val, read_imageui(src, smp, coord.xy).x);
-		val = min(val, read_imageui(src, smp, coord.zw).x);
+		for(int i = 0; i < c2; ++i)
+		{
+			int4 coord = coords[i] + (int4)(gid, gid);	
+			
+			val = min(val, read_imageui(src, smp, coord.xy).x);
+			val = min(val, read_imageui(src, smp, coord.zw).x);
+		}
+		
+		if(coords_size % 2)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[coords_size-1] + gid;
+			val = min(val, read_imageui(src, smp, coord).x);
+		}
+		
+		write_imageui(dst, gid, (uint4)(val));
 	}
-	
-	if(coords_size % 2)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[coords_size-1] + gid;
-		val = min(val, read_imageui(src, smp, coord).x);
-	}
-	
-	write_imageui(dst, gid, (uint4)(val));
 }
 
 __kernel void erode_c4_unroll(
@@ -53,32 +63,36 @@ __kernel void erode_c4_unroll(
 	const int coords_size)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	uint val = erodeINF;
-	int c2 = coords_size >> 1;
-	int i = 0;
-	
-	for(; i < c2; i += 2)
+	if (all(gid < size))
 	{
-		int4 coord0 = coords[i]   + (int4)(gid, gid);
-		int4 coord1 = coords[i+1] + (int4)(gid, gid);	
+		uint val = erodeINF;
+		int c2 = coords_size >> 1;
+		int i = 0;
 		
-		val = min(val, read_imageui(src, smp, coord0.xy).x);
-		val = min(val, read_imageui(src, smp, coord0.zw).x);
-		val = min(val, read_imageui(src, smp, coord1.xy).x);
-		val = min(val, read_imageui(src, smp, coord1.zw).x);
+		for(; i < c2; i += 2)
+		{
+			int4 coord0 = coords[i]   + (int4)(gid, gid);
+			int4 coord1 = coords[i+1] + (int4)(gid, gid);	
+			
+			val = min(val, read_imageui(src, smp, coord0.xy).x);
+			val = min(val, read_imageui(src, smp, coord0.zw).x);
+			val = min(val, read_imageui(src, smp, coord1.xy).x);
+			val = min(val, read_imageui(src, smp, coord1.zw).x);
+		}
+		
+		i *= 2;
+		
+		for( ; i < coords_size; ++i)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[i] + gid;
+			val = min(val, read_imageui(src, smp, coord).x);
+		}
+		
+		write_imageui(dst, gid, (uint4)(val));	
 	}
-	
-	i *= 2;
-	
-	for( ; i < coords_size; ++i)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[i] + gid;
-		val = min(val, read_imageui(src, smp, coord).x);
-	}
-	
-	write_imageui(dst, gid, (uint4)(val));
 }
 
 #ifndef COORDS_SIZE
@@ -92,24 +106,29 @@ __kernel void erode_c4_pragma(
 	const int coords_size /* dummy */)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
-	uint val = erodeINF;
-	int c2 = COORDS_SIZE >> 1;
+	int2 size = { get_image_width(src), get_image_height(src) };
 	
-	#pragma unroll
-	for(int i = 0; i < c2; ++i)
+	if (all(gid < size))
 	{
-		int4 coord = coords[i] + (int4)(gid, gid);	
+		uint val = erodeINF;
+		int c2 = COORDS_SIZE >> 1;
 		
-		val = min(val, read_imageui(src, smp, coord.xy).x);
-		val = min(val, read_imageui(src, smp, coord.zw).x);
+		#pragma unroll
+		for(int i = 0; i < c2; ++i)
+		{
+			int4 coord = coords[i] + (int4)(gid, gid);	
+			
+			val = min(val, read_imageui(src, smp, coord.xy).x);
+			val = min(val, read_imageui(src, smp, coord.zw).x);
+		}
+		
+		if(COORDS_SIZE % 2)
+		{
+			__constant int2* c = (__constant int2*)(coords);
+			int2 coord = c[COORDS_SIZE-1] + gid;
+			val = min(val, read_imageui(src, smp, coord).x);
+		}
+		
+		write_imageui(dst, gid, (uint4)(val));
 	}
-	
-	if(COORDS_SIZE % 2)
-	{
-		__constant int2* c = (__constant int2*)(coords);
-		int2 coord = c[COORDS_SIZE-1] + gid;
-		val = min(val, read_imageui(src, smp, coord).x);
-	}
-	
-	write_imageui(dst, gid, (uint4)(val));
 }

@@ -7,10 +7,14 @@ __kernel void subtract(
 	__write_only image2d_t dst)
 {
 	int2 coords = { get_global_id(0), get_global_id(1) };
-		
-	uint pix = sub_sat(
-		read_imageui(a, smp, coords).x,
-		read_imageui(b, smp, coords).x);
+	int2 size = { get_image_width(dst), get_image_height(dst) };
 	
-	write_imageui(dst, coords, pix);
+	if (all(coords < size))
+	{
+		uint pix = sub_sat(
+			read_imageui(a, smp, coords).x,
+			read_imageui(b, smp, coords).x);
+		
+		write_imageui(dst, coords, pix);
+	}
 }

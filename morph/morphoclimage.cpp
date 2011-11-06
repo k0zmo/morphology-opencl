@@ -429,9 +429,10 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	clError("Error while setting kernel arguments", err);
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange gridDim = cl::NDRange(sourceImage.cpu->cols,
-		sourceImage.cpu->rows);
-	cl::NDRange blockDim = cl::NullRange;
+	cl::NDRange gridDim(
+		roundUp(sourceImage.cpu->cols, workGroupSizeX),
+		roundUp(sourceImage.cpu->rows, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;	
@@ -461,9 +462,10 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 	clError("Error while setting kernel arguments", err);
 
 	cl::NDRange offset(1, 1);
-	cl::NDRange gridDim(sourceImage.cpu->cols - 2,
-		sourceImage.cpu->rows - 2);
-	cl::NDRange blockDim = cl::NullRange;
+	cl::NDRange gridDim(
+		roundUp(sourceImage.cpu->cols - 2, workGroupSizeX),
+		roundUp(sourceImage.cpu->rows - 2, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;
@@ -488,9 +490,10 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	clError("Error while setting kernel arguments", err);
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange gridDim(sourceImage.cpu->cols,
-		sourceImage.cpu->rows);
-	cl::NDRange blockDim = cl::NullRange;
+	cl::NDRange gridDim(
+		roundUp(sourceImage.cpu->cols, workGroupSizeX),
+		roundUp(sourceImage.cpu->rows, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;	
