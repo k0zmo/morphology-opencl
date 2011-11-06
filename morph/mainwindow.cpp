@@ -19,7 +19,11 @@
 // Morph
 
 MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
-	: QMainWindow(parent, flags)
+	: QMainWindow(parent, flags),
+	disableRefreshing(false),
+	kradiusx(1),
+	kradiusy(1),
+	krotation(0)
 {
 	ui.setupUi(this);
 
@@ -66,14 +70,24 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	maxImageWidth = settings.value("gui/maximagewidth", 512).toInt();
 	maxImageHeight = settings.value("gui/maximageheight", 512).toInt();
 	
-	int method;
+	int method = 0;
 	printf("There are 2 methods implemented:\n"
 		"\t1) Images\n"
-		"\t2) Buffers\n"
-		"Choose method: ");
-	scanf("%d", &method);
+		"\t2) Buffers\n");
+	while (method != 1 && method != 2)
+	{
+		printf("Choose method: ");
+		int r = scanf("%d", &method);
+		// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
+		// trzeba opronznic stdin, inaczej wpadniemy w nieskonczona petle
+		if(r != 1)
+		{
+			char buf[128];
+			fgets(buf, 128, stdin);
+		}
+	}
 
-	if(method == 1) ocl = new MorphOpenCLImage();
+	if (method == 1) ocl = new MorphOpenCLImage();
 	else ocl = new MorphOpenCLBuffer();
 
 	ocl->errorCallback = [this](const QString& message, cl_int err)
@@ -112,10 +126,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: 3"));
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
 	ui.lbRotation->setText(QString::fromLatin1("0"));
-
-	kradiusx = 1;
-	kradiusy = 1;
-	krotation = 0;
 
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
@@ -293,16 +303,24 @@ void MainWindow::elementSizeXChanged(int value)
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: ") + 
 		QString::number(2 * ui.hsXElementSize->value() + 1));
 
-	if(ui.cbSquare->checkState() == Qt::Checked)
+	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
-		if(ui.hsYElementSize->value() != ui.hsXElementSize->value())
+		if (ui.hsYElementSize->value() != ui.hsXElementSize->value())
+		{
+			disableRefreshing = true;
 			ui.hsYElementSize->setValue(ui.hsXElementSize->value());
+		}
 	}
 
+	disableRefreshing = false;
 	kradiusx = ui.hsXElementSize->value();
 
-	if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
+	if (!ui.rbNone->isChecked() && 
+		ui.cbAutoTrigger->isChecked() &&
+		!disableRefreshing)
+	{
 		refresh();
+	}
 }
 // -------------------------------------------------------------------------
 void MainWindow::elementSizeYChanged(int value)
@@ -311,16 +329,24 @@ void MainWindow::elementSizeYChanged(int value)
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: ") + 
 		QString::number(2 * ui.hsYElementSize->value() + 1));
 
-	if(ui.cbSquare->checkState() == Qt::Checked)
+	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
-		if(ui.hsXElementSize->value() != ui.hsYElementSize->value())
+		if (ui.hsXElementSize->value() != ui.hsYElementSize->value())
+		{
+			disableRefreshing = true;
 			ui.hsXElementSize->setValue(ui.hsYElementSize->value());
+		}
 	}
 
+	disableRefreshing = false;
 	kradiusy = ui.hsYElementSize->value();
 
-	if(!ui.rbNone->isChecked() && ui.cbAutoTrigger->isChecked())
+	if (!ui.rbNone->isChecked() && 
+		ui.cbAutoTrigger->isChecked() &&
+		!disableRefreshing)
+	{
 		refresh();
+	}
 }
 // -------------------------------------------------------------------------
 void MainWindow::rotationChanged(int value)

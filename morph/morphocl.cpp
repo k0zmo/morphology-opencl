@@ -49,11 +49,19 @@ bool MorphOpenCL::initOpenCL()
 			printf("\t%d) %s %s\n", i+1, name.c_str(), version.c_str());
 		}
 
+		printf("\n");
 		int choice = 0;
 		while(choice > (int)(platforms.size()) || choice <= 0)
 		{
-			printf("\nChoose OpenCL platform: ");
-			scanf("%d", &choice);
+			printf("Choose OpenCL platform: ");
+			int r = scanf("%d", &choice);
+			// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
+			// trzeba opronznic stdin, inaczej wpadniemy w nieskonczona petle
+			if(r != 1)
+			{
+				char buf[128];
+				fgets(buf, 128, stdin);
+			}
 		}
 		platform = platforms[choice-1];
 	}
@@ -89,10 +97,18 @@ bool MorphOpenCL::initOpenCL()
 		}
 
 		int choice = 0;
+		printf("\n");
 		while(choice > (int)(devices.size()) || choice <= 0)
 		{
-			printf("\nChoose OpenCL device: ");
-			scanf("%d", &choice);
+			printf("Choose OpenCL device: ");
+			int r = scanf("%d", &choice);
+			// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
+			// trzeba opronznic stdin, inaczej wpadniemy w nieskonczona petle
+			if(r != 1)
+			{
+				char buf[128];
+				fgets(buf, 128, stdin);
+			}
 		}
 		dev = devices[choice-1];
 	}

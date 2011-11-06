@@ -21,6 +21,7 @@ private:
 	QImage qsrc;
 	cv::Mat src;
 
+	bool disableRefreshing;
 	int kradiusx;
 	int kradiusy;
 	int krotation;
