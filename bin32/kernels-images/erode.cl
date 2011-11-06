@@ -50,7 +50,7 @@ __kernel void erode_c4(
 #define COORDS_SIZE 4
 #endif
 
-__kernel void erode_c4_unroll(
+__kernel void erode_c4_pragma(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
 	__constant int4* coords,
