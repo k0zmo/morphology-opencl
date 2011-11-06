@@ -378,7 +378,7 @@ void skeleton4_iter8_local(
 __kernel void skeleton_iter1(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -388,26 +388,30 @@ __kernel void skeleton_iter1(
 	// X|1|X
 	// 0|0|0
 	//
-		
-	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y - 1) * rowPitch] == OBJ &&
-		
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		
-		input[(gid.x - 1) + (gid.y + 1) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y + 1) * rowPitch] == BCK)
+	
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+		if (input[(gid.x - 1) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y - 1) * imageSize.x] == OBJ &&
+			
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			
+			input[(gid.x - 1) + (gid.y + 1) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y + 1) * imageSize.x] == BCK)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}	
 	}
 }
 
 __kernel void skeleton_iter2(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -417,26 +421,29 @@ __kernel void skeleton_iter2(
 	// 1|1|0
 	// 1|x|0
 	//
-	
-	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y - 1) * rowPitch] == BCK &&
-		
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == BCK &&
-		
-		input[(gid.x - 1) + (gid.y + 1) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y + 1) * rowPitch] == BCK)
-	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
+	{	
+		if (input[(gid.x - 1) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == BCK &&
+			
+			input[(gid.x - 1) + (gid.y + 1) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y + 1) * imageSize.x] == BCK)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter3(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -446,24 +453,27 @@ __kernel void skeleton_iter3(
 	// X|1|X
 	// 1|1|1
 	//
-		
-	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y + 1) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y + 1) * rowPitch] == OBJ)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+		if (input[(gid.x - 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y + 1) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y + 1) * imageSize.x] == OBJ)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter4(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -473,24 +483,27 @@ __kernel void skeleton_iter4(
 	// 0|1|1
 	// 0|X|1
 	//
-	
-	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y + 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y + 1) * rowPitch] == OBJ)
-	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
+	{	
+		if (input[(gid.x - 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y + 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y + 1) * imageSize.x] == OBJ)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter5(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -500,23 +513,26 @@ __kernel void skeleton_iter5(
 	// 0|1|1
 	// 0|0|X
 	//
-
-	if (input[(gid.x    ) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y + 1) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == BCK)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+		if (input[(gid.x    ) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y + 1) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == BCK)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter6(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -526,23 +542,26 @@ __kernel void skeleton_iter6(
 	// 1|1|0
 	// X|0|0
 	//
-		
-	if (input[(gid.x    ) + (gid.y - 1) * rowPitch] == OBJ &&
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y + 1) * rowPitch] == BCK)
-	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
+	{		
+		if (input[(gid.x    ) + (gid.y - 1) * imageSize.x] == OBJ &&
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y + 1) * imageSize.x] == BCK)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter7(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -552,23 +571,26 @@ __kernel void skeleton_iter7(
 	// 1|1|0
 	// X|1|X
 	//
-		
-	if (input[(gid.x    ) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x + 1) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == OBJ)
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
 	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+		if (input[(gid.x    ) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x + 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == OBJ)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
 
 __kernel void skeleton_iter8(
 	__global uint* input,
 	__global uint* output,
-	const int rowPitch,
+	const int2 imageSize,
 	counter_type counter)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -578,15 +600,18 @@ __kernel void skeleton_iter8(
 	// 0|1|1
 	// X|1|X
 	//
-		
-	if (input[(gid.x - 1) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y - 1) * rowPitch] == BCK &&
-		input[(gid.x - 1) + (gid.y    ) * rowPitch] == BCK &&
-		input[(gid.x    ) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x + 1) + (gid.y    ) * rowPitch] == OBJ &&
-		input[(gid.x    ) + (gid.y + 1) * rowPitch] == OBJ)
-	{
-		output[gid.x + gid.y * rowPitch] = BCK;
-		atomic_inc(counter);
+	if (gid.y < imageSize.y - 2 &&
+		gid.x < imageSize.x - 2)
+	{		
+		if (input[(gid.x - 1) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y - 1) * imageSize.x] == BCK &&
+			input[(gid.x - 1) + (gid.y    ) * imageSize.x] == BCK &&
+			input[(gid.x    ) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x + 1) + (gid.y    ) * imageSize.x] == OBJ &&
+			input[(gid.x    ) + (gid.y + 1) * imageSize.x] == OBJ)
+		{
+			output[gid.x + gid.y * imageSize.x] = BCK;
+			atomic_inc(counter);
+		}
 	}
 }
