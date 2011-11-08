@@ -237,9 +237,6 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 		std::string slog = log.toStdString();
 		printf("log: %s\n", slog.c_str());
 	}
-
-	// get binaries
-	//std::vector<char*> binary = program.getInfo<CL_PROGRAM_BINARIES>(&err);
 	return program;
 }
 // -------------------------------------------------------------------------
