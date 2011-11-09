@@ -15,3 +15,7 @@ ipch
 *.sdf
 *.suo
 *.dll
+*moc_*
+*ui_*
+*.o
+Makefile

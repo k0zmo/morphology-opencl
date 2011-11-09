@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>457</width>
-    <height>442</height>
+    <width>472</width>
+    <height>483</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -478,8 +478,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>457</width>
-     <height>21</height>
+     <width>472</width>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -532,7 +532,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>OpenCL</string>
+    <string>Use OpenCL</string>
+   </property>
+   <property name="toolTip">
+    <string>Use OpenCL instead of OpenCV</string>
    </property>
   </action>
  </widget>
@@ -556,8 +559,6 @@
   <tabstop>hsXElementSize</tabstop>
   <tabstop>hsYElementSize</tabstop>
  </tabstops>
- <resources>
-  <include location="morph.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
