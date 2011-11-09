@@ -8,6 +8,7 @@ QT       += core gui
 
 TARGET = morph
 TEMPLATE = app
+DESTDIR = ../bin32
 
 SOURCES += main.cpp \
 	mainwindow.cpp \
