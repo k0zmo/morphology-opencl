@@ -38,9 +38,14 @@ bool MorphOpenCLBuffer::initOpenCL()
 	dilateParams.options = opts;
 	dilateParams.kernelName = s.value("kernel-buffers/dilate", "dilate").toString();
 
+	gradientParams.programName = dir+ "gradient.cl";
+	gradientParams.options = opts;
+	gradientParams.kernelName = s.value("kernel-buffers/gradient", "gradient").toString();
+
 	// Wczytaj programy (rekompilowalne)
 	cl::Program perode = createProgram(erodeParams.programName, opts);
 	cl::Program pdilate = createProgram(dilateParams.programName, opts);
+	cl::Program pgradient = createProgram(gradientParams.programName, opts);
 
 	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
 	cl::Program poutline = createProgram(dir + "outline.cl", opts);
@@ -51,6 +56,7 @@ bool MorphOpenCLBuffer::initOpenCL()
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
+	kernelGradient = createKernel(pgradient, gradientParams.kernelName);
 	kernelOutline = createKernel(poutline, s.value("kernel-buffers/outline", "outline").toString());
 	kernelSubtract = createKernel(putils, s.value("kernel-buffers/subtract", "subtract").toString());
 
@@ -356,17 +362,8 @@ cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
 {
-	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
-	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
-	cl::Buffer tmpBuffer2 = createBuffer(CL_MEM_READ_WRITE);
-
 	//dst = dilate(src) - erode(src);
-	cl_ulong elapsed = 0;
-	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
-	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer2);
-	elapsed += executeSubtractKernel(tmpBuffer, tmpBuffer2, dst);
-
-	return elapsed;
+	return executeMorphologyKernel(&kernelGradient, src, dst);
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)

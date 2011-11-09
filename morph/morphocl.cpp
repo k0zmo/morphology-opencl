@@ -255,6 +255,11 @@ void MorphOpenCL::recompile(EOperationType opType, int coordsSize)
 		kparams = &dilateParams;
 		kernel = &kernelDilate;
 	}
+	else if(opType == OT_Gradient)
+	{
+		kparams = &gradientParams;
+		kernel = &kernelGradient;
+	}
 	else
 	{
 		return;

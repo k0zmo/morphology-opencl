@@ -57,12 +57,14 @@ protected:
 
 	SKernelParameters erodeParams;
 	SKernelParameters dilateParams;
+	SKernelParameters gradientParams;
 
 	cl::Kernel kernelSubtract;
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;
 	cl::Kernel kernelDilate;
+	cl::Kernel kernelGradient;
 
 	// Hit-miss
 	cl::Kernel kernelOutline;

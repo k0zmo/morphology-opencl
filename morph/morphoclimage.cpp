@@ -46,19 +46,25 @@ bool MorphOpenCLImage::initOpenCL()
 	dilateParams.options = opts;
 	dilateParams.kernelName = s.value("kernel-images/dilate", "dilate").toString();
 
+	gradientParams.programName = "kernels-images/gradient.cl";
+	gradientParams.options = opts;
+	gradientParams.kernelName = s.value("kernel-images/gradient", "gradient").toString();
+
 	// Wczytaj programy (rekompilowalne)
 	cl::Program perode = createProgram(erodeParams.programName, opts);
 	cl::Program pdilate = createProgram(dilateParams.programName, opts);
+	cl::Program pgradient = createProgram(gradientParams.programName, opts);
 
 	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
 	cl::Program poutline = createProgram("kernels-images/outline.cl", opts);
 	cl::Program putils = createProgram("kernels-images/utils.cl", opts);
 	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl", opts);
-	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl", opts);	
+	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
+	kernelGradient = createKernel(pgradient, gradientParams.kernelName);
 	kernelOutline = createKernel(poutline, s.value("kernel-images/outline", "outline").toString());
 	kernelSubtract = createKernel(putils, s.value("kernel-images/subtract", "subtract").toString());
 
@@ -255,17 +261,7 @@ cl_ulong MorphOpenCLImage::morphologyClose(cl::Image2D& src, cl::Image2D& dst)
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::morphologyGradient(cl::Image2D& src, cl::Image2D& dst)
 {
-	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
-	cl::Image2D tmpImage = createImage2D(CL_MEM_READ_WRITE);
-	cl::Image2D tmpImage2 = createImage2D(CL_MEM_READ_WRITE);
-
-	//dst = dilate(src) - erode(src);
-	cl_ulong elapsed = 0;
-	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpImage);
-	elapsed += executeMorphologyKernel(&kernelErode, src, tmpImage2);
-	elapsed += executeSubtractKernel(tmpImage, tmpImage2, dst);
-
-	return elapsed;
+	return executeMorphologyKernel(&kernelGradient, src, dst);
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::morphologyTopHat(cl::Image2D& src, cl::Image2D& dst)
