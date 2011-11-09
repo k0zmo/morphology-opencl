@@ -206,6 +206,7 @@ void morphologyOutline(const cv::Mat& src, cv::Mat& dst)
 	uchar* pixels = dst.ptr<uchar>();
 	int rowOffset = src.cols;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		int offset = 1 + y * rowOffset;
@@ -259,6 +260,7 @@ force_inline int _morphologySkeleton_iter1(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -289,6 +291,7 @@ force_inline int _morphologySkeleton_iter2(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -319,6 +322,7 @@ force_inline int _morphologySkeleton_iter3(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -349,6 +353,7 @@ force_inline int _morphologySkeleton_iter4(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -379,6 +384,7 @@ force_inline int _morphologySkeleton_iter5(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -409,6 +415,7 @@ force_inline int _morphologySkeleton_iter6(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -438,6 +445,7 @@ force_inline int _morphologySkeleton_iter7(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -468,6 +476,7 @@ force_inline int _morphologySkeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 
 	int d = 0;
 
+	#pragma omp parallel for
 	for(int y = 1; y < src.rows - 1; ++y)
 	{
 		for(int x = 1; x < src.cols - 1; ++x)
@@ -553,6 +562,7 @@ int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst)
 		int pixelsRemoved = 0;
 		int xMin = 1, yMin = 1, rowOffset = dst.cols;
 
+		#pragma omp parallel for
 		for(int y = yMin; y < dst.rows - 1; ++y)
 		{
 			int offset = xMin + y * rowOffset;
