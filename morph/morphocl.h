@@ -31,6 +31,9 @@ public:
 	// (Ma sens dla dylatacji i erozji)
 	void recompile(EOperationType opType, int coordsSize);
 
+	inline void setWorkGroupSize(int x, int y)
+	{ workGroupSizeX = x; workGroupSizeY = y; }
+
 protected:
 	cl::Context context;
 	cl::Device dev;
@@ -42,7 +45,6 @@ protected:
 	int csize;
 
 	int kradiusx, kradiusy;
-
 
 	// Rozmiar grupy roboczej
 	int workGroupSizeX;
