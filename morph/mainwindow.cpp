@@ -302,6 +302,7 @@ void MainWindow::elementSizeXChanged(int value)
 	Q_UNUSED(value);
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: ") + 
 		QString::number(2 * ui.hsXElementSize->value() + 1));
+	kradiusx = ui.hsXElementSize->value();
 
 	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
@@ -310,10 +311,7 @@ void MainWindow::elementSizeXChanged(int value)
 			disableRefreshing = true;
 			ui.hsYElementSize->setValue(ui.hsXElementSize->value());
 		}
-	}
-
-	disableRefreshing = false;
-	kradiusx = ui.hsXElementSize->value();
+	}	
 
 	if (!ui.rbNone->isChecked() && 
 		ui.cbAutoTrigger->isChecked() &&
@@ -321,6 +319,8 @@ void MainWindow::elementSizeXChanged(int value)
 	{
 		refresh();
 	}
+
+	disableRefreshing = false;
 }
 // -------------------------------------------------------------------------
 void MainWindow::elementSizeYChanged(int value)
@@ -328,6 +328,7 @@ void MainWindow::elementSizeYChanged(int value)
 	Q_UNUSED(value);
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: ") + 
 		QString::number(2 * ui.hsYElementSize->value() + 1));
+	kradiusy = ui.hsYElementSize->value();
 
 	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
@@ -336,10 +337,7 @@ void MainWindow::elementSizeYChanged(int value)
 			disableRefreshing = true;
 			ui.hsXElementSize->setValue(ui.hsYElementSize->value());
 		}
-	}
-
-	disableRefreshing = false;
-	kradiusy = ui.hsYElementSize->value();
+	}	
 
 	if (!ui.rbNone->isChecked() && 
 		ui.cbAutoTrigger->isChecked() &&
@@ -347,6 +345,8 @@ void MainWindow::elementSizeYChanged(int value)
 	{
 		refresh();
 	}
+
+	disableRefreshing = false;
 }
 // -------------------------------------------------------------------------
 void MainWindow::rotationChanged(int value)
