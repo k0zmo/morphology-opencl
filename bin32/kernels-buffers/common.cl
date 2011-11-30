@@ -49,7 +49,7 @@ void cacheToLocalMemory(
 
 //
 // Cache'uje dane z pamieci globalnej do lokalnej w paczkach po 4
-// Dziala tylko dla kerneli o rozmiarze max 16x16
+// Dziala tylko dla kerneli o rozmiarze max 17x17
 //
 
 __attribute__((always_inline))
@@ -64,23 +64,44 @@ void cache4ToLocalMemory(
 	int2 groupId = { get_group_id(0), get_group_id(1) };
 	int2 groupStartId = mul24(groupId, localSize); // id pierwszego bajtu w tej grupie roboczej
 	
+	int sharedSizex4 = sharedSize.x/4;
+	int imageSizex4 = imageSize.x/4;
+	
 	// Przebiega od 0 do 255
 	int flatLid = mad24(lid.y, localSize.x, lid.x);
 	
-	int2 tid = (int2)(
-		flatLid % (sharedSize.x/4),
-		flatLid / (sharedSize.x/4));
+	int2 tid = (int2) {
+		flatLid % (sharedSizex4),
+		flatLid / (sharedSizex4) 
+	};
 	
-	int2 gid = (int2)(
+	int2 gid = (int2) {
 		groupStartId.x/4 + tid.x,
-		groupStartId.y   + tid.y);
+		groupStartId.y   + tid.y
+	};
 	
 	if (gid.y < imageSize.y && 
-		gid.x < imageSize.x/4 && 
+		//gid.x < imageSizex4 && 
 		tid.y < sharedSize.y)
 	{
 		__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
-		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
+		sharedBlock4[0] = input[gid.x + gid.y*imageSizex4];
+		
+		// jesli chcemy wczytac dodatkowy wektor
+
+		int lsize = mul24(localSize.x, localSize.y);
+		int ssize = mul24(sharedSize.x, sharedSize.y);
+		
+		if((flatLid+lsize)*4 < ssize)
+		{
+			int2 gid = (int2) {
+				groupStartId.x/4 + (flatLid+lsize) % (sharedSizex4),
+				groupStartId.y   + (flatLid+lsize) / (sharedSizex4)
+			};
+			
+			sharedBlock4[lsize] = input[gid.x + gid.y*imageSizex4];
+		}
+		
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 }
