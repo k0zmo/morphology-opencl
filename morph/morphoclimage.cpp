@@ -261,7 +261,20 @@ cl_ulong MorphOpenCLImage::morphologyClose(cl::Image2D& src, cl::Image2D& dst)
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::morphologyGradient(cl::Image2D& src, cl::Image2D& dst)
 {
+#if 1
 	return executeMorphologyKernel(&kernelGradient, src, dst);
+#else
+	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
+	cl::Image2D tmpImage = createImage2D(CL_MEM_READ_WRITE);
+	cl::Image2D tmpImage2 = createImage2D(CL_MEM_READ_WRITE);
+
+	// dst = src - dilate(erode(src))
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelErode, src, tmpImage);
+	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpImage2);
+	elapsed += executeSubtractKernel(tmpImage2, tmpImage, dst);
+	return elapsed;
+#endif
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::morphologyTopHat(cl::Image2D& src, cl::Image2D& dst)

@@ -363,7 +363,22 @@ cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
 cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
 {
 	//dst = dilate(src) - erode(src);
+#if 1
 	return executeMorphologyKernel(&kernelGradient, src, dst);
+
+#else
+	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
+	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_WRITE);
+	cl::Buffer tmpBuffer2 = createBuffer(CL_MEM_READ_WRITE);
+
+	// dst = src - dilate(erode(src))
+	cl_ulong elapsed = 0;
+	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer);
+	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer2);
+	elapsed += executeSubtractKernel(tmpBuffer2, tmpBuffer, dst);
+
+	return elapsed;
+#endif
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)
