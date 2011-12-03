@@ -326,11 +326,13 @@ cl_ulong MorphOpenCLBuffer::copyBuffer(const cl::Buffer& src, cl::Buffer& dst)
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::morphologyErode(cl::Buffer& src, cl::Buffer& dst)
 {
+	//printf(" *** erode\n");
 	return executeMorphologyKernel(&kernelErode, src, dst);
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::morphologyDilate( cl::Buffer& src, cl::Buffer& dst )
 {
+	//printf(" *** dilate\n");
 	return executeMorphologyKernel(&kernelDilate, src, dst);
 }
 // -------------------------------------------------------------------------
@@ -341,7 +343,9 @@ cl_ulong MorphOpenCLBuffer::morphologyOpen(cl::Buffer& src, cl::Buffer& dst)
 
 	// dst = dilate(erode(src))
 	cl_ulong elapsed = 0;
+	//printf(" *** erode\n");
 	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer);
+	//printf(" *** dilate\n");
 	elapsed += executeMorphologyKernel(&kernelDilate, tmpBuffer, dst);
 
 	return elapsed;
@@ -354,7 +358,9 @@ cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
 
 	// dst = erode(dilate(src))
 	cl_ulong elapsed = 0;
+	//printf(" *** dilate\n");
 	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
+	//printf(" *** erode\n");
 	elapsed += executeMorphologyKernel(&kernelErode, tmpBuffer, dst);
 
 	return elapsed;
@@ -364,6 +370,7 @@ cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
 {
 	//dst = dilate(src) - erode(src);
 #if 1
+	//printf(" *** gradient\n");
 	return executeMorphologyKernel(&kernelGradient, src, dst);
 
 #else
@@ -389,8 +396,11 @@ cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)
 
 	// dst = src - dilate(erode(src))
 	cl_ulong elapsed = 0;
+	//printf(" *** erode\n");
 	elapsed += executeMorphologyKernel(&kernelErode, src, tmpBuffer);
+	//printf(" *** dilate\n");
 	elapsed += executeMorphologyKernel(&kernelDilate, tmpBuffer, tmpBuffer2);
+	//printf(" *** subtract\n");
 	elapsed += executeSubtractKernel(src, tmpBuffer2, dst);
 
 	return elapsed;
@@ -404,8 +414,11 @@ cl_ulong MorphOpenCLBuffer::morphologyBlackHat(cl::Buffer& src, cl::Buffer& dst)
 
 	// dst = close(src) - src
 	cl_ulong elapsed = 0;
+	//printf(" *** dilate\n");
 	elapsed += executeMorphologyKernel(&kernelDilate, src, tmpBuffer);
+	//printf(" *** erode\n");
 	elapsed += executeMorphologyKernel(&kernelErode, tmpBuffer, tmpBuffer2);
+	//printf(" *** subtract\n");
 	elapsed += executeSubtractKernel(tmpBuffer2, src, dst);
 
 	return elapsed;

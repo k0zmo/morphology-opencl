@@ -49,7 +49,7 @@ void cacheToLocalMemory(
 
 //
 // Cache'uje dane z pamieci globalnej do lokalnej w paczkach po 4
-// Dziala tylko dla kerneli o rozmiarze max 17x17
+// Dziala tylko dla kerneli o rozmiarze max 29x29
 //
 
 __attribute__((always_inline))

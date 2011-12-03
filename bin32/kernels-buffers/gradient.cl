@@ -230,7 +230,7 @@ __kernel void gradient_c4_local_pragma(
 }
 
 // ################################################################################
-// Kernele dla el. strukturalnych o max. promieniu 16
+// Kernele dla el. strukturalnych o max. promieniu 14 (29x29)
 
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 

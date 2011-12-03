@@ -159,7 +159,7 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 		}
 	}
 	csize = static_cast<int>(coords.size());
-	printf("Structure element size (number of 'white' pixels): %d\n", csize);
+	printf("Structure element size (number of 'white' pixels): %d (%dx%d)\n", csize, kradiusx, kradiusy);
 
 	// Zaladuj dane do bufora
 	cl_int err;
