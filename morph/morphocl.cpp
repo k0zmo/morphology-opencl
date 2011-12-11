@@ -120,6 +120,27 @@ bool MorphOpenCL::initOpenCL()
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
 
+	cl_uint maxComputeUnits, maxClockFreq;
+	cl_ulong maxMemAllocSize, localMemSize;
+	cl_device_local_mem_type localMemType;
+
+	printf("\n********************************************************\n");
+	dev.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &maxComputeUnits);
+	printf("Compute units: %d\n", maxComputeUnits);
+
+	dev.getInfo(CL_DEVICE_MAX_CLOCK_FREQUENCY, &maxClockFreq);
+	printf("Clock frequency: %d Hz\n", maxClockFreq);
+
+	dev.getInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE, &maxMemAllocSize);
+	printf("Memory object allocation: %ld B (%ld MB)\n", maxMemAllocSize, maxMemAllocSize/1024/1024);
+
+	dev.getInfo(CL_DEVICE_LOCAL_MEM_SIZE, &localMemSize);
+	printf("Local memory arena: %ld B (%ld kB)\n", localMemSize, localMemSize/1024);
+
+	dev.getInfo(CL_DEVICE_LOCAL_MEM_TYPE, &localMemType);
+	printf("Local memory type: %s\n", ((localMemType == CL_LOCAL) ? "local":"global"));
+	printf("********************************************************\n\n");
+
 	// Kolejka polecen
 	cq = cl::CommandQueue(context, dev, CL_QUEUE_PROFILING_ENABLE, &err);
 	clError("Failed to create command queue!", err);
