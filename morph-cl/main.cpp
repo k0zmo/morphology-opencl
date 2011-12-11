@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 		//int radius = 1;
 		cv::Mat element = standardStructuringElement(radius, radius, SET_Ellipse);
 #if 0
-		int coords_size = ocl->setStructureElement(element);
+		int coords_size = ocl->setStructuringElement(element);
 		//ocl->recompile(opType, coords_size);
 		
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";

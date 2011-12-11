@@ -433,7 +433,7 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	cl_int err;
 	err  = kernel->setArg(0, clSrcImage);
 	err |= kernel->setArg(1, clDstImage);
-	err |= kernel->setArg(2, clStructureElementCoords);
+	err |= kernel->setArg(2, clStructuringElementCoords);
 	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 

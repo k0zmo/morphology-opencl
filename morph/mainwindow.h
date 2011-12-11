@@ -64,8 +64,8 @@ private slots:
 	void invertChanged(int state);
 	void noneOperationToggled(bool checked);
 	void operationToggled(bool checked);
-	void structureElementToggled(bool checked);
-	void structureElementPreview();
+	void structuringElementToggled(bool checked);
+	void structuringElementPreview();
 
 	void ratioChanged(int state);
 	void elementSizeXChanged(int value);

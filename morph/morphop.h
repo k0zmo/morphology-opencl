@@ -22,7 +22,7 @@ enum EOperationType
 	OT_Skeleton_ZhangSuen
 };
 
-enum EStructureElementType
+enum EStructuringElementType
 {
 	SET_Rect,
 	SET_Ellipse,
@@ -32,7 +32,7 @@ enum EStructureElementType
 
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xradius, int yradius, 
-	EStructureElementType type, int rotation = 0);
+	EStructuringElementType type, int rotation = 0);
 
 // Operacja morfologiczna - erozja
 void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);

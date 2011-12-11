@@ -22,7 +22,7 @@ public:
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 
 	// Ustawia element strukturalny
-	int setStructureElement(const cv::Mat& selement);
+	int setStructuringElement(const cv::Mat& selement);
 
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
 	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
@@ -40,7 +40,7 @@ protected:
 	cl::CommandQueue cq;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
-	cl::Buffer clStructureElementCoords;
+	cl::Buffer clStructuringElementCoords;
 	// Ilosc wspolrzednych (rozmiar elementu strukturalnego)
 	int csize;
 
@@ -72,6 +72,7 @@ protected:
 	cl::Kernel kernelOutline;
 	cl::Kernel kernelSkeleton_iter[8];
 	cl::Kernel kernelSkeleton_pass[2];
+	cl_ulong maxConstantBufferSize;
 
 protected:
 	// Pomocznicza funkcja do zglaszania bledow OpenCL'a

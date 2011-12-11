@@ -77,7 +77,7 @@ cv::Mat structuringElementDiamond(int radius)
 }
 // -------------------------------------------------------------------------
 cv::Mat standardStructuringElement(int xradius, int yradius,
-	EStructureElementType type, int rotation)
+	EStructuringElementType type, int rotation)
 {
 	cv::Point anchor(xradius, yradius);
 

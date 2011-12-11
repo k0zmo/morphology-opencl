@@ -560,7 +560,7 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	// Ustaw argumenty kernela
 	err  = kernel->setArg(0, clSrcBuffer);
 	err |= kernel->setArg(1, clDstBuffer);
-	err |= kernel->setArg(2, clStructureElementCoords);
+	err |= kernel->setArg(2, clStructuringElementCoords);
 	err |= kernel->setArg(3, seSize);
 	err |= kernel->setArg(4, imageSize);
 	clError("Error while setting kernel arguments", err);

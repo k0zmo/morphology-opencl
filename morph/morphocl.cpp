@@ -139,6 +139,11 @@ bool MorphOpenCL::initOpenCL()
 
 	dev.getInfo(CL_DEVICE_LOCAL_MEM_TYPE, &localMemType);
 	printf("Local memory type: %s\n", ((localMemType == CL_LOCAL) ? "local":"global"));
+
+	dev.getInfo(CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, &maxConstantBufferSize);
+	printf("Constant buffer size: %lld B (%lld kB)\n", maxConstantBufferSize,
+		maxConstantBufferSize/1024);
+	
 	printf("********************************************************\n\n");
 
 	// Kolejka polecen
@@ -148,7 +153,7 @@ bool MorphOpenCL::initOpenCL()
 	return true;
 }
 // -------------------------------------------------------------------------
-int MorphOpenCL::setStructureElement(const cv::Mat& selement)
+int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 {
 	std::vector<cl_int2> coords;
 
@@ -180,14 +185,24 @@ int MorphOpenCL::setStructureElement(const cv::Mat& selement)
 		}
 	}
 	csize = static_cast<int>(coords.size());
-	printf("Structure element size (number of 'white' pixels): %d (%dx%d)\n", csize, kradiusx, kradiusy);
+	printf("Structuring element size (number of 'white' pixels): %d (%dx%d) - %d B\n",
+		csize, kradiusx, kradiusy, sizeof(cl_int2) * csize);
+
+	if(maxConstantBufferSize < sizeof(cl_int2)*csize)
+	{
+		clError(QString("Structuring element is too big: "
+			"%1 B out of available %2 B").
+			arg(sizeof(cl_int2)*csize).
+			arg(maxConstantBufferSize),
+			CL_OUT_OF_RESOURCES);
+	}
 
 	// Zaladuj dane do bufora
 	cl_int err;
-	clStructureElementCoords = cl::Buffer(context,
+	clStructuringElementCoords = cl::Buffer(context,
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		csize * sizeof(cl_int2), coords.data(), &err);
-	clError("Error while creating buffer for structure element!", err);
+	clError("Error while creating buffer for structuring element!", err);
 
 	return csize;
 }

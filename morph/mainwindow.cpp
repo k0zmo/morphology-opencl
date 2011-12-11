@@ -49,12 +49,12 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.rbSkeletonZhang, SIGNAL(toggled(bool)), this, SLOT(operationToggled(bool)));
 
 	// Element strukturalny
-	connect(ui.rbRect, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
-	connect(ui.rbEllipse, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
-	connect(ui.rbCross, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
-	connect(ui.rbDiamond, SIGNAL(toggled(bool)), this, SLOT(structureElementToggled(bool)));
+	connect(ui.rbRect, SIGNAL(toggled(bool)), this, SLOT(structuringElementToggled(bool)));
+	connect(ui.rbEllipse, SIGNAL(toggled(bool)), this, SLOT(structuringElementToggled(bool)));
+	connect(ui.rbCross, SIGNAL(toggled(bool)), this, SLOT(structuringElementToggled(bool)));
+	connect(ui.rbDiamond, SIGNAL(toggled(bool)), this, SLOT(structuringElementToggled(bool)));
 
-	connect(ui.pbShowSE, SIGNAL(pressed()), this, SLOT(structureElementPreview()));
+	connect(ui.pbShowSE, SIGNAL(pressed()), this, SLOT(structuringElementPreview()));
 
 	// Rozmiar elementu strukturalnego
 	connect(ui.cbSquare, SIGNAL(stateChanged(int)), this, SLOT(ratioChanged(int)));
@@ -252,7 +252,7 @@ void MainWindow::operationToggled(bool checked)
 	}
 }
 // -------------------------------------------------------------------------
-void MainWindow::structureElementToggled(bool checked)
+void MainWindow::structuringElementToggled(bool checked)
 {
 	if(checked)
 	{
@@ -261,7 +261,7 @@ void MainWindow::structureElementToggled(bool checked)
 	}
 }
 // -------------------------------------------------------------------------
-void MainWindow::structureElementPreview()
+void MainWindow::structuringElementPreview()
 {
 	QDialog* d = new QDialog(this);
 
@@ -539,7 +539,7 @@ void MainWindow::morphologyOpenCL()
 	EOperationType opType = operationType();
 
 	int iters;
-	ocl->setStructureElement(element);
+	int csize = ocl->setStructuringElement(element);
 	double delapsed = ocl->morphology(opType, dst, iters);
 	
 	// Wyswietl statystyki
@@ -554,7 +554,7 @@ void MainWindow::morphologyOpenCL()
 // -------------------------------------------------------------------------
 cv::Mat MainWindow::standardStructuringElement()
 {
-	EStructureElementType type;
+	EStructuringElementType type;
 
 	if(ui.rbRect->isChecked()) type = SET_Rect;
 	else if(ui.rbEllipse->isChecked()) type = SET_Ellipse;
