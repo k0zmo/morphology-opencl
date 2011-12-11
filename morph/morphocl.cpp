@@ -132,10 +132,10 @@ bool MorphOpenCL::initOpenCL()
 	printf("Clock frequency: %d Hz\n", maxClockFreq);
 
 	dev.getInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE, &maxMemAllocSize);
-	printf("Memory object allocation: %ld B (%ld MB)\n", maxMemAllocSize, maxMemAllocSize/1024/1024);
+	printf("Memory object allocation: %lld B (%lld MB)\n", maxMemAllocSize, maxMemAllocSize/1024/1024);
 
 	dev.getInfo(CL_DEVICE_LOCAL_MEM_SIZE, &localMemSize);
-	printf("Local memory arena: %ld B (%ld kB)\n", localMemSize, localMemSize/1024);
+	printf("Local memory arena: %lld B (%lld kB)\n", localMemSize, localMemSize/1024);
 
 	dev.getInfo(CL_DEVICE_LOCAL_MEM_TYPE, &localMemType);
 	printf("Local memory type: %s\n", ((localMemType == CL_LOCAL) ? "local":"global"));

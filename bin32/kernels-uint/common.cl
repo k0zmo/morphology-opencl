@@ -1,5 +1,3 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
 __constant uint dilateINF = 0;
 __constant uint erodeINF = 255;
 __constant uint OBJ = 255;
