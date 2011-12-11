@@ -19,7 +19,7 @@ private:
 	Ui::mainWindowClass ui;
 	QLabel* statusBarLabel;
 	QImage qsrc;
-	cv::Mat src;
+	cv::Mat src, dst;
 
 	bool disableRefreshing;
 	int kradiusx;

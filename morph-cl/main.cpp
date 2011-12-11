@@ -68,22 +68,22 @@ int main(int argc, char *argv[])
 	fout << "workgroupsizey: " << settings.value("opencl/workgroupsizey", 0).toInt() << endl;
 	fout << "kernel: " << settings.value("kernel/erode", "").toString() << endl;
 
-	EOperationType opType = OT_Gradient;
+	EOperationType opType = OT_Erode;
 	cv::Mat dst;
 
-	for(int radius = 1; radius <= 35; ++radius)
+	for(int radius = 1; radius <= 75; ++radius)
 	{
 		//int radius = 1;
 		cv::Mat element = standardStructuringElement(radius, radius, SET_Ellipse);
-#if 1
+#if 0
 		int coords_size = ocl->setStructureElement(element);
-		//ocl->recompile(OT_Gradient, coords_size);
+		//ocl->recompile(opType, coords_size);
 		
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 		fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 		qout.flush();
 
-		for(int i = 0; i < 12; ++i)
+		for(int i = 0; i < 6; ++i)
 		{
 			int iters;
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 			QueryPerformanceCounter(&start);
 
 			//morphologyOutline(src, dst);
-			cv::morphologyEx(src, dst, cv::MORPH_GRADIENT, element);
+			cv::morphologyEx(src, dst, cv::MORPH_ERODE, element);
 			//morphologyErode(src, dst, element);
 
 			QueryPerformanceCounter(&end);

@@ -163,7 +163,17 @@ void MainWindow::saveTriggered()
 		QString::fromLatin1("Image file (*.png)"));
 
 	if(!filename.isEmpty())
-		ui.lbImage->pixmap()->toImage().save(filename);
+	{
+		//ui.lbImage->pixmap()->toImage().save(filename);
+		cv::Mat dstc;
+		cvtColor(dst, dstc, CV_GRAY2BGR);
+
+		QImage qdst(
+			reinterpret_cast<const quint8*>(dstc.data),
+			dstc.cols, dstc.rows, dstc.step, 
+			QImage::Format_RGB888);
+		qdst.save(filename);
+	}
 }
 // -------------------------------------------------------------------------
 void MainWindow::exitTriggered()
@@ -206,6 +216,7 @@ void MainWindow::noneOperationToggled(bool checked)
 
 		refresh();
 		ui.pbRun->setEnabled(false);
+		ui.actionSave->setEnabled(false);
 	}
 	else
 	{
@@ -390,8 +401,8 @@ void MainWindow::showCvImage(const cv::Mat& image)
 	{
 		return QImage(
 			reinterpret_cast<const quint8*>(image.data),
-			image.cols, image.rows, image.step, 
-			QImage::Format_Indexed8);
+				image.cols, image.rows, image.step, 
+				QImage::Format_Indexed8);
 	};
 
 	cv::Mat img = image;
@@ -442,6 +453,8 @@ void MainWindow::refresh()
 		morphologyOpenCL();
 	else
 		morphologyOpenCV();
+
+	ui.actionSave->setEnabled(true);
 }
 // -------------------------------------------------------------------------
 void MainWindow::morphologyOpenCV()
@@ -457,7 +470,6 @@ void MainWindow::morphologyOpenCV()
 
 	int iters = 1;
 	EOperationType opType = operationType();
-	cv::Mat dst;
 
 	// Operacje hit-miss
 	if (opType == OT_Outline ||
@@ -523,7 +535,7 @@ void MainWindow::morphologyOpenCV()
 // -------------------------------------------------------------------------
 void MainWindow::morphologyOpenCL()
 {
-	cv::Mat dst, element = standardStructuringElement();
+	cv::Mat element = standardStructuringElement();
 	EOperationType opType = operationType();
 
 	int iters;
