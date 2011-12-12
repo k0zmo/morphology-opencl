@@ -63,25 +63,20 @@ int main(int argc, char *argv[])
 		exit(1);
 	QTextStream fout(&data);
 
-	fout << "method: " << settings.value("opencl/method", 0).toInt() << endl;
-	fout << "workgroupsizex: " << settings.value("opencl/workgroupsizex", 0).toInt() << endl;
-	fout << "workgroupsizey: " << settings.value("opencl/workgroupsizey", 0).toInt() << endl;
-	fout << "kernel: " << settings.value("kernel/erode", "").toString() << endl;
-
 	EOperationType opType = OT_Erode;
 	cv::Mat dst;
 
-	for(int radius = 1; radius <= 75; ++radius)
+	for(int radius = 1; radius <= 37; ++radius)
 	{
 		//int radius = 1;
 		cv::Mat element = standardStructuringElement(radius, radius, SET_Ellipse);
-#if 0
+#if 1
+		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
+		//fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
+		qout.flush();
+
 		int coords_size = ocl->setStructuringElement(element);
 		//ocl->recompile(opType, coords_size);
-		
-		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
-		fout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
-		qout.flush();
 
 		for(int i = 0; i < 6; ++i)
 		{
@@ -91,7 +86,8 @@ int main(int argc, char *argv[])
 			double delapsed = ocl->morphology(opType, dst, iters);
 
 			// Zapisz statystyki
-			fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
+			//fout << "Time elasped : " << delapsed << " ms, iterations: " << iters << endl;
+			fout << delapsed << endl;
 		}
 #else
 		qout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";

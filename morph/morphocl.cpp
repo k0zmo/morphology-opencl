@@ -186,7 +186,7 @@ int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 	}
 	csize = static_cast<int>(coords.size());
 	printf("Structuring element size (number of 'white' pixels): %d (%dx%d) - %d B\n",
-		csize, kradiusx, kradiusy, sizeof(cl_int2) * csize);
+		csize, 2*kradiusx+1, 2*kradiusy+1, sizeof(cl_int2) * csize);
 
 	if(maxConstantBufferSize < sizeof(cl_int2)*csize)
 	{
