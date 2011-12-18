@@ -120,7 +120,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 
 	// Wartosci domyslne
 	ui.rbNone->toggle();
-	ui.rbRect->toggle();
+	ui.rbEllipse->toggle();
 	ui.cbSquare->setChecked(true);
 
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: 3"));
