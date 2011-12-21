@@ -366,6 +366,7 @@ cl_ulong MorphOpenCLImage::morphologySkeleton(cl::Image2D& src, cl::Image2D& dst
 		elapsed += zeroAtomicCounter(clAtomicCnt);	
 
 	} while(true);
+	printf("\n");
 
 	return elapsed;
 }
@@ -422,6 +423,7 @@ cl_ulong MorphOpenCLImage::morphologySkeletonZhangSuen(cl::Image2D& src,
 		elapsed += zeroAtomicCounter(clAtomicCnt);	
 
 	} while(true);
+	printf("\n");
 
 	return elapsed;
 }

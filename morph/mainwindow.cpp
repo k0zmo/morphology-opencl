@@ -529,7 +529,8 @@ void MainWindow::morphologyOpenCV()
 
 	QString txt;
 	QTextStream strm(&txt);
-	strm << "Time elasped : " << elapsed << " ms, iterations: " << iters;
+	strm << "Time elapsed: " << elapsed << " ms, iterations: " << iters;
+	printf("Time elapsed: %lf ms, iterations: %d\n", elapsed, iters);
 	statusBarLabel->setText(txt);
 }
 // -------------------------------------------------------------------------
@@ -545,7 +546,7 @@ void MainWindow::morphologyOpenCL()
 	// Wyswietl statystyki
 	QString txt; 
 	QTextStream strm(&txt);
-	strm << "Time elasped : " << delapsed << " ms, iterations: " << iters;
+	strm << "Time elapsed : " << delapsed << " ms, iterations: " << iters;
 	statusBarLabel->setText(txt);
 
 	// Pokaz obraz wynikowy

@@ -485,6 +485,7 @@ cl_ulong MorphOpenCLBuffer::morphologySkeleton(cl::Buffer& src,
 		elapsed += zeroAtomicCounter(clAtomicCnt);
 
 	} while (true);
+	printf("\n");
 
 	return elapsed;
 }
@@ -541,6 +542,7 @@ cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
 		elapsed += zeroAtomicCounter(clAtomicCnt);	
 
 	} while(true);
+	printf("\n");
 
 	return elapsed;
 }
