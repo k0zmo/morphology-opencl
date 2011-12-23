@@ -72,8 +72,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	
 	int method = 0;
 	printf("There are 2 methods implemented:\n"
-		"\t1) Images\n"
-		"\t2) Buffers\n");
+		"\t1) 2D buffer (image object)\n"
+		"\t2) 1D buffer (buffer object)\n");
 	while (method != 1 && method != 2)
 	{
 		printf("Choose method: ");

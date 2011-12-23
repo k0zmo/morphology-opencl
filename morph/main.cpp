@@ -6,20 +6,21 @@ int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 
-#if 0
-	QString filename = QFileDialog::getOpenFileName(
-		nullptr, QString(), ".",
-		QString::fromLatin1("Image files (*.png *.jpg *.bmp)"));
-
-	if(filename.isEmpty()) {
-		a.quit();
-		return 0;
-	}
-#else
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
-	QString filename = settings.value("gui/defaultimage", "lena.jpg").toString();
-#endif
+	QString filename = settings.value("gui/defaultimage", "").toString();
 
+	if(filename.isEmpty())
+	{
+		filename = QFileDialog::getOpenFileName(
+			nullptr, QString(), ".",
+			QString::fromLatin1("Image files (*.png *.jpg *.bmp)"));
+
+		if(filename.isEmpty()) 
+		{
+			a.quit();
+			return 0;
+		}
+	}
 
 	MainWindow w(filename);
 	w.show();

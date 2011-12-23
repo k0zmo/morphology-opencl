@@ -503,11 +503,11 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 	cv::Mat src = _src.clone();
 	dst = src.clone();
 
-	while(true) 
-	{
-		// iteracja
-		++niters;
- 		int d = 0;
+ 	while(true) 
+ 	{
+ 		// iteracja
+ 		++niters;
+  		int d = 0;
 
 		d += _morphologySkeleton_iter1(src, dst);
 		dst.copyTo(src);
@@ -527,19 +527,19 @@ int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
 		d += _morphologySkeleton_iter6(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter7(src, dst);
-		dst.copyTo(src);
-
-		d += _morphologySkeleton_iter8(src, dst);
-		
-		printf("Iteration: %3d, pixel changed: %5d\r", niters, d);
-
-		if(d == 0)
-			break;
-
-		dst.copyTo(src);
-	}
-	printf("\n");
+ 		d += _morphologySkeleton_iter7(src, dst);
+ 		dst.copyTo(src);
+ 
+ 		d += _morphologySkeleton_iter8(src, dst);
+ 		
+ 		printf("Iteration: %3d, pixel changed: %5d\r", niters, d);
+ 
+ 		if(d == 0)
+ 			break;
+ 
+ 		dst.copyTo(src);
+ 	}
+ 	printf("\n");
 
 	return niters;
 }

@@ -161,8 +161,8 @@ int main(int argc, char *argv[])
 
 		int method;
 		printf("There are 2 methods implemented:\n"
-			"\t1) Images\n"
-			"\t2) Buffers\n"
+			"\t1) 2D buffer (image object)\n"
+			"\t2) 1D buffer (buffer object)\n"
 			"Choose method: ");
 		scanf("%d", &method);
 
