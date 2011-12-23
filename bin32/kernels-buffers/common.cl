@@ -10,8 +10,7 @@ __constant uchar BCK = 0;
 #define counter_type counter32_t
 #else
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define counter_type __global uint*
-#define atomic_inc atom_inc
+#define counter_type volatile __global int*
 #endif
 
 //

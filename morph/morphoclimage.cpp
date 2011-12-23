@@ -33,9 +33,11 @@ bool MorphOpenCLImage::initOpenCL()
 			CL_IMAGE_FORMAT_NOT_SUPPORTED);
 	}
 
-	const char* opts = "-Ikernels-images/";
-
 	QSettings s("./settings.cfg", QSettings::IniFormat);
+	QString opts = "-Ikernels-images/";
+	
+	if(s.value("opencl/atomiccounters", false).toBool())
+		opts += " -DUSE_ATOMIC_COUNTERS";
 
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-images/erode.cl";
@@ -106,12 +108,13 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 		origin, region, 0, 0,
 		const_cast<uchar*>(sourceImage.cpu->ptr<uchar>()),
 		0, &evt);
+	clError("Error while writing new data to OpenCL source image!", err);
 	evt.wait();
+	
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
-	printf("Transfering source image to GPU took %.05lf ms\n", delta * 0.000001);
-	clError("Error while writing new data to OpenCL source image!", err);
+	printf("Transfering source image to GPU took %.05lf ms\n", delta * 0.000001);	
 }
 // -------------------------------------------------------------------------
 double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& iters)

@@ -29,6 +29,9 @@ bool MorphOpenCLBuffer::initOpenCL()
 	}
 	QString opts = "-I " + dir;
 
+	if(s.value("opencl/atomiccounters", false).toBool())
+		opts += " -DUSE_ATOMIC_COUNTERS";
+
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = dir + "erode.cl";
 	erodeParams.options = opts;
