@@ -34,14 +34,12 @@ enum EStructuringElementType
 cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructuringElementType type, int rotation = 0);
 
-// Operacja morfologiczna - erozja
-void morphologyErode(const cv::Mat& src, cv::Mat& dst, const cv::Mat& element);
 // Operacja morfologiczna - kontrur
 void morphologyOutline(const cv::Mat& src, cv::Mat& dst);
 // Operacja morfologiczna - szkieletyzacja
-int morphologySkeleton(const cv::Mat &src, cv::Mat &dst);
+int morphologySkeleton(const cv::Mat& src, cv::Mat& dst);
 // Operacja morfologiczna - Zhang and Suen
-int morphologySkeletonZhangSuen(const cv::Mat& _src, cv::Mat& dst);
+int morphologySkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst);
 
 // Tablica LUT do szkieletyzacji Zhang'a i Suen'a
 extern int lutTable[256];
