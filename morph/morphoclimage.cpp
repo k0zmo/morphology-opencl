@@ -34,25 +34,25 @@ bool MorphOpenCLImage::initOpenCL()
 	}
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
-	QString opts = "-Ikernels-images/";
+	QString opts = "-Ikernels-buffer2D/";
 	
 	if(s.value("opencl/atomiccounters", false).toBool())
 		opts += " -DUSE_ATOMIC_COUNTERS";
 
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
-	erodeParams.programName = "kernels-images/erode.cl";
+	erodeParams.programName = "kernels-buffer2D/erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel-images/erode", "erode").toString();
+	erodeParams.kernelName = s.value("kernel-buffer2D/erode", "erode").toString();
 	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	dilateParams.programName = "kernels-images/dilate.cl";
+	dilateParams.programName = "kernels-buffer2D/dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel-images/dilate", "dilate").toString();
+	dilateParams.kernelName = s.value("kernel-buffer2D/dilate", "dilate").toString();
 	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	gradientParams.programName = "kernels-images/gradient.cl";
+	gradientParams.programName = "kernels-buffer2D/gradient.cl";
 	gradientParams.options = opts;
-	gradientParams.kernelName = s.value("kernel-images/gradient", "gradient").toString();
+	gradientParams.kernelName = s.value("kernel-buffer2D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy (rekompilowalne)
@@ -61,17 +61,18 @@ bool MorphOpenCLImage::initOpenCL()
 	cl::Program pgradient = createProgram(gradientParams.programName, opts);
 
 	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
-	cl::Program poutline = createProgram("kernels-images/outline.cl", opts);
-	cl::Program putils = createProgram("kernels-images/utils.cl", opts);
-	cl::Program pskeleton = createProgram("kernels-images/skeleton.cl", opts);
-	cl::Program pskeletonz = createProgram("kernels-images/skeleton_zhang.cl", opts);
+	cl::Program poutline = createProgram("kernels-buffer2D/outline.cl", opts);
+	cl::Program putils = createProgram("kernels-buffer2D/utils.cl", opts);
+	cl::Program pskeleton = createProgram("kernels-buffer2D/skeleton.cl", opts);
+	cl::Program pskeletonz = createProgram("kernels-buffer2D/skeleton_zhang.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
 	kernelGradient = createKernel(pgradient, gradientParams.kernelName);
-	kernelOutline = createKernel(poutline, s.value("kernel-images/outline", "outline").toString());
-	kernelSubtract = createKernel(putils, s.value("kernel-images/subtract", "subtract").toString());
+	
+	kernelOutline = createKernel(poutline, "outline");
+	kernelSubtract = createKernel(putils, "subtract");
 
 	for(int i = 0; i < 8; ++i)
 	{

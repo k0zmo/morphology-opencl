@@ -21,8 +21,8 @@ private:
 	QImage qsrc;
 	cv::Mat src, dst;
 
-	int krotation;
 	bool disableRefreshing;
+	int krotation;
 	int maxImageWidth;
 	int maxImageHeight;
 
@@ -30,6 +30,9 @@ private:
 	bool oclSupported;
 
 private:
+	// Inicjalizuje OpenCLa
+	void initOpenCL(int method);
+	
 	// Ustawia podany obraz w oknie podgladu
 	void showCvImage(const cv::Mat& image);
 	
@@ -57,6 +60,7 @@ private slots:
 	void saveTriggered();
 	void exitTriggered();
 	void openCLTriggered(bool state);
+	void pickMethodTriggered();
 
 	void invertChanged(int state);
 	void noneOperationToggled(bool checked);

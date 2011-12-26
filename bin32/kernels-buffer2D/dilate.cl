@@ -63,7 +63,8 @@ __kernel void dilate_c4(
 __kernel void dilate_c4_pragma(
 	__read_only image2d_t src,
 	__write_only image2d_t dst,
-	__constant int4* coords)
+	__constant int4* coords,
+	const int coords_size /* dummy */)
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
 	int2 size = { get_image_width(src), get_image_height(src) };

@@ -25,8 +25,6 @@ private:
 	// Parametry odczytane z pliku konfiguracyjnego
 	//
 
-	// Czy uzyc pamieci lokalnej
-	bool local;
 	// Czy uzyc typu uint zamiast uchar
 	bool useUint;
 	// Czy uzyc subtract4 zamiast subtract

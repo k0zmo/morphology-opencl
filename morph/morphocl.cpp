@@ -278,7 +278,7 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 // -------------------------------------------------------------------------
 void MorphOpenCL::recompile(EOperationType opType, int coordsSize)
 {
-	static int prevCoordsSize = 0;
+	static int prevCoordsSize[OT_Gradient+1] = {0};
 	SKernelParameters* kparams;
 	cl::Kernel* kernel;
 
@@ -299,14 +299,22 @@ void MorphOpenCL::recompile(EOperationType opType, int coordsSize)
 	}
 	else
 	{
+		if(opType == OT_TopHat ||
+		   opType == OT_BlackHat ||
+		   opType == OT_Open ||
+		   opType == OT_Close)
+		{
+			recompile(OT_Erode, coordsSize);
+			recompile(OT_Dilate, coordsSize);
+		}
 		return;
 	}
 
-	if(!kparams->needRecompile || coordsSize == prevCoordsSize)
+	if(!kparams->needRecompile || coordsSize == prevCoordsSize[opType])
 		return;
 
 	QString opts = kparams->options + " -DCOORDS_SIZE=" + QString::number(coordsSize);
-	prevCoordsSize = coordsSize;
+	prevCoordsSize[opType] = coordsSize;
 
 	cl::Program prog = createProgram(kparams->programName,opts);
 	*kernel = createKernel(prog, kparams->kernelName);

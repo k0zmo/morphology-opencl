@@ -6,7 +6,6 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 	: MorphOpenCL()
 {
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
-	local = settings.value("kernel-buffers/local", false).toBool();
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCLBuffer::initOpenCL()
@@ -19,12 +18,12 @@ bool MorphOpenCLBuffer::initOpenCL()
 	QString dir;
 	if(s.value("opencl/datatype", "0").toInt() == 0)
 	{
-		dir = "kernels-buffers/";
+		dir = "kernels-buffer1D/";
 		useUint = false;
 	}
 	else
 	{
-		dir = "kernels-uint/";
+		dir = "kernels-buffer1Duint/";
 		useUint = true;
 	}
 	QString opts = "-I " + dir;
@@ -35,17 +34,17 @@ bool MorphOpenCLBuffer::initOpenCL()
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = dir + "erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel-buffers/erode", "erode").toString();
+	erodeParams.kernelName = s.value("kernel-buffer1D/erode", "erode").toString();
 	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	dilateParams.programName = dir + "dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel-buffers/dilate", "dilate").toString();
+	dilateParams.kernelName = s.value("kernel-buffer1D/dilate", "dilate").toString();
 	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	gradientParams.programName = dir+ "gradient.cl";
 	gradientParams.options = opts;
-	gradientParams.kernelName = s.value("kernel-buffers/gradient", "gradient").toString();
+	gradientParams.kernelName = s.value("kernel-buffer1D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy (rekompilowalne)
@@ -63,18 +62,22 @@ bool MorphOpenCLBuffer::initOpenCL()
 	kernelErode = createKernel(perode, erodeParams.kernelName);
 	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
 	kernelGradient = createKernel(pgradient, gradientParams.kernelName);
-	kernelOutline = createKernel(poutline, s.value("kernel-buffers/outline", "outline").toString());
-	kernelSubtract = createKernel(putils, s.value("kernel-buffers/subtract", "subtract").toString());
+	kernelSubtract = createKernel(putils, s.value("kernel-buffer1D/subtract", "subtract").toString());
 
 	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
-	QString sub = s.value("kernel-buffers/subtract", "subtract").toString();
+	QString sub = s.value("kernel-buffer1D/subtract", "subtract").toString();
 	if(sub.endsWith("4")) sub4 = true;
 	else sub4 = false;
 
-	int local = s.value("kernel-buffers/local", "0").toInt();
+	// hitmiss
+	QString localHitmissStr = s.value("kernel-buffer1D/hitmiss", "global").toString();
+	bool localHitmiss = localHitmissStr.contains("local");
+
+	kernelOutline = createKernel(poutline, (localHitmiss ? "outline4_local" : "outline"));
+	
 	for(int i = 0; i < 8; ++i)
 	{
-		if(local == 0)
+		if(localHitmiss == false)
 		{
 			QString kernelName = "skeleton_iter" + QString::number(i+1);
 			kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
@@ -86,7 +89,7 @@ bool MorphOpenCLBuffer::initOpenCL()
 		}
 	}
 
-	if(local == 0)
+	if(localHitmiss == false)
 	{
 		kernelSkeleton_pass[0] = createKernel(pskeletonz, "skeletonZhang_pass1");
 		kernelSkeleton_pass[1] = createKernel(pskeletonz, "skeletonZhang_pass2");
@@ -580,7 +583,10 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	cl::NDRange gridDim(globalItemsX, globalItemsY);
 	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
 
-	if(local)
+	std::string kernelName = kernel->getInfo<CL_KERNEL_FUNCTION_NAME>();
+	bool useLocal = kernelName.find("_local") != std::string::npos;
+
+	if(useLocal)
 	{
 		cl_int2 sharedSize = {
 			roundUp(workGroupSizeX + apronX, 4),

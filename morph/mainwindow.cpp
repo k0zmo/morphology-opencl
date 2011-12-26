@@ -32,6 +32,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.actionSave, SIGNAL(triggered()), this, SLOT(saveTriggered()));
 	connect(ui.actionExit, SIGNAL(triggered()), this, SLOT(exitTriggered()));
 	connect(ui.actionOpenCL, SIGNAL(triggered(bool)), this, SLOT(openCLTriggered(bool)));
+	connect(ui.actionPickMethod, SIGNAL(triggered()), this, SLOT(pickMethodTriggered()));
 
 	connect(ui.cbInvert, SIGNAL(stateChanged(int)), this, SLOT(invertChanged(int)));
 
@@ -86,36 +87,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 			fgets(buf, 128, stdin);
 		}
 	}
-
-	if (method == 1) ocl = new MorphOpenCLImage();
-	else ocl = new MorphOpenCLBuffer();
-
-	ocl->errorCallback = [this](const QString& message, cl_int err)
-	{
-		Q_UNUSED(err);
-		QMessageBox::critical(this, "OpenCL error", 
-			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
-			QMessageBox::Ok);
-		exit(1);
-	};
-
-	oclSupported = ocl->initOpenCL();
-	if(oclSupported)
-	{
-		ui.actionOpenCL->setEnabled(true);
-		ui.actionOpenCL->setChecked(true);
-	}
-	else
-	{
-		QMessageBox::critical(nullptr,
-			"Critical error",
-			"No OpenCL Platform available therefore OpenCL processing will be disabled",
-			QMessageBox::Ok);
-
-		ui.actionOpenCL->setEnabled(false);
-		ui.actionOpenCL->setChecked(false);
-	}
-
+	initOpenCL(method);
 	openFile(filename);
 
 	// Wartosci domyslne
@@ -194,6 +166,32 @@ void MainWindow::openCLTriggered(bool state)
 
 	if(ui.cbAutoTrigger->isChecked())
 		refresh();
+}
+// -------------------------------------------------------------------------
+void MainWindow::pickMethodTriggered()
+{
+	QMessageBox msgBox;
+	msgBox.setText("Choose different method:");
+	QPushButton* buffer1D = msgBox.addButton("Buffer1D", QMessageBox::AcceptRole);
+	QPushButton* buffer2D = msgBox.addButton("Buffer2D", QMessageBox::AcceptRole);
+	QPushButton* cancel = msgBox.addButton(QMessageBox::Cancel);
+	msgBox.setDefaultButton(cancel);
+
+	msgBox.exec();
+
+	int method;
+	if(msgBox.clickedButton() == buffer1D)
+		method = 2;
+	else if(msgBox.clickedButton() == buffer2D)
+		method = 1;
+	else
+		return;
+
+ 	delete ocl;
+ 	initOpenCL(method);
+
+ 	if(oclSupported)
+ 		ocl->setSourceImage(&src);
 }
 // -------------------------------------------------------------------------
 void MainWindow::invertChanged(int state)
@@ -399,6 +397,38 @@ void MainWindow::autoRunChanged(int state)
 
 // Koniec zdarzen
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+
+void MainWindow::initOpenCL(int method)
+{
+	if (method == 1) ocl = new MorphOpenCLImage();
+	else ocl = new MorphOpenCLBuffer();
+
+	ocl->errorCallback = [this](const QString& message, cl_int err)
+	{
+		Q_UNUSED(err);
+		QMessageBox::critical(this, "OpenCL error",
+			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
+			QMessageBox::Ok);
+		exit(1);
+	};
+
+	oclSupported = ocl->initOpenCL();
+	if(oclSupported)
+	{
+		ui.actionOpenCL->setEnabled(true);
+		ui.actionOpenCL->setChecked(true);
+	}
+	else
+	{
+		QMessageBox::critical(nullptr,
+			"Critical error",
+			"No OpenCL Platform available therefore OpenCL processing will be disabled",
+			QMessageBox::Ok);
+
+		ui.actionOpenCL->setEnabled(false);
+		ui.actionOpenCL->setChecked(false);
+	}	
+}
 
 void MainWindow::showCvImage(const cv::Mat& image)
 {
