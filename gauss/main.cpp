@@ -54,15 +54,13 @@ int main(int argc, char** argv)
 		printf("gauss [flags] input\n"
 		       "Flags:\n"
 			   "  --opencv (default is opencl)\n"
-			   "  --maxradius <N>\n"
-			   "  --pragma (will unroll and recompile)\n");
+			   "  --maxradius <N>\n");
 		exit(-1);
 	}
 
 	int maxradius = 1;
 	bool useopencl = true;
 	std::string input;
-	bool recompile = false;
 
 	for(int i = 1; i < argc; ++i)
 	{
@@ -74,10 +72,6 @@ int main(int argc, char** argv)
 		{
 			sscanf(argv[i+1], "%d", &maxradius);
 			++i;
-		}
-		else if(!strcmp(argv[i], "--pragma"))
-		{
-			recompile = true;
 		}
 		else
 		{
@@ -224,19 +218,16 @@ int main(int argc, char** argv)
 			}
 
 			// Create kernel from the program
-			kernel_GaussianRow = cl::Kernel(program,
-				(recompile ? "gaussianRow_pragma" : "gaussianRow"), &err);
+			kernel_GaussianRow = cl::Kernel(program, "gaussianRow", &err);
 			clError("Failed to create kernel!", err);
 
 			// Create kernel from the program
-			kernel_GaussianCol = cl::Kernel(program,
-				(recompile ?  "gaussianCol_pragma" : "gaussianRow"), &err);
+			kernel_GaussianCol = cl::Kernel(program, "gaussianCol", &err);
 			clError("Failed to create kernel!", err);	
 		};
 
 		cl::Kernel kernel_GaussianRow, kernel_GaussianCol;
-		if(!recompile)
-			getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, 3);
+		getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, 3);
 
 		for(int radius = 1; radius <= maxradius; ++radius)
 		{
@@ -251,9 +242,6 @@ int main(int argc, char** argv)
 
 			std::cout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 
-			if(recompile)
-				getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, radius);
-
 			for (int i = 0; i < 5; ++i)
 			{
 				cl_int err = 0;
@@ -262,11 +250,20 @@ int main(int argc, char** argv)
 				err |= kernel_GaussianRow.setArg(2, bKernel);
 				err |= kernel_GaussianRow.setArg(3, radius);
 
+				auto roundUp = [](int value, int multiple) -> int
+				{
+					int v = value % multiple;
+					if (v)
+						return value + (multiple - v);
+					return value;
+				};
+
 				cl::Event evt;
 				err |= cq.enqueueNDRangeKernel(kernel_GaussianRow, 
 					cl::NullRange,
-					cl::NDRange(sourceImage.cols, sourceImage.rows),
-					cl::NullRange, 0, &evt);
+					cl::NDRange(roundUp(sourceImage.cols,16), roundUp(sourceImage.rows,16)),
+					cl::NDRange(16, 16),
+					0, &evt);
 				evt.wait();
 				cl_ulong elapsed1 = elapsedEvent(evt);
 
@@ -277,8 +274,9 @@ int main(int argc, char** argv)
 
 				err |= cq.enqueueNDRangeKernel(kernel_GaussianCol,
 					cl::NullRange,
-					cl::NDRange(sourceImage.cols, sourceImage.rows),
-					cl::NullRange, 0, &evt);
+					cl::NDRange(roundUp(sourceImage.cols,16), roundUp(sourceImage.rows,16)),
+					cl::NDRange(16, 16),
+					0, &evt);
 				evt.wait();
 				cl_ulong elapsed2 = elapsedEvent(evt);
 

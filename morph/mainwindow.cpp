@@ -549,8 +549,8 @@ void MainWindow::morphologyOpenCV()
 		cv::Mat element = standardStructuringElement();
 #if 0
 		int i = 0;
+		omp_set_num_threads(4);
 		int n = omp_get_max_threads();
-		printf("num_threads=%d\n", n);
 
 		int totalWidth = src.cols;
 		int totalHeight = src.rows;
