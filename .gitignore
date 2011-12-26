@@ -4,6 +4,8 @@ morph/GeneratedFiles
 morph-cl/Debug
 morph-cl/Release
 morph-cl/ProfilerOutput
+gauss/Debug
+gauss/Release
 bin32/profiler/*.txt
 
 ipch
