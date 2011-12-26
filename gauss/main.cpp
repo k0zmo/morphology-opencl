@@ -7,8 +7,11 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 
-#include <cl/cl.hpp>
+#include <CL/cl.hpp>
 
 bool loadFile(std::string& contents, const std::string& filename)
 {
@@ -304,15 +307,26 @@ int main(int argc, char** argv)
 
 			for (int i = 0; i < 5; ++i)
 			{
-				LARGE_INTEGER freq, start, end;
-				QueryPerformanceFrequency(&freq);
-				QueryPerformanceCounter(&start);
+				#if defined(_WIN32)
+					LARGE_INTEGER freq, start, end;
+					QueryPerformanceFrequency(&freq);
+					QueryPerformanceCounter(&start);
+				#else
+					timeval start, end;
+					gettimeofday(&start, NULL);
+				#endif
 
 				cv::GaussianBlur(sourceImage, dstImage, ksize, sigma, sigma);
 
-				QueryPerformanceCounter(&end);
-				double elapsed = (static_cast<double>(end.QuadPart - start.QuadPart) / 
-					static_cast<double>(freq.QuadPart)) * 1000.0f;
+				#if defined(_WIN32)
+					QueryPerformanceCounter(&end);
+					double elapsed = (static_cast<double>(end.QuadPart - start.QuadPart) /
+						static_cast<double>(freq.QuadPart)) * 1000.0f;
+				#else
+					gettimeofday(&end, NULL);
+					double elapsed = (static_cast<double>(end.tv_sec - start.tv_sec) * 1000 +
+						0.001f * static_cast<double>(end.tv_usec - start.tv_usec));
+				#endif
 
 				fout << elapsed << std::endl;
 				std::cout << elapsed << std::endl;
