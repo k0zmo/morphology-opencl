@@ -586,7 +586,7 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
 		if(useUint) sharedBlockSize *= sizeof(cl_uint);
 
-		printf("LDS usage: %d B\n", sharedBlockSize);
+		printf("LDS usage (%dx%d): %d B\n", sharedSize.s[0], sharedSize.s[1], sharedBlockSize);
 
 		// Trzeba ustawic dodatkowe argumenty kernela
 		err |= kernel->setArg(5, sharedBlockSize, nullptr);

@@ -21,11 +21,8 @@ private:
 	QImage qsrc;
 	cv::Mat src, dst;
 
-	bool disableRefreshing;
-	int kradiusx;
-	int kradiusy;
 	int krotation;
-
+	bool disableRefreshing;
 	int maxImageWidth;
 	int maxImageHeight;
 

@@ -108,7 +108,7 @@ __kernel void dilate_c4_local_unroll(
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
 		uchar val = dilateINF;
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)
@@ -273,7 +273,7 @@ void dilate4_c4_local_unroll(
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
 		uchar val = dilateINF;	
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)

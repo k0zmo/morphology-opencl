@@ -108,7 +108,7 @@ __kernel void erode_c4_local_unroll(
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
 		uchar val = erodeINF;
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)
@@ -273,7 +273,7 @@ void erode4_c4_local_unroll(
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
 		uchar val = erodeINF;	
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)

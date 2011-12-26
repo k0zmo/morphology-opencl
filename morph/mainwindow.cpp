@@ -21,8 +21,6 @@
 MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),
 	disableRefreshing(false),
-	kradiusx(1),
-	kradiusy(1),
 	krotation(0)
 {
 	ui.setupUi(this);
@@ -129,6 +127,13 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
+
+	//////////////////////////////
+// 	ui.rbErode->toggle();
+// 	ui.cbSquare->setChecked(false);
+// 	ui.hsXElementSize->setValue(5);
+// 	ui.hsYElementSize->setValue(2);
+// 	ui.dialRotation->setValue(300);
 }
 // -------------------------------------------------------------------------
 MainWindow::~MainWindow()
@@ -313,7 +318,6 @@ void MainWindow::elementSizeXChanged(int value)
 	Q_UNUSED(value);
 	ui.lbXElementSize->setText(QString::fromLatin1("Horizontal: ") + 
 		QString::number(2 * ui.hsXElementSize->value() + 1));
-	kradiusx = ui.hsXElementSize->value();
 
 	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
@@ -339,7 +343,6 @@ void MainWindow::elementSizeYChanged(int value)
 	Q_UNUSED(value);
 	ui.lbYElementSize->setText(QString::fromLatin1("Vertical: ") + 
 		QString::number(2 * ui.hsYElementSize->value() + 1));
-	kradiusy = ui.hsYElementSize->value();
 
 	if (ui.cbSquare->checkState() == Qt::Checked)
 	{
@@ -563,7 +566,8 @@ cv::Mat MainWindow::standardStructuringElement()
 	else type = SET_Diamond;
 
 	return ::standardStructuringElement(
-		kradiusx, kradiusy,
+		ui.hsXElementSize->value(),
+		ui.hsYElementSize->value(),
 		type, krotation);
 }
 // -------------------------------------------------------------------------

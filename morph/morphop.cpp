@@ -182,7 +182,28 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 			--right;
 		}
 
-		element = element(cv::Rect(left, top, right-left, bottom-top));
+		int width = right-left;
+		int height = bottom-top;
+
+		// Zalozenie jest ze element strukturalny ma rozmair 2n+1,
+		// ponizsze dwa bloki strzega tego warunku
+
+		if(!(width % 2))
+		{
+			width++; 
+			// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
+			if(left+width > element.cols) 
+				--left;
+		}
+		if(!(height % 2))
+		{
+			height++;
+			// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
+			if(top+height > element.rows) 
+				--top;
+		}
+
+		element = element(cv::Rect(left, top, width, height));
 	}
 
 	return element;

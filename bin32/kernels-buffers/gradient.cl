@@ -132,7 +132,7 @@ __kernel void gradient_c4_local_unroll(
 	{
 		uchar minval = erodeINF;
 		uchar maxval = dilateINF;
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)
@@ -341,7 +341,7 @@ void gradient4_c4_local_unroll(
 	{
 		uchar minval = erodeINF;
 		uchar maxval = dilateINF;
-		int c2 = seSize.z >> 1;
+		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
 		for(; i < c2; i += 2)
