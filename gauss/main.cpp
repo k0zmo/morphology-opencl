@@ -51,13 +51,15 @@ int main(int argc, char** argv)
 		printf("gauss [flags] input\n"
 		       "Flags:\n"
 			   "  --opencv (default is opencl)\n"
-			   "  --maxradius <N>\n");
+			   "  --maxradius <N>\n"
+			   "  --pragma (will unroll and recompile)\n");
 		exit(-1);
 	}
 
 	int maxradius = 1;
 	bool useopencl = true;
 	std::string input;
+	bool recompile = false;
 
 	for(int i = 1; i < argc; ++i)
 	{
@@ -69,6 +71,10 @@ int main(int argc, char** argv)
 		{
 			sscanf(argv[i+1], "%d", &maxradius);
 			++i;
+		}
+		else if(!strcmp(argv[i], "--pragma"))
+		{
+			recompile = true;
 		}
 		else
 		{
@@ -215,13 +221,19 @@ int main(int argc, char** argv)
 			}
 
 			// Create kernel from the program
-			kernel_GaussianRow = cl::Kernel(program, "gaussianRow_pragma", &err);
+			kernel_GaussianRow = cl::Kernel(program,
+				(recompile ? "gaussianRow_pragma" : "gaussianRow"), &err);
 			clError("Failed to create kernel!", err);
 
 			// Create kernel from the program
-			kernel_GaussianCol = cl::Kernel(program, "gaussianCol_pragma", &err);
+			kernel_GaussianCol = cl::Kernel(program,
+				(recompile ?  "gaussianCol_pragma" : "gaussianRow"), &err);
 			clError("Failed to create kernel!", err);	
 		};
+
+		cl::Kernel kernel_GaussianRow, kernel_GaussianCol;
+		if(!recompile)
+			getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, 3);
 
 		for(int radius = 1; radius <= maxradius; ++radius)
 		{
@@ -236,8 +248,8 @@ int main(int argc, char** argv)
 
 			std::cout << "\nSize: " << 2*radius+1 << "x" << 2*radius+1 << ":\n";
 
-			cl::Kernel kernel_GaussianRow, kernel_GaussianCol;
-			getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, radius);
+			if(recompile)
+				getCompiledKernels(kernel_GaussianRow, kernel_GaussianCol, radius);
 
 			for (int i = 0; i < 5; ++i)
 			{
