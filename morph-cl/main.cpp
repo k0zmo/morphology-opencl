@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
 	// ----- Ustawienia testow ----- //
 	int radiusmin = settings.value("test/radiusmin", 1).toInt();
 	int radiusmax = settings.value("test/radiusmax", 1).toInt();
-	bool recompile = settings.value("test/recompile", false).toBool();
 	int nitersopencv = settings.value("test/nitersopencv", 5).toInt();
 	int	nitersopencl = settings.value("test/nitersopencl", 10).toInt();
 	EStructuringElementType set = structuringElement(
@@ -167,7 +166,6 @@ int main(int argc, char *argv[])
 	else
 	{
 		qout << "Number of iterations: " << nitersopencl << endl
-			 << "Recompile for each SE: " << recompile << endl
 			 << "**************************" << endl;
 
 		int method;
@@ -204,9 +202,7 @@ int main(int argc, char *argv[])
 			qout.flush();
 
 			int coords_size = ocl->setStructuringElement(element);
-
-			if(recompile)
-				ocl->recompile(opType, coords_size);
+			ocl->recompile(opType, coords_size);
 
 			for(int i = 0; i < nitersopencl; ++i)
 			{

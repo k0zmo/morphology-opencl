@@ -36,14 +36,17 @@ bool MorphOpenCLBuffer::initOpenCL()
 	erodeParams.programName = dir + "erode.cl";
 	erodeParams.options = opts;
 	erodeParams.kernelName = s.value("kernel-buffers/erode", "erode").toString();
+	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	dilateParams.programName = dir + "dilate.cl";
 	dilateParams.options = opts;
 	dilateParams.kernelName = s.value("kernel-buffers/dilate", "dilate").toString();
+	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	gradientParams.programName = dir+ "gradient.cl";
 	gradientParams.options = opts;
 	gradientParams.kernelName = s.value("kernel-buffers/gradient", "gradient").toString();
+	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy (rekompilowalne)
 	cl::Program perode = createProgram(erodeParams.programName, opts);

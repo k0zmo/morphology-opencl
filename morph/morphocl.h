@@ -55,6 +55,7 @@ protected:
 		QString programName;
 		QString options;
 		QString kernelName;
+		bool needRecompile;
 	};
 
 	SKernelParameters erodeParams;
