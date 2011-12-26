@@ -9,6 +9,8 @@
 #include <QTextStream>
 #include <QSettings>
 
+#include <omp.h>
+
 #if !defined(_WIN32)
 #include <sys/time.h>
 #endif
@@ -515,7 +517,45 @@ void MainWindow::morphologyOpenCV()
 		}
 
 		cv::Mat element = standardStructuringElement();
+#if 0
+		int i = 0;
+		int n = omp_get_max_threads();
+		printf("num_threads=%d\n", n);
+
+		int totalWidth = src.cols;
+		int totalHeight = src.rows;
+		int partHeight = totalHeight/n;
+		int rest = totalHeight%n;
+
+		cv::Mat srcp[4], dstp[4], tmp;
+
+		#pragma omp parallel for num_threads(n)
+		for(int i = 0; i < n; ++i)
+		{
+			cv::Rect roi(0, i*partHeight, totalWidth, partHeight);
+			if(i == n - 1)
+				roi.height += rest;
+
+			srcp[i] = cv::Mat(src, roi);
+			cv::morphologyEx(srcp[i], dstp[i], op_type, element);
+		}
+
+		dst = cv::Mat(totalHeight, totalWidth, dstp[0].type());
+
+		//#pragma omp parallel for
+		// Nie mozna - cv::Mat nie jest thread-safe :(
+		for(int i = 0; i < n; ++i)
+		{
+			cv::Rect roi(0, i*partHeight, totalWidth, partHeight);
+			if(i == n - 1)
+				roi.height += rest;
+
+			tmp = cv::Mat(dst, roi);
+			dstp[i].copyTo(tmp);
+		}
+#else
 		cv::morphologyEx(src, dst, op_type, element);
+#endif
 	}
 
 	showCvImage(dst);
@@ -544,6 +584,7 @@ void MainWindow::morphologyOpenCL()
 
 	int iters;
 	int csize = ocl->setStructuringElement(element);
+	ocl->recompile(opType, csize);
 	double delapsed = ocl->morphology(opType, dst, iters);
 	
 	// Wyswietl statystyki
