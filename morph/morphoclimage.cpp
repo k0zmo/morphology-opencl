@@ -37,7 +37,10 @@ bool MorphOpenCLImage::initOpenCL()
 	QString opts = "-Ikernels-buffer2D/";
 	
 	if(s.value("opencl/atomiccounters", false).toBool())
+	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
+		printf("Using atomic counters instead of global atomic operations\n");
+	}
 
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-buffer2D/erode.cl";

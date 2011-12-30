@@ -20,14 +20,19 @@ bool MorphOpenCLBuffer::initOpenCL()
 	{
 		useUint = false;
 		opts += " -DUSE_UCHAR";
+		printf("Using uchar/uchar4 as a type\n");
 	}
 	else
 	{
 		useUint = true;	
+		printf("Using uint/uint4 as a type\n");
 	}
 
 	if(s.value("opencl/atomiccounters", false).toBool())
+	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
+		printf("Using atomic counters instead of global atomic operations\n");
+	}
 
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-buffer1D/erode.cl";
