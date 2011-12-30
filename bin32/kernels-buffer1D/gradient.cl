@@ -1,8 +1,8 @@
 #include "common.cl"
 
 __kernel void gradient(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
@@ -12,13 +12,13 @@ __kernel void gradient(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		
 		for(int i = 0; i < seSize.z; ++i)
 		{
 			int2 coord = coords[i] + gid;
-			uchar v = input[coord.x + coord.y * imageSize.x];
+			type_t v = input[coord.x + coord.y * imageSize.x];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -30,12 +30,12 @@ __kernel void gradient(
 }
 
 __kernel void gradient_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -46,13 +46,13 @@ __kernel void gradient_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		
 		for(int i = 0; i < seSize.z; ++i)
 		{
 			int2 coord = coords[i] + lid;
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -64,12 +64,12 @@ __kernel void gradient_local(
 }
 
 __kernel void gradient_c4_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -80,16 +80,16 @@ __kernel void gradient_c4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = seSize.z >> 1;
 		
 		for(int i = 0; i < c2; ++i)
 		{
 			int4 coord = coords[i] + (int4)(lid, lid);
 
-			uchar v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
-			uchar v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
+			type_t v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -102,7 +102,7 @@ __kernel void gradient_c4_local(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[seSize.z-1] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -114,12 +114,12 @@ __kernel void gradient_c4_local(
 }
 
 __kernel void gradient_c4_local_unroll(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -130,8 +130,8 @@ __kernel void gradient_c4_local_unroll(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
@@ -140,10 +140,10 @@ __kernel void gradient_c4_local_unroll(
 			int4 coord0 = coords[i]   + (int4)(lid, lid);
 			int4 coord1 = coords[i+1] + (int4)(lid, lid);
 			
-			uchar v0 = sharedBlock[mad24(coord0.y, sharedSize.x, coord0.x)];
-			uchar v1 = sharedBlock[mad24(coord0.w, sharedSize.x, coord0.z)];
-			uchar v2 = sharedBlock[mad24(coord1.y, sharedSize.x, coord1.x)];
-			uchar v3 = sharedBlock[mad24(coord1.w, sharedSize.x, coord1.z)];
+			type_t v0 = sharedBlock[mad24(coord0.y, sharedSize.x, coord0.x)];
+			type_t v1 = sharedBlock[mad24(coord0.w, sharedSize.x, coord0.z)];
+			type_t v2 = sharedBlock[mad24(coord1.y, sharedSize.x, coord1.x)];
+			type_t v3 = sharedBlock[mad24(coord1.w, sharedSize.x, coord1.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -162,7 +162,7 @@ __kernel void gradient_c4_local_unroll(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[i] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -179,12 +179,12 @@ __kernel void gradient_c4_local_unroll(
 #endif
 
 __kernel void gradient_c4_local_pragma(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -195,8 +195,8 @@ __kernel void gradient_c4_local_pragma(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = COORDS_SIZE >> 1;
 		
 		#pragma unroll
@@ -204,8 +204,8 @@ __kernel void gradient_c4_local_pragma(
 		{
 			int4 coord = coords[i] + (int4)(lid, lid);
 
-			uchar v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
-			uchar v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
+			type_t v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -218,7 +218,7 @@ __kernel void gradient_c4_local_pragma(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[COORDS_SIZE-1] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -235,12 +235,12 @@ __kernel void gradient_c4_local_pragma(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void gradient4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -251,13 +251,13 @@ void gradient4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 
 		for(int i = 0; i < seSize.z; ++i)
 		{
 			int2 coord = coords[i] + lid;
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -271,12 +271,12 @@ void gradient4_local(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void gradient4_c4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -287,16 +287,16 @@ void gradient4_c4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = seSize.z >> 1;
 		
 		for(int i = 0; i < c2; ++i)
 		{
 			int4 coord = coords[i] + (int4)(lid, lid);
 			
-			uchar v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
-			uchar v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
+			type_t v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -309,7 +309,7 @@ void gradient4_c4_local(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[seSize.z-1] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);
@@ -323,12 +323,12 @@ void gradient4_c4_local(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void gradient4_c4_local_unroll(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -339,8 +339,8 @@ void gradient4_c4_local_unroll(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
@@ -349,10 +349,10 @@ void gradient4_c4_local_unroll(
 			int4 coord0 = coords[i]   + (int4)(lid, lid);
 			int4 coord1 = coords[i+1] + (int4)(lid, lid);
 			
-			uchar v0 = sharedBlock[mad24(coord0.y, sharedSize.x, coord0.x)];
-			uchar v1 = sharedBlock[mad24(coord0.w, sharedSize.x, coord0.z)];
-			uchar v2 = sharedBlock[mad24(coord1.y, sharedSize.x, coord1.x)];
-			uchar v3 = sharedBlock[mad24(coord1.w, sharedSize.x, coord1.z)];
+			type_t v0 = sharedBlock[mad24(coord0.y, sharedSize.x, coord0.x)];
+			type_t v1 = sharedBlock[mad24(coord0.w, sharedSize.x, coord0.z)];
+			type_t v2 = sharedBlock[mad24(coord1.y, sharedSize.x, coord1.x)];
+			type_t v3 = sharedBlock[mad24(coord1.w, sharedSize.x, coord1.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -372,7 +372,7 @@ void gradient4_c4_local_unroll(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[i] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);			
@@ -386,12 +386,12 @@ void gradient4_c4_local_unroll(
 __kernel
 __attribute__((work_group_size_hint(16,16,1))) 
 void gradient4_c4_local_pragma(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -402,8 +402,8 @@ void gradient4_c4_local_pragma(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar minval = erodeINF;
-		uchar maxval = dilateINF;
+		type_t minval = erodeINF;
+		type_t maxval = dilateINF;
 		int c2 = COORDS_SIZE / 2;
 		
 		#pragma unroll
@@ -411,8 +411,8 @@ void gradient4_c4_local_pragma(
 		{
 			int4 coord = coords[i] + (int4)(lid, lid);
 			
-			uchar v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
-			uchar v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
+			type_t v0 = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v1 = sharedBlock[mad24(coord.w, sharedSize.x, coord.z)];
 			
 			minval = min(minval, v0);
 			minval = min(minval, v1);
@@ -425,7 +425,7 @@ void gradient4_c4_local_pragma(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[COORDS_SIZE-1] + lid;
 			
-			uchar v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
+			type_t v = sharedBlock[mad24(coord.y, sharedSize.x, coord.x)];
 			
 			minval = min(minval, v);
 			maxval = max(maxval, v);

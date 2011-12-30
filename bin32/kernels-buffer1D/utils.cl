@@ -1,9 +1,9 @@
 #include "common.cl"
 
 __kernel void subtract(
-	__global uchar* a,
-	__global uchar* b,
-	__global uchar* output,
+	__global type_t* a,
+	__global type_t* b,
+	__global type_t* output,
 	const uint n)
 {
 	size_t gid = get_global_id(0);
@@ -12,9 +12,9 @@ __kernel void subtract(
 }
 
 __kernel void subtract4(
-	__global uchar4* a,
-	__global uchar4* b,
-	__global uchar4* output,
+	__global type4_t* a,
+	__global type4_t* b,
+	__global type4_t* output,
 	const uint n)
 {
 	size_t gid = get_global_id(0);

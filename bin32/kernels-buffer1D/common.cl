@@ -1,16 +1,23 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+#ifdef USE_UCHAR
+	#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+	typedef uchar type_t;
+	typedef uchar4 type4_t ;
+#else
+	typedef uint type_t;
+	typedef uint4 type4_t;
+#endif
 
-__constant uchar dilateINF = 0;
-__constant uchar erodeINF = 255;
-__constant uchar OBJ = 255;
-__constant uchar BCK = 0;
+__constant type_t dilateINF = 0;
+__constant type_t erodeINF = 255;
+__constant type_t OBJ = 255;
+__constant type_t BCK = 0;
 
 #ifdef USE_ATOMIC_COUNTERS
-#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
-#define counter_type counter32_t
+	#pragma OPENCL EXTENSION cl_ext_atomic_counters_32 : enable 
+	#define counter_type counter32_t
 #else
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#define counter_type volatile __global int*
+	#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+	#define counter_type volatile __global int*
 #endif
 
 //
@@ -19,11 +26,11 @@ __constant uchar BCK = 0;
 
 __attribute__((always_inline))
 void cacheToLocalMemory(
-	__global uchar* input,
+	__global type_t* input,
 	const int2 imageSize,
 	const int2 lid,
 	const int2 sharedSize,
-	__local uchar* sharedBlock)
+	__local type_t* sharedBlock)
 {
 	int2 localSize = { get_local_size(0), get_local_size(1) };
 	int2 groupId = { get_group_id(0), get_group_id(1) };
@@ -53,11 +60,11 @@ void cacheToLocalMemory(
 
 __attribute__((always_inline))
 void cache4ToLocalMemory(
-	__global uchar4* input,
+	__global type4_t* input,
 	const int2 imageSize,
 	const int2 lid,
 	const int2 sharedSize,
-	__local uchar* sharedBlock)
+	__local type_t* sharedBlock)
 {
 	int2 localSize = { get_local_size(0), get_local_size(1) };
 	int2 groupId = { get_group_id(0), get_group_id(1) };
@@ -83,7 +90,7 @@ void cache4ToLocalMemory(
 		//gid.x < imageSizex4 && 
 		tid.y < sharedSize.y)
 	{
-		__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
+		__local type4_t* sharedBlock4 = (__local type4_t*)(&sharedBlock[mad24(tid.y, sharedSize.x, tid.x*4)]);
 		sharedBlock4[0] = input[gid.x + gid.y*imageSizex4];
 		
 		// jesli chcemy wczytac dodatkowy wektor
@@ -115,10 +122,10 @@ void cache4ToLocalMemory(
 
 __attribute__((always_inline))
 void cache4ToLocalMemory16(
-	__global uchar4* input,
+	__global type4_t* input,
 	const int2 imageSize,
 	const int2 lid,
-	__local uchar sharedBlock[SHARED_SIZEY][SHARED_SIZEX])
+	__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX])
 {
 	int2 localSize = { get_local_size(0), get_local_size(1) };
 	int2 groupId = { get_group_id(0), get_group_id(1) };
@@ -139,7 +146,7 @@ void cache4ToLocalMemory16(
 		gid.x < imageSize.x/4 && 
 		tid.y < SHARED_SIZEY)
 	{
-		__local uchar4* sharedBlock4 = (__local uchar4*)(&sharedBlock[tid.y][tid.x*4]);
+		__local type4_t* sharedBlock4 = (__local type4_t*)(&sharedBlock[tid.y][tid.x*4]);
 		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);

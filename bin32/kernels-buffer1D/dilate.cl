@@ -1,8 +1,8 @@
 #include "common.cl"
 
 __kernel void dilate(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize)
@@ -12,7 +12,7 @@ __kernel void dilate(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 		
 		for(int i = 0; i < seSize.z; ++i)
 		{
@@ -25,12 +25,12 @@ __kernel void dilate(
 }
 
 __kernel void dilate_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -41,7 +41,7 @@ __kernel void dilate_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 		for(int i = 0; i < seSize.z; ++i)
 		{
 			int2 coord = coords[i] + lid;
@@ -53,12 +53,12 @@ __kernel void dilate_local(
 }
 
 __kernel void dilate_c4_local(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -69,7 +69,7 @@ __kernel void dilate_c4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 		int c2 = seSize.z >> 1;
 		
 		for(int i = 0; i < c2; ++i)
@@ -91,12 +91,12 @@ __kernel void dilate_c4_local(
 }
 
 __kernel void dilate_c4_local_unroll(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -107,7 +107,7 @@ __kernel void dilate_c4_local_unroll(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
@@ -141,12 +141,12 @@ __kernel void dilate_c4_local_unroll(
 #endif
 
 __kernel void dilate_c4_local_pragma(
-	__global uchar* input,
-	__global uchar* output,
+	__global type_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -157,7 +157,7 @@ __kernel void dilate_c4_local_pragma(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 		int c2 = COORDS_SIZE >> 1;
 		
 		#pragma unroll
@@ -185,12 +185,12 @@ __kernel void dilate_c4_local_pragma(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void dilate4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int2* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -201,7 +201,7 @@ void dilate4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;
+		type_t val = dilateINF;
 
 		for(int i = 0; i < seSize.z; ++i)
 		{
@@ -216,12 +216,12 @@ void dilate4_local(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void dilate4_c4_local(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -232,7 +232,7 @@ void dilate4_c4_local(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;	
+		type_t val = dilateINF;	
 		int c2 = seSize.z >> 1;
 		
 		for(int i = 0; i < c2; ++i)
@@ -256,12 +256,12 @@ void dilate4_c4_local(
 __kernel
 __attribute__((reqd_work_group_size(16,16,1))) 
 void dilate4_c4_local_unroll(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -272,7 +272,7 @@ void dilate4_c4_local_unroll(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;	
+		type_t val = dilateINF;	
 		int c2 = (seSize.z >> 1) - 1;
 		int i = 0;
 		
@@ -303,12 +303,12 @@ void dilate4_c4_local_unroll(
 __kernel
 __attribute__((work_group_size_hint(16,16,1))) 
 void dilate4_c4_local_pragma(
-	__global uchar4* input,
-	__global uchar* output,
+	__global type4_t* input,
+	__global type_t* output,
 	__constant int4* coords,
 	const int4 seSize, // { kradiusX, kradiusY, coords.size() }
 	const int2 imageSize,
-	__local uchar* sharedBlock,
+	__local type_t* sharedBlock,
 	const int2 sharedSize) // { sharedBlockSizeX, sharedBlockSizeY }
 {
 	int2 gid = { get_global_id(0), get_global_id(1) };
@@ -319,7 +319,7 @@ void dilate4_c4_local_pragma(
 	if (gid.y < imageSize.y - mul24(seSize.y, 2) &&
 		gid.x < imageSize.x - mul24(seSize.x, 2))
 	{
-		uchar val = dilateINF;	
+		type_t val = dilateINF;	
 		int c2 = COORDS_SIZE / 2;
 		
 		#pragma unroll

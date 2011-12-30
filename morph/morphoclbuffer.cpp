@@ -13,36 +13,34 @@ bool MorphOpenCLBuffer::initOpenCL()
 	MorphOpenCL::initOpenCL();
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
+	QString opts = "-Ikernels-buffer1D/";
 
 	// Typ danych (uchar czy uint)
-	QString dir;
 	if(s.value("opencl/datatype", "0").toInt() == 0)
 	{
-		dir = "kernels-buffer1D/";
 		useUint = false;
+		opts += " -DUSE_UCHAR";
 	}
 	else
 	{
-		dir = "kernels-buffer1Duint/";
-		useUint = true;
+		useUint = true;	
 	}
-	QString opts = "-I " + dir;
 
 	if(s.value("opencl/atomiccounters", false).toBool())
 		opts += " -DUSE_ATOMIC_COUNTERS";
 
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
-	erodeParams.programName = dir + "erode.cl";
+	erodeParams.programName = "kernels-buffer1D/erode.cl";
 	erodeParams.options = opts;
 	erodeParams.kernelName = s.value("kernel-buffer1D/erode", "erode").toString();
 	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	dilateParams.programName = dir + "dilate.cl";
+	dilateParams.programName = "kernels-buffer1D/dilate.cl";
 	dilateParams.options = opts;
 	dilateParams.kernelName = s.value("kernel-buffer1D/dilate", "dilate").toString();
 	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	gradientParams.programName = dir+ "gradient.cl";
+	gradientParams.programName = "kernels-buffer1D/gradient.cl";
 	gradientParams.options = opts;
 	gradientParams.kernelName = s.value("kernel-buffer1D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
@@ -53,10 +51,10 @@ bool MorphOpenCLBuffer::initOpenCL()
 	cl::Program pgradient = createProgram(gradientParams.programName, opts);
 
 	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
-	cl::Program poutline = createProgram(dir + "outline.cl", opts);
-	cl::Program putils = createProgram(dir + "utils.cl", opts);
-	cl::Program pskeleton = createProgram(dir + "skeleton.cl", opts);	
-	cl::Program pskeletonz = createProgram(dir + "skeleton_zhang.cl", opts);
+	cl::Program poutline = createProgram("kernels-buffer1D/outline.cl", opts);
+	cl::Program putils = createProgram("kernels-buffer1D/utils.cl", opts);
+	cl::Program pskeleton = createProgram("kernels-buffer1D/skeleton.cl", opts);	
+	cl::Program pskeletonz = createProgram("kernels-buffer1D/skeleton_zhang.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
 	kernelErode = createKernel(perode, erodeParams.kernelName);
