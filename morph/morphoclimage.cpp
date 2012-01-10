@@ -5,6 +5,7 @@
 bool MorphOpenCLImage::initOpenCL()
 {
 	MorphOpenCL::initOpenCL();
+	if(error) return false;
 
 	// Pobierz obslugiwane formaty obrazow
 	std::vector<cl::ImageFormat> imageFormats;
@@ -32,6 +33,7 @@ bool MorphOpenCLImage::initOpenCL()
 		clError("Required image format (CL_R, CL_UNSIGNED8) not supported!",
 			CL_IMAGE_FORMAT_NOT_SUPPORTED);
 	}
+	if(error) return false;
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 	QString opts = "-Ikernels-buffer2D/";
@@ -117,7 +119,6 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 		0, &evt);
 	clError("Error while writing new data to OpenCL source image!", err);
 	evt.wait();
-	
 
 	// Podaj czas trwania transferu
 	cl_ulong delta = elapsedEvent(evt);
@@ -348,6 +349,8 @@ cl_ulong MorphOpenCLImage::morphologySkeleton(cl::Image2D& src, cl::Image2D& dst
 		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
 		sizeof(cl_uint), &d_init, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	do 
 	{
@@ -397,11 +400,15 @@ cl_ulong MorphOpenCLImage::morphologySkeletonZhangSuen(cl::Image2D& src,
 		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
 		sizeof(cl_uint), &d_init, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	cl::Buffer clLut(context, 
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(lutTable), lutTable, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 	cl::Image2D tmpImage = createImage2D(CL_MEM_READ_ONLY);
@@ -449,6 +456,9 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(3, csize);
 	clError("Error while setting kernel arguments", err);
 
+	if(err != CL_SUCCESS)
+		return 0;
+
 	cl::NDRange offset = cl::NullRange;
 	cl::NDRange gridDim(
 		roundUp(sourceImage.cpu->cols, workGroupSizeX),
@@ -481,6 +491,8 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 	else if (clAtomicCnt) err |= kernel->setArg(2, *clAtomicCnt);
 
 	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	cl::NDRange offset(1, 1);
 	cl::NDRange gridDim(
@@ -509,6 +521,8 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	err |= kernelSubtract.setArg(1, clBImage);
 	err |= kernelSubtract.setArg(2, clDstImage);
 	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	cl::NDRange offset = cl::NullRange;
 	cl::NDRange gridDim(

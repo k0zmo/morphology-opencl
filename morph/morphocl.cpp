@@ -16,7 +16,8 @@ int roundUp(int value, int multiple)
 MorphOpenCL::MorphOpenCL()
 : errorCallback(nullptr),
 kradiusx(0),
-kradiusy(0)
+kradiusy(0),
+error(false)
 {
 	// Wczytaj opcje z pliku konfiguracyjnego
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
@@ -30,9 +31,12 @@ bool MorphOpenCL::initOpenCL()
 	std::vector<cl::Platform> platforms;
 	cl_int err;
 	err = cl::Platform::get(&platforms);
-
-	if (platforms.empty())
+	if(platforms.empty())
+	{
+		error = true;
+		printf("No OpenCL platfrom has been detected!");
 		return false;
+	}
 
 	cl::Platform platform;
 
@@ -78,6 +82,7 @@ bool MorphOpenCL::initOpenCL()
 	// Stworz kontekst
 	context = cl::Context(CL_DEVICE_TYPE_ALL, properties, nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
+	if(error) return false;
 
 	// Pobierz liste urzadzen
 	std::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
@@ -149,6 +154,7 @@ bool MorphOpenCL::initOpenCL()
 	// Kolejka polecen
 	cq = cl::CommandQueue(context, dev, CL_QUEUE_PROFILING_ENABLE, &err);
 	clError("Failed to create command queue!", err);
+	if(error) return false;
 
 	return true;
 }
@@ -191,10 +197,10 @@ int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 	if(maxConstantBufferSize < sizeof(cl_int2)*csize)
 	{
 		clError(QString("Structuring element is too big: "
-			"%1 B out of available %2 B").
-			arg(sizeof(cl_int2)*csize).
-			arg(maxConstantBufferSize),
-			CL_OUT_OF_RESOURCES);
+			"%1 B out of available %2 B.")
+				.arg(sizeof(cl_int2)*csize)
+				.arg(maxConstantBufferSize), CL_OUT_OF_RESOURCES);
+		return 0;
 	}
 
 	// Zaladuj dane do bufora
@@ -209,8 +215,12 @@ int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 // -------------------------------------------------------------------------
 void MorphOpenCL::clError(const QString& message, cl_int err)
 {
-	if(err != CL_SUCCESS && errorCallback != nullptr)
-		errorCallback(message, err);
+	if(err != CL_SUCCESS)
+	{
+		error = true;
+		if(errorCallback != nullptr)
+			errorCallback(message, err);
+	}
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCL::elapsedEvent(const cl::Event& evt)
@@ -237,12 +247,15 @@ cl::Program MorphOpenCL::createProgram(const QString& progFile,
 // -------------------------------------------------------------------------
 cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
 {
+	if(error) return cl::Program();
+
 	QFile file(progFile);
 	if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		clError("Can't read " + 
 			QString(progFile) + 
 			" file!", -1);
+		return cl::Program();
 	}
 
 	QTextStream in(&file);
@@ -256,6 +269,7 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 	cl::Program::Sources sources(1, std::make_pair(src, len));
 	cl::Program program = cl::Program(context, sources, &err);
 	clError("Failed to create compute program from" + QString(progFile), err);
+	if(error) return cl::Program();
 
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
@@ -266,7 +280,7 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 		program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev)));
 	if(err != CL_SUCCESS)
 		clError(log, err);
-	printf("[OK]\n");
+	if(!error) printf("[OK]\n");
 
 	if(log.size() > 0)
 	{
@@ -349,6 +363,8 @@ cl_ulong MorphOpenCL::readAtomicCounter(cl_uint& v,
 cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog, 
 	const char* kernelName)
 {
+	if(error) return cl::Kernel();
+
 	cl_int err;
 	printf("Creating %s kernel...", kernelName);
 	cl::Kernel k(prog, kernelName, &err);

@@ -87,17 +87,17 @@ __kernel void skeletonZhang_pass2(
 
 __attribute__((always_inline)) 
 uint getCode_local(
-	__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX],
+	__local type_t* sharedBlock,
 	int2 lid, __constant uint* table)
 {
-	type_t p1 = sharedBlock[lid.y    ][lid.x    ];
-	type_t p2 = sharedBlock[lid.y    ][lid.x + 1];
-	type_t p3 = sharedBlock[lid.y    ][lid.x + 2];
-	type_t p4 = sharedBlock[lid.y + 1][lid.x    ];
-	type_t p6 = sharedBlock[lid.y + 1][lid.x + 2];
-	type_t p7 = sharedBlock[lid.y + 2][lid.x    ];
-	type_t p8 = sharedBlock[lid.y + 2][lid.x + 1];
-	type_t p9 = sharedBlock[lid.y + 2][lid.x + 2];
+	type_t p1 = sharedBlock[mad24(SHARED_SIZEX, lid.y    , lid.x    )];
+	type_t p2 = sharedBlock[mad24(SHARED_SIZEX, lid.y    , lid.x + 1)];
+	type_t p3 = sharedBlock[mad24(SHARED_SIZEX, lid.y    , lid.x + 2)];
+	type_t p4 = sharedBlock[mad24(SHARED_SIZEX, lid.y + 1, lid.x    )];
+	type_t p6 = sharedBlock[mad24(SHARED_SIZEX, lid.y + 1, lid.x + 2)];
+	type_t p7 = sharedBlock[mad24(SHARED_SIZEX, lid.y + 2, lid.x    )];
+	type_t p8 = sharedBlock[mad24(SHARED_SIZEX, lid.y + 2, lid.x + 1)];
+	type_t p9 = sharedBlock[mad24(SHARED_SIZEX, lid.y + 2, lid.x + 2)];
 	
 	// lut index
 	uint index = 
@@ -124,14 +124,14 @@ void skeletonZhang4_pass1_local(
 	int2 gid = { get_global_id(0), get_global_id(1) };
 	int2 lid = { get_local_id(0), get_local_id(1) };
 	
-	__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	__local type_t sharedBlock[SHARED_SIZEY*SHARED_SIZEX];
 	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	if (gid.y < imageSize.y - 2 && 
 		gid.x < imageSize.x - 2)
 	{
 		// Pobierz srodkowy piksel z pamieci lokalnej
-		type_t v = sharedBlock[lid.y + 1][lid.x + 1];
+		type_t v = sharedBlock[mad24(SHARED_SIZEX, (lid.y + 1), lid.x + 1)];
 		
 		if(v != BCK)
 		{
@@ -160,14 +160,14 @@ void skeletonZhang4_pass2_local(
 	int2 gid = { get_global_id(0), get_global_id(1) };
 	int2 lid = { get_local_id(0), get_local_id(1) };
 	
-	__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX];
+	__local type_t sharedBlock[SHARED_SIZEY*SHARED_SIZEX];
 	cache4ToLocalMemory16(input, imageSize, lid, sharedBlock);	
 	
 	if (gid.y < imageSize.y - 2 &&
 		gid.x < imageSize.x - 2)
 	{
 		// Pobierz srodkowy piksel z pamieci lokalnej
-		type_t v = sharedBlock[lid.y + 1][lid.x + 1];
+		type_t v = sharedBlock[mad24(SHARED_SIZEX, (lid.y + 1), lid.x + 1)];
 		
 		if(v != BCK)
 		{

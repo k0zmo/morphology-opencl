@@ -11,6 +11,7 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 bool MorphOpenCLBuffer::initOpenCL()
 {
 	MorphOpenCL::initOpenCL();
+	if(error) return false;
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
 	QString opts = "-Ikernels-buffer1D/";
@@ -290,6 +291,8 @@ cl_ulong MorphOpenCLBuffer::readBack(const cl::Buffer& source,
 
 		clError("Error while reading result to buffer!", err);
 		evt.wait();
+		if(err != CL_SUCCESS)
+			return 0;
 
 		// .. a nastepnie zrzutowac do uchar'ow
 		uchar* dptr = dst.ptr<uchar>();
@@ -469,6 +472,8 @@ cl_ulong MorphOpenCLBuffer::morphologySkeleton(cl::Buffer& src,
 		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
 		sizeof(cl_uint), &d_init, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	do 
 	{
@@ -518,11 +523,15 @@ cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
 		CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, 
 		sizeof(cl_uint), &d_init, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	cl::Buffer clLut(context, 
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 		sizeof(lutTable), lutTable, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
 	cl::Buffer tmpBuffer = createBuffer(CL_MEM_READ_ONLY);
@@ -604,7 +613,10 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 		err |= kernel->setArg(5, sharedBlockSize, nullptr);
 		err |= kernel->setArg(6, sharedSize);
 		clError("Error while setting kernel arguments", err);
+
 	}
+	if(err != CL_SUCCESS)
+		return 0;
 
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(*kernel,
@@ -634,6 +646,8 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	if(clAtomicCounter && clLut) err |= kernel->setArg(4, *clAtomicCounter);
 	else if (clAtomicCounter) err |= kernel->setArg(3, *clAtomicCounter);
 	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	const int lsize = 16;
 	int globalItemsX = roundUp(sourceBuffer.cpu->cols - 2, lsize);
@@ -674,6 +688,8 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	err |= kernelSubtract.setArg(2, clDstBuffer);
 	err |= kernelSubtract.setArg(3, xitems * sourceBuffer.gpuHeight);
 	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
 
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(kernelSubtract,

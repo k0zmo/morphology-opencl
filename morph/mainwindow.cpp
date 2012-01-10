@@ -409,10 +409,20 @@ void MainWindow::initOpenCL(int method)
 		QMessageBox::critical(this, "OpenCL error",
 			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
 			QMessageBox::Ok);
-		exit(1);
+		oclSupported = false;
 	};
 
-	oclSupported = ocl->initOpenCL();
+	oclSupported = true;
+	oclSupported &= ocl->initOpenCL();
+
+	ocl->errorCallback = [this](const QString& message, cl_int err)
+	{
+		Q_UNUSED(err);
+		QMessageBox::critical(this, "OpenCL error",
+			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
+			QMessageBox::Ok);
+	};
+
 	if(oclSupported)
 	{
 		ui.actionOpenCL->setEnabled(true);
@@ -422,7 +432,8 @@ void MainWindow::initOpenCL(int method)
 	{
 		QMessageBox::critical(nullptr,
 			"Critical error",
-			"No OpenCL Platform available therefore OpenCL processing will be disabled",
+			"No OpenCL Platform available or something terrible happened "
+			"during OpenCL initialization therefore OpenCL processing will be disabled.",
 			QMessageBox::Ok);
 
 		ui.actionOpenCL->setEnabled(false);
@@ -547,45 +558,7 @@ void MainWindow::morphologyOpenCV()
 		}
 
 		cv::Mat element = standardStructuringElement();
-#if 0
-		int i = 0;
-		omp_set_num_threads(4);
-		int n = omp_get_max_threads();
-
-		int totalWidth = src.cols;
-		int totalHeight = src.rows;
-		int partHeight = totalHeight/n;
-		int rest = totalHeight%n;
-
-		cv::Mat srcp[4], dstp[4], tmp;
-
-		#pragma omp parallel for num_threads(n)
-		for(int i = 0; i < n; ++i)
-		{
-			cv::Rect roi(0, i*partHeight, totalWidth, partHeight);
-			if(i == n - 1)
-				roi.height += rest;
-
-			srcp[i] = cv::Mat(src, roi);
-			cv::morphologyEx(srcp[i], dstp[i], op_type, element);
-		}
-
-		dst = cv::Mat(totalHeight, totalWidth, dstp[0].type());
-
-		//#pragma omp parallel for
-		// Nie mozna - cv::Mat nie jest thread-safe :(
-		for(int i = 0; i < n; ++i)
-		{
-			cv::Rect roi(0, i*partHeight, totalWidth, partHeight);
-			if(i == n - 1)
-				roi.height += rest;
-
-			tmp = cv::Mat(dst, roi);
-			dstp[i].copyTo(tmp);
-		}
-#else
 		cv::morphologyEx(src, dst, op_type, element);
-#endif
 	}
 
 	showCvImage(dst);
@@ -611,20 +584,29 @@ void MainWindow::morphologyOpenCL()
 {
 	cv::Mat element = standardStructuringElement();
 	EOperationType opType = operationType();
-
 	int iters;
-	int csize = ocl->setStructuringElement(element);
-	ocl->recompile(opType, csize);
-	double delapsed = ocl->morphology(opType, dst, iters);
 	
-	// Wyswietl statystyki
-	QString txt; 
-	QTextStream strm(&txt);
-	strm << "Time elapsed : " << delapsed << " ms, iterations: " << iters;
-	statusBarLabel->setText(txt);
+	ocl->error = false;
+	int csize = ocl->setStructuringElement(element);
 
-	// Pokaz obraz wynikowy
-	showCvImage(dst);
+	if(!ocl->error) 
+	{
+		ocl->recompile(opType, csize);
+	}
+
+	if(!ocl->error) 
+	{
+		double delapsed = ocl->morphology(opType, dst, iters);
+
+		// Wyswietl statystyki
+		QString txt; 
+		QTextStream strm(&txt);
+		strm << "Time elapsed : " << delapsed << " ms, iterations: " << iters;
+		statusBarLabel->setText(txt);
+
+		// Pokaz obraz wynikowy
+		showCvImage(dst);
+	}	
 }
 // -------------------------------------------------------------------------
 cv::Mat MainWindow::standardStructuringElement()

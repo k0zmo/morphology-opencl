@@ -125,7 +125,8 @@ void cache4ToLocalMemory16(
 	__global type4_t* input,
 	const int2 imageSize,
 	const int2 lid,
-	__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX])
+	__local type_t* sharedBlock)
+	//__local type_t sharedBlock[SHARED_SIZEY][SHARED_SIZEX])
 {
 	int2 localSize = { get_local_size(0), get_local_size(1) };
 	int2 groupId = { get_group_id(0), get_group_id(1) };
@@ -146,7 +147,8 @@ void cache4ToLocalMemory16(
 		gid.x < imageSize.x/4 && 
 		tid.y < SHARED_SIZEY)
 	{
-		__local type4_t* sharedBlock4 = (__local type4_t*)(&sharedBlock[tid.y][tid.x*4]);
+		__local type4_t* sharedBlock4 = (__local type4_t*)(&sharedBlock[mad24(SHARED_SIZEX, tid.y, mul24(tid.x,4))]);
+		//__local type4_t* sharedBlock4 = (__local type4_t*)(&sharedBlock[tid.y][tid.x*4]);
 		sharedBlock4[0] = input[gid.x + gid.y*imageSize.x/4];
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);

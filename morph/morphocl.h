@@ -34,6 +34,8 @@ public:
 	inline void setWorkGroupSize(int x, int y)
 	{ workGroupSizeX = x; workGroupSizeY = y; }
 
+	bool error;
+
 protected:
 	cl::Context context;
 	cl::Device dev;
@@ -45,7 +47,7 @@ protected:
 	int csize;
 
 	int kradiusx, kradiusy;
-
+	
 	// Rozmiar grupy roboczej
 	int workGroupSizeX;
 	int workGroupSizeY;
