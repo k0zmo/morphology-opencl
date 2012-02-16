@@ -544,7 +544,7 @@ void MainWindow::showCvImage(const cv::Mat& image)
 void MainWindow::openFile(const QString& filename)
 {
 	src = cv::imread(filename.toStdString());
-	int depth = src.depth();
+	//int depth = src.depth();
 	int channels = src.channels();
 
 	//printf("depth:%d channels:%d\n", depth, channels);

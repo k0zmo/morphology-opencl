@@ -1,5 +1,5 @@
 #include "glwidget.h"
-#include "GL/glew.h"
+#include <QMessageBox>
 
 GLWidget::GLWidget(QWidget* parent)
 	: QGLWidget(parent), 

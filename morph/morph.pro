@@ -10,7 +10,8 @@ SOURCES += main.cpp \
 	morphocl.cpp \
 	morphoclimage.cpp \
 	morphoclbuffer.cpp \
-	glwidget.cpp
+	glwidget.cpp \
+	glew.c
 
 HEADERS  += mainwindow.h \
 	morphocl.h \
@@ -23,9 +24,10 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui \
 	sepreview.ui
 
+DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
 
 # For gcc only
 QMAKE_CXXFLAGS += -std=c++0x -fopenmp
-LIBS += -lopencv_core -lopencv_imgproc -lOpenCL -fopenmp
+LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
 LIBS += -L$(AMDAPPSDKROOT)/lib/x86_64
