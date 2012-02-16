@@ -17,6 +17,17 @@
 
 #include "ui_sepreview.h"
 
+void negateImage(cv::Mat& src)
+{
+	cv::Mat lut(1, 256, CV_8U);
+	uchar* p = lut.ptr<uchar>();
+	for(int i = 0; i < lut.cols; ++i)
+	{
+		*p++ = 255 - i;
+	}
+	cv::LUT(src, lut, src);
+}
+
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 // Morph
 
@@ -33,6 +44,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.actionExit, SIGNAL(triggered()), this, SLOT(exitTriggered()));
 	connect(ui.actionOpenCL, SIGNAL(triggered(bool)), this, SLOT(openCLTriggered(bool)));
 	connect(ui.actionPickMethod, SIGNAL(triggered()), this, SLOT(pickMethodTriggered()));
+	connect(ui.actionCameraInput, SIGNAL(triggered(bool)), this, SLOT(cameraInputTriggered(bool)));
 
 	connect(ui.cbInvert, SIGNAL(stateChanged(int)), this, SLOT(invertChanged(int)));
 
@@ -102,12 +114,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
 
-	//////////////////////////////
-// 	ui.rbErode->toggle();
-// 	ui.cbSquare->setChecked(false);
-// 	ui.hsXElementSize->setValue(5);
-// 	ui.hsYElementSize->setValue(2);
-// 	ui.dialRotation->setValue(300);
+	timer = new QTimer(this);
+	connect(timer, SIGNAL(timeout()), this, SLOT(updateCameraInput()));
 }
 // -------------------------------------------------------------------------
 MainWindow::~MainWindow()
@@ -168,6 +176,64 @@ void MainWindow::openCLTriggered(bool state)
 		refresh();
 }
 // -------------------------------------------------------------------------
+void MainWindow::cameraInputTriggered(bool state)
+{
+	if(state)
+	{
+		camera.open(0);
+		if(!camera.isOpened())
+		{
+			QMessageBox::critical(nullptr, "Error", 
+				"Cannot establish connection to default camera device.", QMessageBox::Ok);
+			return;
+		}
+
+		printf("Connection established\n");
+		printf("Frame size: %.0fx%.0f\n", 
+			camera.get(CV_CAP_PROP_FRAME_WIDTH),
+			camera.get(CV_CAP_PROP_FRAME_HEIGHT));
+
+		// CV_CAP_PROP_FORMAT zwraca tylko format danych (np. CV_8U), bez liczby kanalow
+		cv::Mat dummy;
+		camera.read(dummy);
+		int type = dummy.type();
+
+		const char* s_type;
+		switch(type)
+		{
+#define ENUM_TO_STR(X) case X: s_type = #X; break;
+		ENUM_TO_STR(CV_8UC1);
+		ENUM_TO_STR(CV_8UC2);
+		ENUM_TO_STR(CV_8UC3);
+		ENUM_TO_STR(CV_8UC4);
+		ENUM_TO_STR(CV_8SC1);
+		ENUM_TO_STR(CV_8SC2);
+		ENUM_TO_STR(CV_8SC3);
+		ENUM_TO_STR(CV_8SC4);
+		ENUM_TO_STR(CV_16UC1);
+		ENUM_TO_STR(CV_16UC2);
+		ENUM_TO_STR(CV_16UC3);
+		ENUM_TO_STR(CV_16UC4);
+		ENUM_TO_STR(CV_16SC1);
+		ENUM_TO_STR(CV_16SC2);
+		ENUM_TO_STR(CV_16SC3);
+		ENUM_TO_STR(CV_16SC4);
+		default:
+			s_type = "(unknown format)"; break;
+#undef ENUM_TO_STR
+		}
+
+		printf("Camera input format: %s\n", s_type);
+
+		timer->start(100);
+	}
+	else
+	{
+		timer->stop();
+		camera.release();
+	}
+}
+// -------------------------------------------------------------------------
 void MainWindow::pickMethodTriggered()
 {
 	QMessageBox msgBox;
@@ -197,13 +263,8 @@ void MainWindow::pickMethodTriggered()
 void MainWindow::invertChanged(int state)
 {
 	Q_UNUSED(state);
-	cv::Mat lut(1, 256, CV_8U);
-	uchar* p = lut.ptr<uchar>();
-	for(int i = 0; i < lut.cols; ++i)
-	{
-		*p++ = 255 - i;
-	}
-	cv::LUT(src, lut, src);
+	
+	negateImage(src);
 
 	if(oclSupported)
 		ocl->setSourceImage(&src);
@@ -394,6 +455,23 @@ void MainWindow::autoRunChanged(int state)
 	if(state == Qt::Checked)
 		refresh();
 }
+// -------------------------------------------------------------------------
+void MainWindow::updateCameraInput()
+{
+	camera >> src;
+
+	// TODO: hardcoded
+	if(src.channels() != 1)
+		cvtColor(src, src, CV_BGR2GRAY);
+
+	if(ui.cbInvert->isChecked())
+		negateImage(src);
+
+	if(oclSupported)
+		ocl->setSourceImage(&src);
+
+	refresh();
+}
 
 // Koniec zdarzen
 // HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
@@ -440,7 +518,7 @@ void MainWindow::initOpenCL(int method)
 		ui.actionOpenCL->setChecked(false);
 	}	
 }
-
+// -------------------------------------------------------------------------
 void MainWindow::showCvImage(const cv::Mat& image)
 {
 	auto toQImage = [](const cv::Mat& image)
@@ -467,22 +545,19 @@ void MainWindow::showCvImage(const cv::Mat& image)
 // -------------------------------------------------------------------------
 void MainWindow::openFile(const QString& filename)
 {
-	qsrc = QImage(filename);
-	if(qsrc.format() != QImage::Format_RGB888)
-		qsrc = qsrc.convertToFormat(QImage::Format_RGB888);
+	src = cv::imread(filename.toStdString());
+	int depth = src.depth();
+	int channels = src.channels();
 
-	auto toCvMat = [](const QImage& qimage) -> cv::Mat
-	{
-		cv::Mat mat(qimage.height(), qimage.width(), CV_8UC3,
-			const_cast<uchar*>(qimage.bits()),
-			qimage.bytesPerLine());
+	//printf("depth:%d channels:%d\n", depth, channels);
 
-		// Konwersja do obrazu jednokanalowego
-		cvtColor(mat, mat, CV_RGB2GRAY);
-		return mat;
-	};
+	Q_ASSERT(depth == CV_8U);
 
-	src = toCvMat(qsrc);
+	if(channels == 3)
+		cvtColor(src, src, CV_BGR2GRAY);
+	else if(channels == 4)
+		cvtColor(src, src, CV_BGRA2GRAY);
+
 	if(oclSupported)
 		ocl->setSourceImage(&src);
 }

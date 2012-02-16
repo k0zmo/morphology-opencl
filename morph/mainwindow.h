@@ -1,11 +1,13 @@
 #pragma once
 
 #include <QtGui/QMainWindow>
+#include <QTimer>
 #include "ui_mainwindow.h"
 #include "morphocl.h"
 
 #define CV_NO_BACKWARD_COMPATIBILITY
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 class MainWindow : public QMainWindow
 {
@@ -18,8 +20,9 @@ public:
 private:
 	Ui::mainWindowClass ui;
 	QLabel* statusBarLabel;
-	QImage qsrc;
+	QTimer* timer;
 	cv::Mat src, dst;
+	cv::VideoCapture camera;
 
 	bool disableRefreshing;
 	int krotation;
@@ -61,6 +64,7 @@ private slots:
 	void exitTriggered();
 	void openCLTriggered(bool state);
 	void pickMethodTriggered();
+	void cameraInputTriggered(bool state);
 
 	void invertChanged(int state);
 	void noneOperationToggled(bool checked);
@@ -76,4 +80,6 @@ private slots:
 
 	void runPressed();
 	void autoRunChanged(int state);
+
+	void updateCameraInput();
 };

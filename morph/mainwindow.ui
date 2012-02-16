@@ -496,13 +496,14 @@
      <x>0</x>
      <y>0</y>
      <width>485</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionCameraInput"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionExit"/>
@@ -562,6 +563,14 @@
    </property>
    <property name="toolTip">
     <string>Pick method again (buffer 1D or 2D)</string>
+   </property>
+  </action>
+  <action name="actionCameraInput">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>From camera</string>
    </property>
   </action>
  </widget>
