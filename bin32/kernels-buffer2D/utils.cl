@@ -1,6 +1,8 @@
 #include "common.cl"
 
 // dst = saturate((int)a - (int)b)
+// dla CL_UNORM_INT8 dostajemy saturacje za friko
+
 __kernel void subtract(
 	__read_only image2d_t a,
 	__read_only image2d_t b,
@@ -11,10 +13,9 @@ __kernel void subtract(
 	
 	if (all(coords < size))
 	{
-		uint pix = sub_sat(
-			read_imageui(a, smp, coords).x,
-			read_imageui(b, smp, coords).x);
+		float aa = read_imagef(a, smp, coords).x;
+		float bb = read_imagef(b, smp, coords).x;
 		
-		write_imageui(dst, coords, pix);
+		write_imagef(dst, coords, (float4)(aa - bb));
 	}
 }

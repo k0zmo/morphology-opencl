@@ -11,15 +11,15 @@ __kernel void erode(
 	
 	if (all(gid < size))
 	{
-		uint val = erodeINF;
+		float val = erodeINF;
 		
 		for(int i = 0; i < coords_size; ++i)
 		{
 			int2 coord = coords[i] + gid;	
-			val = min(val, read_imageui(src, smp, coord).x);
+			val = min(val, read_imagef(src, smp, coord).x);
 		}
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }
 
@@ -34,25 +34,25 @@ __kernel void erode_c4(
 	
 	if (all(gid < size))
 	{
-		uint val = erodeINF;
+		float val = erodeINF;
 		int c2 = coords_size >> 1;
 		
 		for(int i = 0; i < c2; ++i)
 		{
 			int4 coord = coords[i] + (int4)(gid, gid);	
 			
-			val = min(val, read_imageui(src, smp, coord.xy).x);
-			val = min(val, read_imageui(src, smp, coord.zw).x);
+			val = min(val, read_imagef(src, smp, coord.xy).x);
+			val = min(val, read_imagef(src, smp, coord.zw).x);
 		}
 		
 		if(coords_size % 2)
 		{
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[coords_size-1] + gid;
-			val = min(val, read_imageui(src, smp, coord).x);
+			val = min(val, read_imagef(src, smp, coord).x);
 		}
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }
 
@@ -71,7 +71,7 @@ __kernel void erode_c4_pragma(
 	
 	if (all(gid < size))
 	{
-		uint val = erodeINF;
+		float val = erodeINF;
 		int c2 = COORDS_SIZE >> 1;
 		
 		#pragma unroll
@@ -79,17 +79,17 @@ __kernel void erode_c4_pragma(
 		{
 			int4 coord = coords[i] + (int4)(gid, gid);	
 			
-			val = min(val, read_imageui(src, smp, coord.xy).x);
-			val = min(val, read_imageui(src, smp, coord.zw).x);
+			val = min(val, read_imagef(src, smp, coord.xy).x);
+			val = min(val, read_imagef(src, smp, coord.zw).x);
 		}
 		
 		if(COORDS_SIZE % 2)
 		{
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[COORDS_SIZE-1] + gid;
-			val = min(val, read_imageui(src, smp, coord).x);
+			val = min(val, read_imagef(src, smp, coord).x);
 		}
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }

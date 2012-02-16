@@ -1,10 +1,4 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2011-10-04T09:36:45
-#
-#-------------------------------------------------
-
-QT       += core gui
+QT       += core gui opengl
 
 TARGET = morph
 TEMPLATE = app
@@ -15,13 +9,15 @@ SOURCES += main.cpp \
 	morphop.cpp \
 	morphocl.cpp \
 	morphoclimage.cpp \
-	morphoclbuffer.cpp
+	morphoclbuffer.cpp \
+	glwidget.cpp
 
 HEADERS  += mainwindow.h \
 	morphocl.h \
 	morphop.h \
 	morphoclimage.h \
 	morphoclbuffer.h \
+	glwidget.h \
 	precompiled.h
 
 FORMS    += mainwindow.ui \

@@ -10,13 +10,13 @@ __kernel void skeleton_iter1(
 	
 	if (all(gid < size))
 	{	
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 		
 		// Element strukturalny pierwszy
 		// 1|1|1
@@ -32,7 +32,7 @@ __kernel void skeleton_iter1(
 			v8 == BCK &&
 			v9 == BCK)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -48,13 +48,13 @@ __kernel void skeleton_iter2(
 	
 	if (all(gid < size))
 	{
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 			
 		// Element strukturalny pierwszy - 90 w lewo
 		// 1|X|0
@@ -70,7 +70,7 @@ __kernel void skeleton_iter2(
 			v7 == OBJ &&
 			v9 == BCK)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -86,13 +86,13 @@ __kernel void skeleton_iter3(
 	
 	if (all(gid < size))
 	{	
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 
 		// Element strukturalny pierwszy - 180 w lewo
 		// 0|0|0
@@ -108,7 +108,7 @@ __kernel void skeleton_iter3(
 			v8 == OBJ &&
 			v9 == OBJ)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -124,13 +124,13 @@ __kernel void skeleton_iter4(
 	
 	if (all(gid < size))
 	{	
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 
 		// Element strukturalny pierwszy - 270 w lewo
 		// 0|X|1
@@ -146,7 +146,7 @@ __kernel void skeleton_iter4(
 			v7 == BCK &&
 			v9 == OBJ)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -162,12 +162,12 @@ __kernel void skeleton_iter5(
 	
 	if (all(gid < size))
 	{	
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
 		
 		// Element strukturalny drugi
 		// X|1|X
@@ -182,7 +182,7 @@ __kernel void skeleton_iter5(
 			v7 == BCK &&
 			v8 == BCK)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -198,12 +198,12 @@ __kernel void skeleton_iter6(
 	
 	if (all(gid < size))
 	{	
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 			
 		// Element strukturalny drugi - 90 stopni w lewo
 		// X|1|X
@@ -218,7 +218,7 @@ __kernel void skeleton_iter6(
 			v8 == BCK &&
 			v9 == BCK)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -234,12 +234,12 @@ __kernel void skeleton_iter7(
 	
 	if (all(gid < size))
 	{		
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
 			
 		// Element strukturalny drugi - 180 stopni w lewo
 		// X|0|0
@@ -254,7 +254,7 @@ __kernel void skeleton_iter7(
 			v6 == BCK &&
 			v8 == OBJ)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}
@@ -270,12 +270,12 @@ __kernel void skeleton_iter8(
 	
 	if (all(gid < size))
 	{	
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-		uint v5 = read_imageui(src, smp, gid + (int2){ 0,  0}).x;
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+		float v5 = read_imagef(src, smp, gid + (int2){ 0,  0}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
 			
 		// Element strukturalny drugi - 270 stopni w lewo
 		// 0|0|X
@@ -290,7 +290,7 @@ __kernel void skeleton_iter8(
 			v6 == OBJ &&
 			v8 == OBJ)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 			atomic_inc(counter);
 		}
 	}

@@ -14,7 +14,7 @@ bool MorphOpenCLImage::initOpenCL()
 
 	// Sprawdz czy ten co chcemy jest obslugiwany
 	bool found = false;
-	sourceImage.format.image_channel_data_type = CL_UNSIGNED_INT8;
+	sourceImage.format.image_channel_data_type = CL_UNORM_INT8;
 	sourceImage.format.image_channel_order = CL_R;
 
 	for(auto i = imageFormats.cbegin(), 

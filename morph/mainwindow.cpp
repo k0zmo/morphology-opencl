@@ -102,6 +102,9 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	initOpenCL(method);
 	openFile(filename);
 
+	// Wymuszenie initializeGL tak aby miec juz utworzony kontekst OGL
+	ui.glWidget->updateGL();
+
 	// Wartosci domyslne
 	ui.rbNone->toggle();
 	ui.rbEllipse->toggle();
@@ -113,9 +116,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 
 	statusBarLabel = new QLabel();
 	ui.statusBar->addPermanentWidget(statusBarLabel);
-
-	timer = new QTimer(this);
-	connect(timer, SIGNAL(timeout()), this, SLOT(updateCameraInput()));
 }
 // -------------------------------------------------------------------------
 MainWindow::~MainWindow()
@@ -151,7 +151,6 @@ void MainWindow::saveTriggered()
 
 	if(!filename.isEmpty())
 	{
-		//ui.lbImage->pixmap()->toImage().save(filename);
 		cv::Mat dstc;
 		cvtColor(dst, dstc, CV_GRAY2BGR);
 
@@ -225,11 +224,11 @@ void MainWindow::cameraInputTriggered(bool state)
 
 		printf("Camera input format: %s\n", s_type);
 
-		timer->start(100);
+		timerId = startTimer(100);
 	}
 	else
 	{
-		timer->stop();
+		killTimer(timerId);
 		camera.release();
 	}
 }
@@ -456,8 +455,10 @@ void MainWindow::autoRunChanged(int state)
 		refresh();
 }
 // -------------------------------------------------------------------------
-void MainWindow::updateCameraInput()
+void MainWindow::timerEvent(QTimerEvent* event)
 {
+	Q_UNUSED(event);
+
 	camera >> src;
 
 	// TODO: hardcoded
@@ -521,26 +522,23 @@ void MainWindow::initOpenCL(int method)
 // -------------------------------------------------------------------------
 void MainWindow::showCvImage(const cv::Mat& image)
 {
-	auto toQImage = [](const cv::Mat& image)
-	{
-		return QImage(
-			reinterpret_cast<const quint8*>(image.data),
-				image.cols, image.rows, image.step, 
-				QImage::Format_Indexed8);
-	};
+	QSize surfaceSize(image.cols, image.rows);
 
-	cv::Mat img = image;
-	if(img.rows > maxImageHeight ||img.cols > maxImageWidth)
+	if(image.rows > maxImageHeight ||image.cols > maxImageWidth)
 	{
 		double fx;
-		if(img.rows > img.cols)
-			fx = static_cast<double>(maxImageHeight) / img.rows;
+		if(image.rows > image.cols)
+			fx = static_cast<double>(maxImageHeight) / image.rows;
 		else
-			fx = static_cast<double>(maxImageWidth) / img.cols;
-		cv::resize(img, img, cv::Size(0,0), fx, fx, cv::INTER_LINEAR);
+			fx = static_cast<double>(maxImageWidth) / image.cols;
+
+		surfaceSize.setWidth(image.cols * fx);
+		surfaceSize.setHeight(image.rows * fx);
 	}
 
-	ui.lbImage->setPixmap(QPixmap::fromImage(toQImage(img)));
+	ui.glWidget->setMinimumSize(surfaceSize);
+	ui.glWidget->setMaximumSize(surfaceSize);
+	ui.glWidget->setSurface(image);
 }
 // -------------------------------------------------------------------------
 void MainWindow::openFile(const QString& filename)

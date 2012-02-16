@@ -2,28 +2,34 @@
 
 __attribute__((always_inline))
 uint getCode(
-	__read_only image2d_t src, const sampler_t smp, 
-	int2 gid, __constant uint* table)
+	__read_only image2d_t src,
+	const sampler_t smp, 
+	int2 gid,
+	__constant uint* table)
 {
-	uint p1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-	uint p2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-	uint p3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-	uint p4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
-	uint p6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-	uint p7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-	uint p8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
-	uint p9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
-	
+	float p1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+	float p2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+	float p3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+	float p4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
+	float p6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+	float p7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+	float p8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
+	float p9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
+
 	// lut index
-	uint index = 
-		((p4&0x01) << 7) |
-		((p7&0x01) << 6) |
-		((p8&0x01) << 5) |
-		((p9&0x01) << 4) |
-		((p6&0x01) << 3) |
-		((p3&0x01) << 2) |
-		((p2&0x01) << 1) |
-		 (p1&0x01);
+	float4 p1234 = { p1, p2, p3, p4 };
+	float4 p6789 = { p6, p7, p8, p9 };
+	p1234 *= (float4) { 1.0f, 2.0f, 4.0f, 128.0f };
+	p6789 *= (float4) { 8.0f, 64.0f, 32.0f, 16.0f };
+	
+	p1234.xy += p1234.zw;
+	p1234.x += p1234.y;
+	
+	p6789.xy += p6789.zw;
+	p6789.x += p6789.y;
+	
+	uint index = (uint)(p1234.x + p6789.x);
+
 	return table[index];
 }
 
@@ -38,7 +44,7 @@ __kernel void skeletonZhang_pass1(
 	
 	if (all(gid < size))
 	{
-		uint v = read_imageui(src, smp, gid).x;
+		float v = read_imagef(src, smp, gid).x;
 		
 		if(v != BCK)
 		{
@@ -48,7 +54,7 @@ __kernel void skeletonZhang_pass1(
 			{
 				// pixelRemoved++
 				atomic_inc(counter);
-				write_imageui(dst, gid, (uint4)(BCK));
+				write_imagef(dst, gid, (float4)(BCK));
 			}
 		}
 	}
@@ -65,7 +71,7 @@ __kernel void skeletonZhang_pass2(
 	
 	if (all(gid < size))
 	{
-		uint v = read_imageui(src, smp, gid).x;
+		float v = read_imagef(src, smp, gid).x;
 		
 		if(v != BCK)
 		{
@@ -75,7 +81,7 @@ __kernel void skeletonZhang_pass2(
 			{
 				// pixelRemoved++
 				atomic_inc(counter);
-				write_imageui(dst, gid, (uint4)(BCK));
+				write_imagef(dst, gid, (float4)(BCK));
 			}
 		}
 	}

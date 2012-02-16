@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QtGui/QMainWindow>
-#include <QTimer>
 #include "ui_mainwindow.h"
 #include "morphocl.h"
 
@@ -20,12 +19,12 @@ public:
 private:
 	Ui::mainWindowClass ui;
 	QLabel* statusBarLabel;
-	QTimer* timer;
 	cv::Mat src, dst;
 	cv::VideoCapture camera;
 
 	bool disableRefreshing;
 	int krotation;
+	int timerId;
 	int maxImageWidth;
 	int maxImageHeight;
 
@@ -58,6 +57,8 @@ private:
 	// Wykonuje operacje morfologiczne z uzyciem API OpenCL'a
 	void morphologyOpenCL();
 
+	void timerEvent(QTimerEvent* event);
+
 private slots:
 	void openTriggered();
 	void saveTriggered();
@@ -80,6 +81,4 @@ private slots:
 
 	void runPressed();
 	void autoRunChanged(int state);
-
-	void updateCameraInput();
 };

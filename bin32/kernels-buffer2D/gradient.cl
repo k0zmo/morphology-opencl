@@ -11,21 +11,21 @@ __kernel void gradient(
 	
 	if (all(gid < size))
 	{
-		uint minval = erodeINF;
-		uint maxval = dilateINF;
+		float minval = erodeINF;
+		float maxval = dilateINF;
 		
 		for(int i = 0; i < coords_size; ++i)
 		{
 			int2 coord = coords[i] + gid;	
-			uint texel = read_imageui(src, smp, coord).x;
+			float texel = read_imagef(src, smp, coord).x;
 			
 			minval = min(minval, texel);
 			maxval = max(maxval, texel);
 		}
 		
-		uint val = sub_sat(maxval, minval);
+		float val = maxval - minval;
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }
 
@@ -40,16 +40,16 @@ __kernel void gradient_c4(
 	
 	if (all(gid < size))
 	{
-		uint minval = erodeINF;
-		uint maxval = dilateINF;
+		float minval = erodeINF;
+		float maxval = dilateINF;
 		int c2 = coords_size >> 1;
 		
 		for(int i = 0; i < c2; ++i)
 		{
 			int4 coord = coords[i] + (int4)(gid, gid);	
 			
-			uint texel0 = read_imageui(src, smp, coord.xy).x;
-			uint texel1 = read_imageui(src, smp, coord.zw).x;
+			float texel0 = read_imagef(src, smp, coord.xy).x;
+			float texel1 = read_imagef(src, smp, coord.zw).x;
 			
 			minval = min(minval, texel0);
 			minval = min(minval, texel1);
@@ -62,15 +62,15 @@ __kernel void gradient_c4(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[coords_size-1] + gid;
 			
-			uint texel = read_imageui(src, smp, coord).x;
+			float texel = read_imagef(src, smp, coord).x;
 			
 			minval = min(minval, texel);
 			maxval = max(maxval, texel);
 		}
 		
-		uint val = sub_sat(maxval, minval);
+		float val = maxval - minval;
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }
 
@@ -89,8 +89,8 @@ __kernel void gradient_c4_pragma(
 	
 	if (all(gid < size))
 	{
-		uint minval = erodeINF;
-		uint maxval = dilateINF;
+		float minval = erodeINF;
+		float maxval = dilateINF;
 		int c2 = COORDS_SIZE >> 1;
 		
 		#pragma unroll
@@ -98,8 +98,8 @@ __kernel void gradient_c4_pragma(
 		{
 			int4 coord = coords[i] + (int4)(gid, gid);	
 			
-			uint texel0 = read_imageui(src, smp, coord.xy).x;
-			uint texel1 = read_imageui(src, smp, coord.zw).x;
+			float texel0 = read_imagef(src, smp, coord.xy).x;
+			float texel1 = read_imagef(src, smp, coord.zw).x;
 			
 			minval = min(minval, texel0);
 			minval = min(minval, texel1);
@@ -112,14 +112,14 @@ __kernel void gradient_c4_pragma(
 			__constant int2* c = (__constant int2*)(coords);
 			int2 coord = c[COORDS_SIZE-1] + gid;
 			
-			uint texel = read_imageui(src, smp, coord).x;
+			float texel = read_imagef(src, smp, coord).x;
 			
 			minval = min(minval, texel);
 			maxval = max(maxval, texel);
 		}
 		
-		uint val = sub_sat(maxval, minval);
+		float val = maxval - minval;
 		
-		write_imageui(dst, gid, (uint4)(val));
+		write_imagef(dst, gid, (float4)(val));
 	}
 }

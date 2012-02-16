@@ -9,15 +9,15 @@ __kernel void outline(
 	
 	if (all(gid < size))
 	{	
-		uint v1 = read_imageui(src, smp, gid + (int2){-1, -1}).x;
-		uint v2 = read_imageui(src, smp, gid + (int2){ 0, -1}).x;
-		uint v3 = read_imageui(src, smp, gid + (int2){ 1, -1}).x;
-		uint v4 = read_imageui(src, smp, gid + (int2){-1,  0}).x;
+		float v1 = read_imagef(src, smp, gid + (int2){-1, -1}).x;
+		float v2 = read_imagef(src, smp, gid + (int2){ 0, -1}).x;
+		float v3 = read_imagef(src, smp, gid + (int2){ 1, -1}).x;
+		float v4 = read_imagef(src, smp, gid + (int2){-1,  0}).x;
 		// v5
-		uint v6 = read_imageui(src, smp, gid + (int2){ 1,  0}).x;
-		uint v7 = read_imageui(src, smp, gid + (int2){-1,  1}).x;
-		uint v8 = read_imageui(src, smp, gid + (int2){ 0,  1}).x;
-		uint v9 = read_imageui(src, smp, gid + (int2){ 1,  1}).x;
+		float v6 = read_imagef(src, smp, gid + (int2){ 1,  0}).x;
+		float v7 = read_imagef(src, smp, gid + (int2){-1,  1}).x;
+		float v8 = read_imagef(src, smp, gid + (int2){ 0,  1}).x;
+		float v9 = read_imagef(src, smp, gid + (int2){ 1,  1}).x;
 		
 		if (v1 == OBJ &&
 			v2 == OBJ &&
@@ -28,7 +28,7 @@ __kernel void outline(
 			v8 == OBJ &&
 			v9 == OBJ)
 		{
-			write_imageui(dst, gid, (uint4)(BCK));
+			write_imagef(dst, gid, (float4)(BCK));
 		}
 	}
 }
