@@ -133,6 +133,12 @@ void MainWindow::openTriggered()
 
 	if(!filename.isEmpty())
 	{
+		if(ui.actionCameraInput->isChecked())
+		{
+			ui.actionCameraInput->setChecked(false);
+			cameraInputTriggered(false);
+		}
+
 		openFile(filename);
 
 		if(ui.cbAutoTrigger->isChecked() || ui.rbNone->isChecked())
@@ -539,12 +545,14 @@ void MainWindow::showCvImage(const cv::Mat& image)
 	ui.glWidget->setMinimumSize(surfaceSize);
 	ui.glWidget->setMaximumSize(surfaceSize);
 	ui.glWidget->setSurface(image);
+
+	adjustSize();
 }
 // -------------------------------------------------------------------------
 void MainWindow::openFile(const QString& filename)
 {
 	src = cv::imread(filename.toStdString());
-	//int depth = src.depth();
+	int depth = src.depth();
 	int channels = src.channels();
 
 	//printf("depth:%d channels:%d\n", depth, channels);
