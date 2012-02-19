@@ -54,7 +54,7 @@ bool MorphOpenCL::initOpenCL()
 		{
 			std::string name = platforms[i].getInfo<CL_PLATFORM_NAME>(&err);
 			std::string version = platforms[i].getInfo<CL_PLATFORM_VERSION>(&err);
-			printf("\t%ud) %s %s\n", i+1, name.c_str(), version.c_str());
+			printf("\t%d) %s %s\n", i+1, name.c_str(), version.c_str());
 		}
 
 		printf("\n");
@@ -101,7 +101,7 @@ bool MorphOpenCL::initOpenCL()
 		{
 			std::string devName = devices[i].getInfo<CL_DEVICE_NAME>(&err);
 			cl_bool devImagesSupported = devices[i].getInfo<CL_DEVICE_IMAGE_SUPPORT>(&err);
-			printf("\t%ud) %s (%s)\n", i+1, devName.c_str(), 
+			printf("\t%d) %s (%s)\n", i+1, devName.c_str(), 
 				(devImagesSupported ? "Images supported" : "Images NOT supported"));
 		}
 
@@ -131,22 +131,22 @@ bool MorphOpenCL::initOpenCL()
 
 	printf("\n********************************************************\n");
 	dev.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &maxComputeUnits);
-	printf("Compute units: %ud\n", maxComputeUnits);
+	printf("Compute units: %d\n", maxComputeUnits);
 
 	dev.getInfo(CL_DEVICE_MAX_CLOCK_FREQUENCY, &maxClockFreq);
 	printf("Clock frequency: %d Hz\n", maxClockFreq);
 
 	dev.getInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE, &maxMemAllocSize);
-	printf("Memory object allocation: %lud B (%lud MB)\n", maxMemAllocSize, maxMemAllocSize/1024/1024);
+	printf("Memory object allocation: %ld B (%ld MB)\n", maxMemAllocSize, maxMemAllocSize/1024/1024);
 
 	dev.getInfo(CL_DEVICE_LOCAL_MEM_SIZE, &localMemSize);
-	printf("Local memory arena: %lud B (%lud kB)\n", localMemSize, localMemSize/1024);
+	printf("Local memory arena: %ld B (%ld kB)\n", localMemSize, localMemSize/1024);
 
 	dev.getInfo(CL_DEVICE_LOCAL_MEM_TYPE, &localMemType);
 	printf("Local memory type: %s\n", ((localMemType == CL_LOCAL) ? "local":"global"));
 
 	dev.getInfo(CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, &maxConstantBufferSize);
-	printf("Constant buffer size: %lud B (%lud kB)\n", maxConstantBufferSize,
+	printf("Constant buffer size: %ld B (%ld kB)\n", maxConstantBufferSize,
 		maxConstantBufferSize/1024);
 	
 	printf("********************************************************\n\n");
@@ -191,7 +191,7 @@ int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 		}
 	}
 	csize = static_cast<int>(coords.size());
-	printf("Structuring element size (number of 'white' pixels): %d (%dx%d) - %ud B\n",
+	printf("Structuring element size (number of 'white' pixels): %d (%dx%d) - %d B\n",
 		csize, 2*kradiusx+1, 2*kradiusy+1, sizeof(cl_int2) * csize);
 
 	if(maxConstantBufferSize < sizeof(cl_int2)*csize)
