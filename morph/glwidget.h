@@ -14,6 +14,7 @@ public:
 	virtual ~GLWidget();
 
 	void setSurface(const cv::Mat& surface);
+	GLuint createEmptySurface(int w, int h);
 
 protected:
 	virtual void initializeGL();
@@ -30,4 +31,7 @@ private:
 
 	int swidth; 
 	int sheight;
+
+private:
+	void createSurface_impl(int w, int h, const void* data);
 };

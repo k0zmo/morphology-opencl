@@ -6,9 +6,11 @@ class MorphOpenCLBuffer : public MorphOpenCL
 {
 public:
 	MorphOpenCLBuffer();
+	virtual ~MorphOpenCLBuffer();
 
 	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
+	/*override*/ virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
 private:
@@ -29,6 +31,10 @@ private:
 	bool useUint;
 	// Czy uzyc subtract4 zamiast subtract
 	bool sub4;
+
+	cl::BufferGL shared;
+	GLuint pboStaging;
+	GLuint glTexture;
 
 private:
 	// Odczyt ze wskazanego bufora do podanej macierzy

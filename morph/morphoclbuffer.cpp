@@ -5,7 +5,12 @@
 MorphOpenCLBuffer::MorphOpenCLBuffer()
 	: MorphOpenCL()
 {
-	QSettings settings("./settings.cfg", QSettings::IniFormat);
+	glGenBuffers(1, &pboStaging);
+}
+// -------------------------------------------------------------------------
+MorphOpenCLBuffer::~MorphOpenCLBuffer()
+{
+	glDeleteBuffers(1, &pboStaging);
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCLBuffer::initOpenCL()
@@ -171,6 +176,27 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 	delete [] ptr;
 }
 // -------------------------------------------------------------------------
+void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
+{
+	setSourceImage(newSrc);
+
+	if(newSrc->cols != sharedw || newSrc->rows != sharedh)
+	{
+		sharedw = newSrc->cols;
+		sharedh = newSrc->rows;
+		glTexture = glresource;
+
+		// Zerujemy bufor do przenoszenia danych (PBO) z bufora do tekstury
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboStaging);
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, bufferSize(), nullptr, GL_STREAM_COPY);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+		cl_int err;
+		shared = cl::BufferGL(context, CL_MEM_WRITE_ONLY, pboStaging, &err);
+		clError("Can't create shared GL/CL 1D buffer", err);
+	}
+}
+// -------------------------------------------------------------------------
 double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 {
 	int dstSizeX = sourceBuffer.cpu->cols;
@@ -180,7 +206,9 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	cl_ulong elapsed = 0;
 
 	// Bufor docelowy
-	cl::Buffer clDst = createBuffer(CL_MEM_WRITE_ONLY);
+	cl::Buffer clDst;
+	if(useShared) clDst = shared;
+	else clDst = createBuffer(CL_MEM_WRITE_ONLY);
 
 	switch(opType)
 	{
@@ -236,19 +264,35 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 		break;
 	}
 
-	// Zczytaj wynik z karty
-	cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
+	// Zczytaj wynik z karty (tylko w przypadku nie dzielenia zasobu)
+	if(!useShared)
+	{
+		cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
 
-	double totalTime = (elapsed + readingTime) * 0.000001;
-	//FILE* fp = fopen("oo.txt", "a");
-	printf("Total time: %.05lf ms (in which %.05lf was a processing time "
-		"and %.05lf ms was a transfer time)\n",
-		totalTime, elapsed * 0.000001, readingTime * 0.000001);
-	//fprintf(fp, "%.05lf\n", elapsed*0.000001);
-	//fclose(fp);
+		double totalTime = (elapsed + readingTime) * 0.000001;
+		printf("Total time: %.05lf ms (in which %.05lf was a processing time "
+			"and %.05lf ms was a transfer time)\n",
+			totalTime, elapsed * 0.000001, readingTime * 0.000001);
 
-	// Ile czasu wszystko zajelo
-	return totalTime;
+		// Ile czasu wszystko zajelo
+		return totalTime;
+	}
+	else
+	{
+		// Pozostalo nam przeniesc dane z PBO (tam sie znajduja) do tekstury
+		// ktora GLWidget wyswietli
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboStaging);
+		glBindTexture(GL_TEXTURE_2D, glTexture);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sourceBuffer.cpu->cols,
+			sourceBuffer.cpu->rows, GL_RED, GL_UNSIGNED_BYTE, nullptr);;
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+		double totalTime = elapsed * 0.000001;
+		printf("Total time: %.05lf ms (+ 0 transfer time)\n", totalTime);
+
+		// Ile czasu wszystko zajelo
+		return totalTime;
+	}
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLBuffer::readBack(const cl::Buffer& source,

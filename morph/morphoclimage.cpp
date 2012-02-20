@@ -2,6 +2,15 @@
 
 #include <QSettings>
 
+MorphOpenCLImage::MorphOpenCLImage()
+	: MorphOpenCL()
+{
+}
+// -------------------------------------------------------------------------
+MorphOpenCLImage::~MorphOpenCLImage()
+{
+}
+// -------------------------------------------------------------------------
 bool MorphOpenCLImage::initOpenCL()
 {
 	MorphOpenCL::initOpenCL();
@@ -125,13 +134,30 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 	printf("Transfering source image to GPU took %.05lf ms\n", delta * 0.000001);	
 }
 // -------------------------------------------------------------------------
+void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
+{
+	setSourceImage(newSrc);
+
+	if(newSrc->cols != sharedw || newSrc->rows != sharedh)
+	{
+		sharedw = newSrc->cols;
+		sharedh = newSrc->rows;
+
+		cl_int err;
+		shared = cl::Image2DGL(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, glresource, &err);
+		clError("Can't create shared GL/CL 2D buffer", err);
+	}
+}
+// -------------------------------------------------------------------------
 double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& iters)
 {
 	iters = 1;
 	cl_ulong elapsed = 0;
 
 	// Obraz docelowy
-	cl::Image2D clDstImage = createImage2D(CL_MEM_READ_ONLY);
+	cl::Image2D clDstImage;
+	if(useShared) clDstImage = shared;
+	else clDstImage = createImage2D(CL_MEM_WRITE_ONLY);
 
 	switch(opType)
 	{
@@ -167,16 +193,27 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 		break;
 	}
 
-	// Zczytaj wynik z karty
-	cl_ulong readingTime = readBack(clDstImage, dst);
+	// Zczytaj wynik z karty (tylko w przypadku nie dzielenia zasobu)
+	if(!useShared)
+	{
+		cl_ulong readingTime = readBack(clDstImage, dst);
 
-	double totalTime = (elapsed + readingTime) * 0.000001;
-	printf("Total time: %.05lf ms (in which %.05f was a processing time "
-		"and %.05lf ms was a transfer time)\n",
-		totalTime, elapsed * 0.000001, readingTime * 0.000001);
+		double totalTime = (elapsed + readingTime) * 0.000001;
+		printf("Total time: %.05lf ms (in which %.05f was a processing time "
+			"and %.05lf ms was a transfer time)\n",
+			totalTime, elapsed * 0.000001, readingTime * 0.000001);
 
-	// Ile czasu wszystko zajelo
-	return totalTime;
+		// Ile czasu wszystko zajelo
+		return totalTime;
+	}
+	else
+	{
+		double totalTime = elapsed * 0.000001;
+		printf("Total time: %.05lf ms (+ 0 transfer time)\n", totalTime);
+
+		// Ile czasu wszystko zajelo
+		return totalTime;
+	}
 }
 // -------------------------------------------------------------------------
 cl_ulong MorphOpenCLImage::readBack(cl::Image2D& source, cv::Mat &dst)

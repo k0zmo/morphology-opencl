@@ -20,6 +20,7 @@ public:
 
 	// Ustawia obraz zrodlowy do operacji morfologicznych
 	virtual void setSourceImage(const cv::Mat* src) = 0;
+	virtual void setSourceImage(const cv::Mat* src, GLuint glresource) = 0;
 
 	// Ustawia element strukturalny
 	int setStructuringElement(const cv::Mat& selement);
@@ -30,6 +31,8 @@ public:
 	// Rekompiluje kod kernela odpowiedzialny za wskazana operacje
 	// (Ma sens dla dylatacji i erozji)
 	void recompile(EOperationType opType, int coordsSize);
+
+	bool usingShared() const { return useShared; }
 
 	inline void setWorkGroupSize(int x, int y)
 	{ workGroupSizeX = x; workGroupSizeY = y; }
@@ -51,6 +54,9 @@ protected:
 	// Rozmiar grupy roboczej
 	int workGroupSizeX;
 	int workGroupSizeY;
+
+	int sharedw, sharedh;
+	bool useShared;
 
 	struct SKernelParameters
 	{

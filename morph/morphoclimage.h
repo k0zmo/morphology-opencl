@@ -5,12 +5,12 @@
 class MorphOpenCLImage : public MorphOpenCL
 {
 public:
-	MorphOpenCLImage()
-		: MorphOpenCL()
-	{ }
+	MorphOpenCLImage();
+	virtual ~MorphOpenCLImage();
 
 	/*override*/ virtual bool initOpenCL();
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
+	/*override*/ virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
 
 private:
@@ -22,6 +22,8 @@ private:
 		cl::Image2D gpu;
 	};
 	SImage sourceImage;	
+
+	cl::Image2DGL shared;
 
 private:
 	// Odczyt ze wskazanej tekstury do podanej macierzy

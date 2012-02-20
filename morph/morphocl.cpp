@@ -17,12 +17,16 @@ MorphOpenCL::MorphOpenCL()
 : error(false),
 errorCallback(nullptr),
 kradiusx(0),
-kradiusy(0)
+kradiusy(0),
+sharedw(-1), 
+sharedh(-1),
+useShared(false)
 {
 	// Wczytaj opcje z pliku konfiguracyjnego
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
 	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
+	useShared      = settings.value("opencl/glinterop", "true").toBool();
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCL::initOpenCL()
@@ -64,7 +68,7 @@ bool MorphOpenCL::initOpenCL()
 			printf("Choose OpenCL platform: ");
 			int r = scanf("%d", &choice);
 			// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
-			// trzeba opronznic stdin, inaczej wpadniemy w nieskonczona petle
+			// trzeba oproznic stdin, inaczej wpadniemy w nieskonczona petle
 			if(r != 1)
 			{
 				char buf[128];
@@ -74,13 +78,22 @@ bool MorphOpenCL::initOpenCL()
 		platform = platforms[choice-1];
 	}
 
-	cl_context_properties properties[] = { 
-		CL_CONTEXT_PLATFORM, (cl_context_properties)(platform)(),
+	cl_context_properties properties_interop[] = { 
+		CL_CONTEXT_PLATFORM, (cl_context_properties) (platform)(),
+		CL_GL_CONTEXT_KHR,   (cl_context_properties) wglGetCurrentContext(),
+		CL_WGL_HDC_KHR,      (cl_context_properties) wglGetCurrentDC(),
 		0, 0
 	};	
 
+	cl_context_properties properties[] = { 
+		CL_CONTEXT_PLATFORM, (cl_context_properties) (platform)(),
+		0, 0
+	};
+
 	// Stworz kontekst
-	context = cl::Context(CL_DEVICE_TYPE_ALL, properties, nullptr, nullptr, &err);
+	context = cl::Context(CL_DEVICE_TYPE_ALL,
+		useShared ? properties_interop : properties, 
+		nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 	if(error) return false;
 

@@ -22,6 +22,7 @@ void GLWidget::initializeGL()
 	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
 	// -------------------------------
 	// Tekstura
@@ -75,12 +76,12 @@ void GLWidget::initializeGL()
 		exit(-1);
 	};
 
-	if(!prog->addShaderFromSourceFile(
-		QGLShader::Vertex, QLatin1String("gl/vertex.glsl")))
+	if(!prog->addShaderFromSourceFile
+		(QGLShader::Vertex, QLatin1String("gl/vertex.glsl")))
 		raportError();
 
-	if(!prog->addShaderFromSourceFile(
-		QGLShader::Fragment, QLatin1String("gl/fragment.glsl")))
+	if(!prog->addShaderFromSourceFile
+		(QGLShader::Fragment, QLatin1String("gl/fragment.glsl")))
 		raportError();
 
 	if(!prog->link())
@@ -113,20 +114,31 @@ void GLWidget::resizeGL(int width, int height)
 void GLWidget::setSurface(const cv::Mat& cvSurface)
 {
 	makeCurrent();
+	createSurface_impl(cvSurface.cols, cvSurface.rows, cvSurface.data);
+	updateGL();
+}
+// -------------------------------------------------------------------------
+GLuint GLWidget::createEmptySurface(int w, int h)
+{
+	createSurface_impl(w, h, nullptr);
+	return surface;
+}
+// -------------------------------------------------------------------------
+void GLWidget::createSurface_impl(int w, int h, const void* data)
+{
+	makeCurrent();
 
-	if(swidth != cvSurface.cols || sheight != cvSurface.rows)
+	if(swidth != w || sheight != h)
 	{
-		swidth = cvSurface.cols;
-		sheight = cvSurface.rows;
+		swidth = w;
+		sheight = h;
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, swidth, 
-			sheight, 0, GL_RED, GL_UNSIGNED_BYTE, cvSurface.data);
+			sheight, 0, GL_RED, GL_UNSIGNED_BYTE, data);
 	}
- 	else
- 	{
- 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, swidth,
- 			sheight, GL_RED, GL_UNSIGNED_BYTE, cvSurface.data);
- 	}
-
-	updateGL();
+	else
+	{
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, swidth,
+			sheight, GL_RED, GL_UNSIGNED_BYTE, data);
+	}
 }

@@ -79,11 +79,16 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.cbAutoTrigger, SIGNAL(stateChanged(int)), this, SLOT(autoRunChanged(int)));
 	connect(ui.pbRun, SIGNAL(pressed()), this, SLOT(runPressed()));
 
+	// Wymuszenie initializeGL tak aby miec juz utworzony kontekst OGL
+	// OpenGL najpierw, pozniej OpenCL
+	ui.glWidget->updateGL();
+	ui.glWidget->makeCurrent();
+
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 	maxImageWidth = settings.value("gui/maximagewidth", 512).toInt();
 	maxImageHeight = settings.value("gui/maximageheight", 512).toInt();
 	
-	int method = 0;
+	method = 0;
 	printf("There are 2 methods implemented:\n"
 		"\t1) 2D buffer (image object)\n"
 		"\t2) 1D buffer (buffer object)\n");
@@ -101,9 +106,6 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	}
 	initOpenCL(method);
 	openFile(filename);
-
-	// Wymuszenie initializeGL tak aby miec juz utworzony kontekst OGL
-	ui.glWidget->updateGL();
 
 	// Wartosci domyslne
 	ui.rbNone->toggle();
@@ -190,6 +192,7 @@ void MainWindow::cameraInputTriggered(bool state)
 		{
 			QMessageBox::critical(nullptr, "Error", 
 				"Cannot establish connection to default camera device.", QMessageBox::Ok);
+			ui.actionCameraInput->setChecked(false);
 			return;
 		}
 
@@ -250,7 +253,6 @@ void MainWindow::pickMethodTriggered()
 
 	msgBox.exec();
 
-	int method;
 	if(msgBox.clickedButton() == buffer1D)
 		method = 2;
 	else if(msgBox.clickedButton() == buffer2D)
@@ -260,9 +262,7 @@ void MainWindow::pickMethodTriggered()
 
  	delete ocl;
  	initOpenCL(method);
-
- 	if(oclSupported)
- 		ocl->setSourceImage(&src);
+ 	setOpenCLSourceImage();
 }
 // -------------------------------------------------------------------------
 void MainWindow::invertChanged(int state)
@@ -270,10 +270,7 @@ void MainWindow::invertChanged(int state)
 	Q_UNUSED(state);
 	
 	negateImage(src);
-
-	if(oclSupported)
-		ocl->setSourceImage(&src);
-
+	setOpenCLSourceImage();
 	refresh();
 }
 // -------------------------------------------------------------------------
@@ -474,9 +471,7 @@ void MainWindow::timerEvent(QTimerEvent* event)
 	if(ui.cbInvert->isChecked())
 		negateImage(src);
 
-	if(oclSupported)
-		ocl->setSourceImage(&src);
-
+	setOpenCLSourceImage();
 	refresh();
 }
 
@@ -549,6 +544,29 @@ void MainWindow::showCvImage(const cv::Mat& image)
 	adjustSize();
 }
 // -------------------------------------------------------------------------
+void MainWindow::showGlImage(int w, int h)
+{
+	QSize surfaceSize(w, h);
+
+	if(h > maxImageHeight || w > maxImageWidth)
+	{
+		double fx;
+		if(h > w)
+			fx = static_cast<double>(maxImageHeight) / h;
+		else
+			fx = static_cast<double>(maxImageWidth) / w;
+
+		surfaceSize.setWidth(w * fx);
+		surfaceSize.setHeight(h * fx);
+	}
+
+	ui.glWidget->setMinimumSize(surfaceSize);
+	ui.glWidget->setMaximumSize(surfaceSize);
+	ui.glWidget->updateGL();
+
+	adjustSize();
+}
+// -------------------------------------------------------------------------
 void MainWindow::openFile(const QString& filename)
 {
 	src = cv::imread(filename.toStdString());
@@ -564,8 +582,7 @@ void MainWindow::openFile(const QString& filename)
 	else if(channels == 4)
 		cvtColor(src, src, CV_BGRA2GRAY);
 
-	if(oclSupported)
-		ocl->setSourceImage(&src);
+	setOpenCLSourceImage();
 }
 // -------------------------------------------------------------------------
 void MainWindow::refresh()
@@ -686,7 +703,10 @@ void MainWindow::morphologyOpenCL()
 		statusBarLabel->setText(txt);
 
 		// Pokaz obraz wynikowy
-		showCvImage(dst);
+		if(!ocl->usingShared())
+			showCvImage(dst);
+		else
+			showGlImage(src.cols, src.rows);
 	}	
 }
 // -------------------------------------------------------------------------
@@ -718,4 +738,21 @@ EOperationType MainWindow::operationType()
 	else if(ui.rbSkeleton->isChecked()) { return OT_Skeleton; }
 	else if(ui.rbSkeletonZhang->isChecked()) { return OT_Skeleton_ZhangSuen; }
 	else { return OT_Erode; }
+}
+// -------------------------------------------------------------------------
+void MainWindow::setOpenCLSourceImage()
+{
+	if(oclSupported)
+	{
+		if(ocl->usingShared())
+		{
+			GLuint glresource = ui.glWidget->createEmptySurface
+				(src.cols, src.rows);
+			ocl->setSourceImage(&src, glresource);
+		}
+		else
+		{
+			ocl->setSourceImage(&src);
+		}
+	}
 }

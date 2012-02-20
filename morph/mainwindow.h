@@ -30,6 +30,7 @@ private:
 
 	MorphOpenCL* ocl;
 	bool oclSupported;
+	int method;
 
 private:
 	// Inicjalizuje OpenCLa
@@ -37,6 +38,7 @@ private:
 	
 	// Ustawia podany obraz w oknie podgladu
 	void showCvImage(const cv::Mat& image);
+	void showGlImage(int w, int h);
 	
 	// Czyta plik graficzny o podanej nazwie
 	void openFile(const QString& filename);
@@ -58,6 +60,8 @@ private:
 	void morphologyOpenCL();
 
 	void timerEvent(QTimerEvent* event);
+
+	void setOpenCLSourceImage();;
 
 private slots:
 	void openTriggered();
