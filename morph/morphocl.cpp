@@ -138,11 +138,18 @@ bool MorphOpenCL::initOpenCL()
 	std::vector<cl::Device> devs(1);
 	devs[0] = (dev);
 
+	cl_device_type deviceType;
+	dev.getInfo(CL_DEVICE_TYPE, &deviceType);
+	if(deviceType != CL_DEVICE_TYPE_GPU)
+		useShared = false;
+
 	cl_uint maxComputeUnits, maxClockFreq;
 	cl_ulong maxMemAllocSize, localMemSize;
 	cl_device_local_mem_type localMemType;
 
 	printf("\n********************************************************\n");
+	printf("Using CL/GL interop: %s\n", useShared ? "yes" : "no");
+
 	dev.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &maxComputeUnits);
 	printf("Compute units: %d\n", maxComputeUnits);
 
