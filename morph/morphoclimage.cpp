@@ -69,33 +69,24 @@ bool MorphOpenCLImage::initOpenCL()
 	gradientParams.kernelName = s.value("kernel-buffer2D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	// Wczytaj programy (rekompilowalne)
-	cl::Program perode = createProgram(erodeParams.programName, opts);
-	cl::Program pdilate = createProgram(dilateParams.programName, opts);
-	cl::Program pgradient = createProgram(gradientParams.programName, opts);
-
-	// Wczytaj reszte programow (nie ma sensu ich rekompilowac)
-	cl::Program poutline = createProgram("kernels-buffer2D/outline.cl", opts);
-	cl::Program putils = createProgram("kernels-buffer2D/utils.cl", opts);
-	cl::Program pskeleton = createProgram("kernels-buffer2D/skeleton.cl", opts);
-	cl::Program pskeletonz = createProgram("kernels-buffer2D/skeleton_zhang.cl", opts);
+	// Wczytaj program
+	cl::Program program = createProgram("kernels-buffer2D/morph.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
-	kernelErode = createKernel(perode, erodeParams.kernelName);
-	kernelDilate = createKernel(pdilate, dilateParams.kernelName);
-	kernelGradient = createKernel(pgradient, gradientParams.kernelName);
-	
-	kernelOutline = createKernel(poutline, "outline");
-	kernelSubtract = createKernel(putils, "subtract");
+	kernelErode = createKernel(program, erodeParams.kernelName);
+	kernelDilate = createKernel(program, dilateParams.kernelName);
+	kernelGradient = createKernel(program, gradientParams.kernelName);
+	kernelOutline = createKernel(program, "outline");
+	kernelSubtract = createKernel(program, "subtract");
 
 	for(int i = 0; i < 8; ++i)
 	{
 		QString kernelName = "skeleton_iter" + QString::number(i+1);
-		kernelSkeleton_iter[i] = createKernel(pskeleton, kernelName);
+		kernelSkeleton_iter[i] = createKernel(program, kernelName);
 	}
 
-	kernelSkeleton_pass[0]  = createKernel(pskeletonz, "skeletonZhang_pass1");
-	kernelSkeleton_pass[1]  = createKernel(pskeletonz, "skeletonZhang_pass2");
+	kernelSkeleton_pass[0]  = createKernel(program, "skeletonZhang_pass1");
+	kernelSkeleton_pass[1]  = createKernel(program, "skeletonZhang_pass2");
 
 	return true;
 }

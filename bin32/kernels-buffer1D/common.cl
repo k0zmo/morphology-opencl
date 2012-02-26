@@ -1,3 +1,6 @@
+#ifndef __COMMON_CL__
+#define __COMMON_CL__
+
 #ifdef USE_UCHAR
 	#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 	typedef uchar type_t;
@@ -153,3 +156,5 @@ void cache4ToLocalMemory16(
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
 }
+
+#endif

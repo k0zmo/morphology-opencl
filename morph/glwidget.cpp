@@ -33,12 +33,6 @@ void GLWidget::initializeGL()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-	//glEnable(GL_TEXTURE_2D);
-
 	// -------------------------------
 	// Dane wierzcholkow
 	struct Vertex { float x, y, s, t; };
@@ -62,13 +56,8 @@ void GLWidget::initializeGL()
 		sizeof(Vertex), (GLubyte*)nullptr + sizeof(float)*2);
 	glEnableVertexAttribArray(1);
 
-	//glVertexPointer(2, GL_FLOAT, sizeof(Vertex), (GLubyte*)nullptr);
-	//glEnableClientState(GL_VERTEX_ARRAY);
-	//glTexCoordPointer(2, GL_FLOAT, sizeof(Vertex), (GLubyte*)nullptr + sizeof(float)*2);
-	//glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
 	// -------------------------------
-	// Shadery
+	// Shader
 	auto raportError = [this]()
 	{
 		QMessageBox::critical(nullptr,
@@ -91,8 +80,6 @@ void GLWidget::initializeGL()
 	prog->setUniformValue("surface", 0);
 	prog->bindAttributeLocation("in_pos", 0);
 	prog->bindAttributeLocation("in_texCoord", 1);
-
-	//glUseProgram(0);
 }
 // -------------------------------------------------------------------------
 void GLWidget::paintGL()
