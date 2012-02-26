@@ -45,6 +45,8 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.actionOpenCL, SIGNAL(triggered(bool)), this, SLOT(openCLTriggered(bool)));
 	connect(ui.actionPickMethod, SIGNAL(triggered()), this, SLOT(pickMethodTriggered()));
 	connect(ui.actionCameraInput, SIGNAL(triggered(bool)), this, SLOT(cameraInputTriggered(bool)));
+	connect(ui.actionOpenSE, SIGNAL(triggered()), this, SLOT(openSETriggered()));
+	connect(ui.actionSaveSE, SIGNAL(triggered()), this, SLOT(saveSETriggered()));
 
 	connect(ui.cbInvert, SIGNAL(stateChanged(int)), this, SLOT(invertChanged(int)));
 
@@ -239,6 +241,94 @@ void MainWindow::cameraInputTriggered(bool state)
 	{
 		killTimer(timerId);
 		camera.release();
+	}
+}
+// -------------------------------------------------------------------------
+void MainWindow::openSETriggered()
+{
+	QString filename = QFileDialog::getOpenFileName(this, QString(), ".",
+		QString::fromLatin1("Structuring element file (*.se)"));
+
+	if(!filename.isEmpty())
+	{
+		// Dane do deserializacji
+		EStructuringElementType etype;
+		int xradius, yradius, rotation, type;
+		unsigned magic;
+
+		// Otworz wskazany plik i go zdeserializuj
+		QFile file(filename);
+		file.open(QIODevice::ReadOnly);
+		QDataStream strm(&file);
+		strm >> magic;
+		if(magic != 0x1337U)
+		{
+			QMessageBox::critical(nullptr, "Error",
+				"Unknown format file or file is corrupted.",
+				QMessageBox::Ok);
+			return;
+		}
+
+		strm >> type >> xradius >> yradius >> rotation;
+		etype = static_cast<EStructuringElementType>(type);
+		file.close();
+
+		// Jesli mamy wlaczonego auto-refresha, deaktywujemy go na chwile
+		bool autorefresh = ui.cbAutoTrigger->isChecked();
+		ui.cbAutoTrigger->setChecked(false);
+
+		// Ustaw ksztalt elementu strukturalnego
+		switch(etype)
+		{
+		case SET_Rect:
+			ui.rbRect->setChecked(true); break;
+		case SET_Ellipse:
+			ui.rbEllipse->setChecked(true); break;
+		case SET_Cross:
+			ui.rbCross->setChecked(true); break;
+		case SET_Diamond:
+		default:
+			ui.rbDiamond->setChecked(true); break;
+		}
+
+		// Ustaw jego rozmiar oraz rotacje
+		if(xradius != yradius)
+			ui.cbSquare->setChecked(false);
+		else
+			ui.cbSquare->setChecked(true);
+
+		ui.hsXElementSize->setValue(xradius);
+		ui.hsYElementSize->setValue(yradius);
+		ui.dialRotation->setValue(rotation);
+
+		// Przywroc auto-refresha to stanu poprzedniego
+		// Jesli byl ustalony to zostanie wywolany refresh()
+		ui.cbAutoTrigger->setChecked(autorefresh);
+	}
+}
+// -------------------------------------------------------------------------
+void MainWindow::saveSETriggered()
+{
+	QString filename = QFileDialog::getSaveFileName(this, QString(), ".",
+		QString::fromLatin1("Structuring element file (*.se)"));
+
+	if(!filename.isEmpty())
+	{
+		EStructuringElementType type;
+		if(ui.rbRect->isChecked()) type = SET_Rect;
+		else if(ui.rbEllipse->isChecked()) type = SET_Ellipse;
+		else if(ui.rbCross->isChecked()) type = SET_Cross;
+		else type = SET_Diamond;
+
+		int xradius = ui.hsXElementSize->value();
+		int yradius = ui.hsYElementSize->value();
+		int rotation = ui.dialRotation->value();
+
+		QFile file(filename);
+		file.open(QIODevice::WriteOnly);
+		QDataStream strm(&file);
+		strm << 0x1337U << type << xradius << yradius << rotation;
+		file.close();
 	}
 }
 // -------------------------------------------------------------------------
