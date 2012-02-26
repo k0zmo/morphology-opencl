@@ -496,7 +496,7 @@
      <x>0</x>
      <y>0</y>
      <width>485</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -506,6 +506,10 @@
     <addaction name="actionCameraInput"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
+    <addaction name="separator"/>
+    <addaction name="actionSaveSE"/>
+    <addaction name="actionOpenSE"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
@@ -520,12 +524,12 @@
   </widget>
   <action name="actionOpen">
    <property name="text">
-    <string>&amp;Open</string>
+    <string>&amp;Open image</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>&amp;Save</string>
+    <string>&amp;Save image</string>
    </property>
   </action>
   <action name="actionExit">
@@ -571,6 +575,16 @@
    </property>
    <property name="text">
     <string>From camera</string>
+   </property>
+  </action>
+  <action name="actionSaveSE">
+   <property name="text">
+    <string>Save structuring element</string>
+   </property>
+  </action>
+  <action name="actionOpenSE">
+   <property name="text">
+    <string>Open structuring element</string>
    </property>
   </action>
  </widget>

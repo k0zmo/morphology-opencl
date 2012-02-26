@@ -31,5 +31,5 @@ PRECOMPILED_HEADER = precompiled.h
 
 # For gcc only
 QMAKE_CXXFLAGS += -std=c++0x -fopenmp
-LIBS += -lopencv_core -lopencv_imgproc -lOpenCL -fopenmp
+LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
 LIBS += -L$(AMDAPPSDKROOT)/lib/x86_64

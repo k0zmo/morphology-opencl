@@ -66,6 +66,9 @@ private slots:
 	void pickMethodTriggered();
 	void cameraInputTriggered(bool state);
 
+	void openSETriggered();
+	void saveSETriggered();
+
 	void invertChanged(int state);
 	void noneOperationToggled(bool checked);
 	void operationToggled(bool checked);
