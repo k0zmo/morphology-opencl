@@ -131,7 +131,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	cl_ulong elapsed = 0;
 
 	// Obraz docelowy
-	cl::Image2D clDstImage = createImage2D(CL_MEM_READ_ONLY);
+	cl::Image2D clDstImage = createImage2D(CL_MEM_WRITE_ONLY);
 
 	switch(opType)
 	{
