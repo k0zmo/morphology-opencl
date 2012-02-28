@@ -17,12 +17,31 @@ GLWidget::~GLWidget()
 // -------------------------------------------------------------------------
 void GLWidget::initializeGL()
 {
-	glewInit();
+	printf("glewInit()\n");
+	GLenum err = glewInit();
+	if(err != GLEW_OK)
+	{
+		QString msg = "GLEW error: ";
+		msg += QLatin1String(reinterpret_cast<const char*>
+			(glewGetErrorString(err)));
+		QMessageBox::critical(nullptr, "GLWidget error", msg, QMessageBox::Ok);
+		exit(-1);
+	}
+	printf("Using OpenGL %s version\n", glGetString(GL_VERSION));
+
+	if(!GLEW_VERSION_2_0)
+	{
+		QMessageBox::critical(nullptr, "GLWidget error",
+			"GL 2.0 version is required", QMessageBox::Ok);
+		exit(-1);
+	}
 
 	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+	printf("Creating empty texture object ()\n");
 
 	// -------------------------------
 	// Tekstura
@@ -42,6 +61,8 @@ void GLWidget::initializeGL()
 		{ -1,  3,   0, 0 }
 	};
 
+	printf("Creating vertex buffer object\n");
+
 	glGenBuffers(1, &vboQuad);
 	glBindBuffer(GL_ARRAY_BUFFER, vboQuad);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -55,6 +76,8 @@ void GLWidget::initializeGL()
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 
 		sizeof(Vertex), (GLubyte*)nullptr + sizeof(float)*2);
 	glEnableVertexAttribArray(1);
+
+	printf("Creating shaders\n");
 
 	// -------------------------------
 	// Shader
