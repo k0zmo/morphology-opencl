@@ -49,6 +49,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.actionSaveSE, SIGNAL(triggered()), this, SLOT(saveSETriggered()));
 
 	connect(ui.cbInvert, SIGNAL(stateChanged(int)), this, SLOT(invertChanged(int)));
+	connect(ui.cmbBayer, SIGNAL(currentIndexChanged(int)), this, SLOT(bayerIndexChanged(int)));
 
 	// Operacje
 	connect(ui.rbNone, SIGNAL(toggled(bool)), this, SLOT(noneOperationToggled(bool)));
@@ -362,6 +363,12 @@ void MainWindow::invertChanged(int state)
 	negateImage(src);
 	setOpenCLSourceImage();
 	refresh();
+}
+// -------------------------------------------------------------------------
+void MainWindow::bayerIndexChanged(int i)
+{
+	if(oclSupported)
+		ocl->setBayerFilter(static_cast<EBayerCode>(i));
 }
 // -------------------------------------------------------------------------
 void MainWindow::noneOperationToggled(bool checked)
@@ -704,6 +711,21 @@ void MainWindow::morphologyOpenCV()
 
 	int iters = 1;
 	EOperationType opType = operationType();
+	cv::Mat src_ = src;
+
+	if(ui.cmbBayer->currentIndex() != 0)
+	{
+		// Jest bug dla CV_BayerXX2GRAY i trzeba wykonac sciezke okrezna
+		switch(ui.cmbBayer->currentIndex())
+		{
+		case 1: cv::cvtColor(src, src_, CV_BayerRG2BGR); break;
+		case 2: cv::cvtColor(src, src_, CV_BayerGR2BGR); break;
+		case 3: cv::cvtColor(src, src_, CV_BayerBG2BGR); break;
+		case 4: cv::cvtColor(src, src_, CV_BayerGB2BGR); break;
+		default: break;
+		}
+		cvtColor(src_, src_, CV_BGR2GRAY);
+	}
 
 	// Operacje hit-miss
 	if (opType == OT_Outline ||
@@ -714,17 +736,17 @@ void MainWindow::morphologyOpenCV()
 		{
 		case OT_Outline:
 			{
-				morphologyOutline(src, dst);
+				morphologyOutline(src_, dst);
 				break;
 			}
 		case OT_Skeleton:
 			{
-				iters = morphologySkeleton(src, dst);
+				iters = morphologySkeleton(src_, dst);
 				break;
 			}
 		case OT_Skeleton_ZhangSuen:
 			{
-				iters = morphologySkeletonZhangSuen(src, dst);
+				iters = morphologySkeletonZhangSuen(src_, dst);
 				break;
 			}
 		default: break;
@@ -746,7 +768,7 @@ void MainWindow::morphologyOpenCV()
 		}
 
 		cv::Mat element = standardStructuringElement();
-		cv::morphologyEx(src, dst, op_type, element);
+		cv::morphologyEx(src_, dst, op_type, element);
 	}
 
 	showCvImage(dst);

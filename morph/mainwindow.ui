@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>464</width>
-    <height>442</height>
+    <width>474</width>
+    <height>487</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -424,6 +424,35 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="0">
+            <widget class="QComboBox" name="cmbBayer">
+             <item>
+              <property name="text">
+               <string>No preprocessing</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Bayer RG</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Bayer GR</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Bayer BG</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Bayer GB</string>
+              </property>
+             </item>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>
@@ -507,8 +536,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>485</width>
-     <height>20</height>
+     <width>474</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

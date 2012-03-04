@@ -75,6 +75,7 @@ private slots:
 	void saveSETriggered();
 
 	void invertChanged(int state);
+	void bayerIndexChanged(int i);
 	void noneOperationToggled(bool checked);
 	void operationToggled(bool checked);
 	void structuringElementToggled(bool checked);

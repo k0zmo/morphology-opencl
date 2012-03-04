@@ -22,6 +22,10 @@ public:
 	virtual void setSourceImage(const cv::Mat* src) = 0;
 	virtual void setSourceImage(const cv::Mat* src, GLuint glresource) = 0;
 
+	// Ustawia czy przed filtracja wlasciwa wykonana zostanie interpolacja bayera
+	void setBayerFilter(EBayerCode code)
+	{ bayerFilter = code; }
+
 	// Ustawia element strukturalny
 	int setStructuringElement(const cv::Mat& selement);
 
@@ -57,6 +61,7 @@ protected:
 
 	int sharedw, sharedh;
 	bool useShared;
+	EBayerCode bayerFilter;
 
 	struct SKernelParameters
 	{
@@ -71,6 +76,7 @@ protected:
 	SKernelParameters gradientParams;
 
 	cl::Kernel kernelSubtract;
+	cl::Kernel kernelBayer[4];
 
 	// Standardowe ('cegielki') operacje morfologiczne
 	cl::Kernel kernelErode;

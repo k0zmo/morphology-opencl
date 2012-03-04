@@ -30,6 +30,16 @@ enum EStructuringElementType
 	SET_Diamond
 };
 
+enum EBayerCode
+{
+	BC_None,
+	BC_RedGreen,
+	BC_GreenRed,
+	BC_BlueGreen,
+	BC_GreenBlue
+};
+
+
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructuringElementType type, int rotation = 0);

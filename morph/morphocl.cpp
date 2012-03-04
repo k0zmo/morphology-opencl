@@ -20,7 +20,8 @@ kradiusx(0),
 kradiusy(0),
 sharedw(-1), 
 sharedh(-1),
-useShared(false)
+useShared(false),
+bayerFilter(BC_None)
 {
 	// Wczytaj opcje z pliku konfiguracyjnego
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
