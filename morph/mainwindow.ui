@@ -553,15 +553,17 @@
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
-   <widget class="QMenu" name="menuSettings">
+   <widget class="QMenu" name="menuConfig">
     <property name="title">
-     <string>Settings</string>
+     <string>Configure</string>
     </property>
     <addaction name="actionOpenCL"/>
     <addaction name="actionPickMethod"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuSettings"/>
+   <addaction name="menuConfig"/>
   </widget>
   <action name="actionOpen">
    <property name="text">
@@ -626,6 +628,11 @@
   <action name="actionOpenSE">
    <property name="text">
     <string>Open structuring element</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Settings</string>
    </property>
   </action>
  </widget>

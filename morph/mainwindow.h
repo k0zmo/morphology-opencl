@@ -69,6 +69,7 @@ private slots:
 	void exitTriggered();
 	void openCLTriggered(bool state);
 	void pickMethodTriggered();
+	void settingsTriggered();
 	void cameraInputTriggered(bool state);
 
 	void openSETriggered();

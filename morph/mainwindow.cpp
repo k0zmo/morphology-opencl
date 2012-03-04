@@ -16,6 +16,7 @@
 #endif
 
 #include "ui_sepreview.h"
+#include "ui_settings.h"
 
 void negateImage(cv::Mat& src)
 {
@@ -44,6 +45,7 @@ MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	connect(ui.actionExit, SIGNAL(triggered()), this, SLOT(exitTriggered()));
 	connect(ui.actionOpenCL, SIGNAL(triggered(bool)), this, SLOT(openCLTriggered(bool)));
 	connect(ui.actionPickMethod, SIGNAL(triggered()), this, SLOT(pickMethodTriggered()));
+	connect(ui.actionSettings, SIGNAL(triggered()), this, SLOT(settingsTriggered()));
 	connect(ui.actionCameraInput, SIGNAL(triggered(bool)), this, SLOT(cameraInputTriggered(bool)));
 	connect(ui.actionOpenSE, SIGNAL(triggered()), this, SLOT(openSETriggered()));
 	connect(ui.actionSaveSE, SIGNAL(triggered()), this, SLOT(saveSETriggered()));
@@ -354,6 +356,82 @@ void MainWindow::pickMethodTriggered()
  	delete ocl;
  	initOpenCL(method);
  	setOpenCLSourceImage();
+}
+// -------------------------------------------------------------------------
+void MainWindow::settingsTriggered()
+{
+	QDialog* d = new QDialog(this);
+	d->setModal(true);
+
+	Ui::SettingDialog uid;
+	uid.setupUi(d);
+
+	// Ustaw wartosci kontrolek zgodnie z ustawieniami w settings.cfg
+	QSettings s("./settings.cfg", QSettings::IniFormat);
+	auto setComboBoxIndex = [&s](QComboBox* cb, const QString& path)
+	{
+		int i = cb->findText(s.value(path).toString());
+		//if(i == -1) i = 0;
+		cb->setCurrentIndex(i);
+	};
+
+	// Sekcja Preview
+	uid.maxImageWidthLineEdit->setText(s.value("gui/maximagewidth").toString());
+	uid.maxImageHeightLineEdit->setText(s.value("gui/maximageheight").toString());
+	uid.defaultImageLineEdit->setText(s.value("gui/defaultimage").toString());
+
+	// Sekcja OpenCL
+	uid.useAtomicCountersCheckBox->setChecked(s.value("opencl/atomiccounters").toBool());
+	uid.openGInteropCheckBox->setChecked(s.value("opencl/glinterop").toBool());
+	uid.datatypeComboBox->setCurrentIndex(s.value("opencl/datatype").toInt());
+	setComboBoxIndex(uid.workgroupSizeXComboBox, "opencl/workgroupsizex");
+	setComboBoxIndex(uid.workgroupSizeYComboBox, "opencl/workgroupsizey");
+
+	// Sekcja Buffer 2D kernels
+	setComboBoxIndex(uid.erodeKernelComboBox, "kernel-buffer2D/erode");
+	setComboBoxIndex(uid.dilateKernelComboBox, "kernel-buffer2D/dilate");
+	setComboBoxIndex(uid.gradientKernelComboBox, "kernel-buffer2D/gradient");
+
+	// Sekcja Buffer 1D kernels
+	setComboBoxIndex(uid.erodeKernelComboBox_2, "kernel-buffer1D/erode");
+	setComboBoxIndex(uid.dilateKernelComboBox_2, "kernel-buffer1D/dilate");
+	setComboBoxIndex(uid.gradientKernelComboBox_2, "kernel-buffer1D/gradient");
+	setComboBoxIndex(uid.subtractKernelComboBox, "kernel-buffer1D/subtract");
+	setComboBoxIndex(uid.hitmissMemTypeComboBox, "kernel-buffer1D/hitmiss");
+
+	// Ustaw dodatkowo walidator
+	QIntValidator validator(0, 2048);
+	uid.maxImageWidthLineEdit->setValidator(&validator);
+	uid.maxImageHeightLineEdit->setValidator(&validator);
+
+	int ret = d->exec();
+	if(ret == QDialog::Accepted)
+	{
+		s.setValue("gui/maximagewidth", uid.maxImageWidthLineEdit->text());
+		s.setValue("gui/maximageheight", uid.maxImageHeightLineEdit->text());
+		s.setValue("gui/defaultimage", uid.defaultImageLineEdit->text());
+
+		s.setValue("opencl/atomiccounters", 
+			QVariant(uid.useAtomicCountersCheckBox->isChecked()));
+		s.setValue("opencl/glinterop", 
+			QVariant(uid.openGInteropCheckBox->isChecked()));
+		s.setValue("opencl/datatype", uid.datatypeComboBox->currentText());
+		s.setValue("opencl/workgroupsizex", uid.workgroupSizeXComboBox->currentText());
+		s.setValue("opencl/workgroupsizey", uid.workgroupSizeYComboBox->currentText());
+
+		s.setValue("kernel-buffer2D/erode", uid.erodeKernelComboBox->currentText());
+		s.setValue("kernel-buffer2D/dilate", uid.dilateKernelComboBox->currentText());
+		s.setValue("kernel-buffer2D/gradient", uid.gradientKernelComboBox->currentText());
+
+		s.setValue("kernel-buffer1D/erode", uid.erodeKernelComboBox_2->currentText());
+		s.setValue("kernel-buffer1D/dilate", uid.dilateKernelComboBox_2->currentText());
+		s.setValue("kernel-buffer1D/gradient", uid.gradientKernelComboBox_2->currentText());
+		s.setValue("kernel-buffer1D/subtract", uid.subtractKernelComboBox->currentText());
+		s.setValue("kernel-buffer1D/hitmiss", uid.hitmissMemTypeComboBox->currentText());
+
+		QMessageBox::information(this, "Settings", 
+			"You need to restart the application to apply changes.", QMessageBox::Ok);
+	}
 }
 // -------------------------------------------------------------------------
 void MainWindow::invertChanged(int state)

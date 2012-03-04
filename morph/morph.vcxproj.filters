@@ -97,6 +97,9 @@
     <ClInclude Include="glwidget.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GeneratedFiles\ui_settings.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="morph.qrc">
@@ -109,6 +112,9 @@
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="sepreview.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="settings.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
   </ItemGroup>
