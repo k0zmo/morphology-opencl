@@ -4,9 +4,11 @@
 #ifdef USE_UCHAR
 	#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 	typedef uchar type_t;
+	typedef uchar3 type3_t;
 	typedef uchar4 type4_t ;
 #else
 	typedef uint type_t;
+	typedef uint3 type3_t;
 	typedef uint4 type4_t;
 #endif
 

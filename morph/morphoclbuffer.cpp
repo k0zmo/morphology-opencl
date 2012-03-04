@@ -58,7 +58,7 @@ bool MorphOpenCLBuffer::initOpenCL()
 
 	// Wczytaj programy
 	cl::Program programBayer = createProgram("kernels-buffer1D/bayer.cl",
-		"-DGRAYSCALE -Ikernels-buffer1D/");
+		opts + QString(" -DGRAYSCALE"));
 	cl::Program program = createProgram("kernels-buffer1D/morph.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)

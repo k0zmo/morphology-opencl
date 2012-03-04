@@ -4,25 +4,25 @@ __constant uint4 shift = { 0, 2, 2, 0 };
 __constant uint4 ddiv = { 2, 5, 2, 1 };
 __constant uint4 coeff = { 4899, 9617, 1864, 0 };
 
-uchar4 convert_bayer2rgb(
-	__global uchar* src,
+type4_t convert_bayer2rgb(
+	__global type_t* src,
 	const int2 size,
 	int2 gid,
 	bool x_odd, bool y_odd)
 {
-	uchar3 row1 = {
+	type3_t row1 = {
 		src[(gid.x - 1) + (gid.y - 1) * size.x],
 		src[(gid.x    ) + (gid.y - 1) * size.x],
 		src[(gid.x + 1) + (gid.y - 1) * size.x],
 	};
 
-	uchar3 row2 = {
+	type3_t row2 = {
 		src[(gid.x - 1) + (gid.y) * size.x],
 		src[(gid.x    ) + (gid.y) * size.x],
 		src[(gid.x + 1) + (gid.y) * size.x],
 	};
 
-	uchar3 row3 = {
+	type3_t row3 = {
 		src[(gid.x - 1) + (gid.y + 1) * size.x],
 		src[(gid.x    ) + (gid.y + 1) * size.x],
 		src[(gid.x + 1) + (gid.y + 1) * size.x],
@@ -40,21 +40,26 @@ uchar4 convert_bayer2rgb(
 	
 	uint4 dd1 = (uint4)(r, g, b, 0) >> shift;
 	uint4 dd2 = (uint4)(rr, gg, bb, 0) / ddiv;
-	
-	uchar4 out1 = convert_uchar4(dd1);
-	uchar4 out2 = convert_uchar4(dd2);
 
- 	uchar4 out = x_odd ?
+#ifdef USE_UCHAR
+	type4_t out1 = convert_uchar4(dd1);
+	type4_t out2 = convert_uchar4(dd2);
+#else
+	type4_t out1 = dd1;
+	type4_t out2 = dd2;
+#endif
+
+ 	type4_t out = x_odd ?
  		(y_odd ? out1.xyzw : out2.zyxw) :
  		(y_odd ? out2.xyzw : out1.zyxw);
-		
+
 	return out;
 }
 
 #define DEFINE_BAYER_KERNEL_RGB(name, xo, yo) \
 	__kernel void name( \
-		__global uchar* src, \
-		__global uchar4* dst, \
+		__global type_t* src, \
+		__global type4_t* dst, \
 		const int2 size) \
 	{ \
 		int2 gid = { get_global_id(0), get_global_id(1) }; \
@@ -65,15 +70,15 @@ uchar4 convert_bayer2rgb(
 		bool x_odd = gid.x & 0x01; \
 		bool y_odd = gid.y & 0x01; \
 	\
-		uchar4 out = convert_bayer2rgb(src, size, gid, xo(x_odd), yo(y_odd)); \
+		type4_t out = convert_bayer2rgb(src, size, gid, xo(x_odd), yo(y_odd)); \
 		dst[gid.x + gid.y * size.x] = out;	\
 	}
 
 #define DESCALE(x, n) (((x) + (1 << ((n)+1))) >> (n))
 #define DEFINE_BAYER_KERNEL_GRAY(name, xo, yo) \
 	__kernel void name( \
-		__global uchar* src, \
-		__global uchar* dst, \
+		__global type_t* src, \
+		__global type_t* dst, \
 		const int2 size) \
 	{ \
 		int2 gid = { get_global_id(0), get_global_id(1) }; \
@@ -84,9 +89,9 @@ uchar4 convert_bayer2rgb(
 		bool x_odd = gid.x & 0x01; \
 		bool y_odd = gid.y & 0x01; \
 	\
-		uchar4 o = convert_bayer2rgb(src, size, gid, xo(x_odd), yo(y_odd)); \
+		type4_t o = convert_bayer2rgb(src, size, gid, xo(x_odd), yo(y_odd)); \
 		uint4 out = convert_uint4(o) * coeff; \
-		uchar gray = convert_uchar_sat(DESCALE(out.x + out.y + out.z, 14)); \
+		type_t gray = convert_uchar_sat(DESCALE(out.x + out.y + out.z, 14)); \
 		dst[gid.x + gid.y * size.x] = gray;	\
 	}
 

@@ -70,8 +70,8 @@ bool MorphOpenCLImage::initOpenCL()
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy
-	cl::Program programBayer = createProgram("kernels-buffer2D/bayer.cl",
-		"-DGRAYSCALE -Ikernels-buffer2D/");
+	cl::Program programBayer = createProgram("kernels-buffer2D/bayer.cl", 
+		opts + QString(" -DGRAYSCALE"));
 	cl::Program program = createProgram("kernels-buffer2D/morph.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
