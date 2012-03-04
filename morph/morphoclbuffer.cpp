@@ -56,7 +56,9 @@ bool MorphOpenCLBuffer::initOpenCL()
 	gradientParams.kernelName = s.value("kernel-buffer1D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	// Wczytaj program
+	// Wczytaj programy
+	cl::Program programBayer = createProgram("kernels-buffer1D/bayer.cl",
+		"-DGRAYSCALE -Ikernels-buffer1D/");
 	cl::Program program = createProgram("kernels-buffer1D/morph.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
@@ -64,6 +66,11 @@ bool MorphOpenCLBuffer::initOpenCL()
 	kernelDilate = createKernel(program, dilateParams.kernelName);
 	kernelGradient = createKernel(program, gradientParams.kernelName);
 	kernelSubtract = createKernel(program, s.value("kernel-buffer1D/subtract", "subtract").toString());
+
+	kernelBayer[0] = createKernel(programBayer, "convert_rg2gray");
+	kernelBayer[1] = createKernel(programBayer, "convert_gr2gray");
+	kernelBayer[2] = createKernel(programBayer, "convert_bg2gray");
+	kernelBayer[3] = createKernel(programBayer, "convert_gb2gray");
 
 	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
 	QString sub = s.value("kernel-buffer1D/subtract", "subtract").toString();
@@ -202,55 +209,68 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	if(useShared) clDst = shared;
 	else clDst = createBuffer(CL_MEM_WRITE_ONLY);
 
+	cl::Buffer* clSrcImage = &sourceBuffer.gpu;
+	cl::Buffer bayered;
+
+	if(bayerFilter != BC_None)
+	{
+		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
+		bayered = createBuffer(CL_MEM_READ_WRITE);
+
+		elapsed += executeBayerFilter(kernel, sourceBuffer.gpu, bayered);
+		printf("Bayer interpolation took %.05lf ms\n", elapsed * 0.000001);
+		clSrcImage = &bayered;
+	}
+
 	switch(opType)
 	{
 	case OT_Erode:
-		elapsed += morphologyErode(sourceBuffer.gpu, clDst);
+		elapsed += morphologyErode(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_Dilate:
-		elapsed += morphologyDilate(sourceBuffer.gpu, clDst);
+		elapsed += morphologyDilate(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_Open:
-		elapsed += morphologyOpen(sourceBuffer.gpu, clDst);
+		elapsed += morphologyOpen(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Close:
-		elapsed += morphologyClose(sourceBuffer.gpu, clDst);
+		elapsed += morphologyClose(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Gradient:
-		elapsed += morphologyGradient(sourceBuffer.gpu, clDst);
+		elapsed += morphologyGradient(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
 	case OT_TopHat:
-		elapsed += morphologyTopHat(sourceBuffer.gpu, clDst);
+		elapsed += morphologyTopHat(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_BlackHat:
-		elapsed += morphologyBlackHat(sourceBuffer.gpu, clDst);
+		elapsed += morphologyBlackHat(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
 	case OT_Outline:
-		elapsed += morphologyOutline(sourceBuffer.gpu, clDst);
+		elapsed += morphologyOutline(*clSrcImage, clDst);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
 	case OT_Skeleton:
-		elapsed += morphologySkeleton(sourceBuffer.gpu, clDst, iters);
+		elapsed += morphologySkeleton(*clSrcImage, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
 	case OT_Skeleton_ZhangSuen:
-		elapsed += morphologySkeletonZhangSuen(sourceBuffer.gpu, clDst, iters);
+		elapsed += morphologySkeletonZhangSuen(*clSrcImage, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
@@ -730,6 +750,38 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	// Odpal kernela
 	err = cq.enqueueNDRangeKernel(kernelSubtract,
 		offset, gridDim, blockDim,
+		nullptr, &evt);
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLBuffer::executeBayerFilter(cl::Kernel* kernel, 
+	const cl::Buffer& clSrc, const cl::Buffer& clDst)
+{
+	cl_int err;
+	cl_int2 imageSize = { sourceBuffer.gpuWidth, sourceBuffer.gpuHeight };
+
+	err  = kernel->setArg(0, clSrc);
+	err |= kernel->setArg(1, clDst);
+	err |= kernel->setArg(2, imageSize);
+
+	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
+
+	cl::NDRange offset(1, 1);
+	cl::NDRange gridDim(
+		roundUp(sourceBuffer.cpu->cols - 2, workGroupSizeX),
+		roundUp(sourceBuffer.cpu->rows - 2, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+
+	// Odpal kernela
+	cl::Event evt;
+	err |= cq.enqueueNDRangeKernel(*kernel,
+		offset, gridDim, blockDim, 
 		nullptr, &evt);
 	evt.wait();
 	clError("Error while executing kernel over ND range!", err);

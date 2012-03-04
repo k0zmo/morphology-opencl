@@ -69,7 +69,9 @@ bool MorphOpenCLImage::initOpenCL()
 	gradientParams.kernelName = s.value("kernel-buffer2D/gradient", "gradient").toString();
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
-	// Wczytaj program
+	// Wczytaj programy
+	cl::Program programBayer = createProgram("kernels-buffer2D/bayer.cl",
+		"-DGRAYSCALE -Ikernels-buffer2D/");
 	cl::Program program = createProgram("kernels-buffer2D/morph.cl", opts);
 
 	// Stworz kernele (nazwy pobierz z pliku konfiguracyjnego)
@@ -78,6 +80,11 @@ bool MorphOpenCLImage::initOpenCL()
 	kernelGradient = createKernel(program, gradientParams.kernelName);
 	kernelOutline = createKernel(program, "outline");
 	kernelSubtract = createKernel(program, "subtract");
+
+	kernelBayer[0] = createKernel(programBayer, "convert_rg2gray");
+	kernelBayer[1] = createKernel(programBayer, "convert_gr2gray");
+	kernelBayer[2] = createKernel(programBayer, "convert_bg2gray");
+	kernelBayer[3] = createKernel(programBayer, "convert_gb2gray");
 
 	for(int i = 0; i < 8; ++i)
 	{
@@ -150,37 +157,50 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	if(useShared) clDstImage = shared;
 	else clDstImage = createImage2D(CL_MEM_WRITE_ONLY);
 
+	cl::Image2D* clSrcImage = &sourceImage.gpu;
+	cl::Image2D bayered;
+
+	if(bayerFilter != BC_None)
+	{
+		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
+		bayered = createImage2D(CL_MEM_READ_WRITE);
+		
+		elapsed += executeBayerFilter(kernel, sourceImage.gpu, bayered);
+		printf("Bayer interpolation took %.05lf ms\n", elapsed * 0.000001);
+		clSrcImage = &bayered;
+	}
+
 	switch(opType)
 	{
 	case OT_Erode:
-		elapsed += morphologyErode(sourceImage.gpu, clDstImage);
+		elapsed += morphologyErode(*clSrcImage, clDstImage);
 		break;
 	case OT_Dilate:
-		elapsed += morphologyDilate(sourceImage.gpu, clDstImage);
+		elapsed += morphologyDilate(*clSrcImage, clDstImage);
 		break;
 	case OT_Open:
-		elapsed += morphologyOpen(sourceImage.gpu, clDstImage);
+		elapsed += morphologyOpen(*clSrcImage, clDstImage);
 		break;
 	case OT_Close:
-		elapsed += morphologyClose(sourceImage.gpu, clDstImage);
+		elapsed += morphologyClose(*clSrcImage, clDstImage);
 		break;
 	case OT_Gradient:
-		elapsed += morphologyGradient(sourceImage.gpu, clDstImage);
+		elapsed += morphologyGradient(*clSrcImage, clDstImage);
 		break;
 	case OT_TopHat:
-		elapsed += morphologyTopHat(sourceImage.gpu, clDstImage);
+		elapsed += morphologyTopHat(*clSrcImage, clDstImage);
 		break;
 	case OT_BlackHat:
-		elapsed += morphologyBlackHat(sourceImage.gpu, clDstImage);
+		elapsed += morphologyBlackHat(*clSrcImage, clDstImage);
 		break;
 	case OT_Outline:
-		elapsed += morphologyOutline(sourceImage.gpu, clDstImage);
+		elapsed += morphologyOutline(*clSrcImage, clDstImage);
 		break;
 	case OT_Skeleton:
-		elapsed += morphologySkeleton(sourceImage.gpu, clDstImage, iters);
+		elapsed += morphologySkeleton(*clSrcImage, clDstImage, iters);
 		break;
 	case OT_Skeleton_ZhangSuen:
-		elapsed += morphologySkeletonZhangSuen(sourceImage.gpu, clDstImage, iters);
+		elapsed += morphologySkeletonZhangSuen(*clSrcImage, clDstImage, iters);
 		break;
 	}
 
@@ -561,6 +581,35 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	// Odpal kernela
 	cl::Event evt;	
 	err |= cq.enqueueNDRangeKernel(kernelSubtract,
+		offset, gridDim, blockDim, 
+		nullptr, &evt);
+	evt.wait();
+	clError("Error while executing kernel over ND range!", err);
+
+	// Ile czasu to zajelo
+	return elapsedEvent(evt);
+}
+// -------------------------------------------------------------------------
+cl_ulong MorphOpenCLImage::executeBayerFilter(cl::Kernel* kernel, 
+	const cl::Image2D& clSrcImage, const cl::Image2D& clDstImage)
+{
+	cl_int err;
+	err  = kernel->setArg(0, clSrcImage);
+	err |= kernel->setArg(1, clDstImage);
+
+	clError("Error while setting kernel arguments", err);
+	if(err != CL_SUCCESS)
+		return 0;
+
+	cl::NDRange offset(1, 1);
+	cl::NDRange gridDim(
+		roundUp(sourceImage.cpu->cols - 2, workGroupSizeX),
+		roundUp(sourceImage.cpu->rows - 2, workGroupSizeY));
+	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+
+	// Odpal kernela
+	cl::Event evt;
+	err |= cq.enqueueNDRangeKernel(*kernel,
 		offset, gridDim, blockDim, 
 		nullptr, &evt);
 	evt.wait();

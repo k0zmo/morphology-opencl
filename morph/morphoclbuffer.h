@@ -74,4 +74,7 @@ private:
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Buffer& clABuffer,
 		const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer);
+
+	cl_ulong executeBayerFilter(cl::Kernel* kernel, 
+		const cl::Buffer& clSrc, const cl::Buffer& clDst);
 };

@@ -12,7 +12,6 @@ public:
 	/*override*/ virtual void setSourceImage(const cv::Mat* src);
 	/*override*/ virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
 	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
-
 private:
 	// Reprezentuje obraz zrodlowy, wszystkie operacje beda odwolywac sie do jego rozmiaru czy formatu
 	struct SImage
@@ -56,4 +55,7 @@ private:
 	// Pomocnicza funkcja do odpalania kernela do odejmowania dwoch obrazow od siebie
 	cl_ulong executeSubtractKernel(const cl::Image2D& clAImage, 
 		const cl::Image2D& clBImage, cl::Image2D& clDstImage);
+
+	cl_ulong executeBayerFilter(cl::Kernel* kernel, 
+		const cl::Image2D& clSrcImage, const cl::Image2D& clDstImage);
 };
