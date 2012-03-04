@@ -19,4 +19,7 @@ __constant sampler_t smp =
 	#define counter_type volatile __global int*
 #endif
 
+__attribute__((always_inline)) bool opTrue(bool o) { return o; }
+__attribute__((always_inline)) bool opFalse(bool o) { return !o; }
+
 #endif

@@ -23,6 +23,9 @@ __constant type_t BCK = 0;
 	#define counter_type volatile __global int*
 #endif
 
+__attribute__((always_inline)) bool opTrue(bool o) { return o; }
+__attribute__((always_inline)) bool opFalse(bool o) { return !o; }
+
 //
 // Cache'uje dane z pamieci globalnej do lokalnej 
 //
