@@ -1,8 +1,5 @@
 #include "mainwindow.h"
 
-#include "morphoclimage.h"
-#include "morphoclbuffer.h"
-
 #include <QElapsedTimer>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -18,19 +15,10 @@
 #include "ui_sepreview.h"
 #include "ui_settings.h"
 
-void negateImage(cv::Mat& src)
-{
-	cv::Mat lut(1, 256, CV_8U);
-	uchar* p = lut.ptr<uchar>();
-	for(int i = 0; i < lut.cols; ++i)
-	{
-		*p++ = 255 - i;
-	}
-	cv::LUT(src, lut, src);
-}
-
-// HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
-// Morph
+#include "cvutils.h"
+#include "morphoclbuffer.h"
+#include "morphoclimage.h"
+#include "morphoperators.h"
 
 MainWindow::MainWindow(QString filename, QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),
@@ -255,7 +243,7 @@ void MainWindow::openSETriggered()
 	if(!filename.isEmpty())
 	{
 		// Dane do deserializacji
-		EStructuringElementType etype;
+		Morphology::EStructuringElementType etype;
 		int xradius, yradius, rotation, type;
 		unsigned magic;
 
@@ -273,7 +261,7 @@ void MainWindow::openSETriggered()
 		}
 
 		strm >> type >> xradius >> yradius >> rotation;
-		etype = static_cast<EStructuringElementType>(type);
+		etype = static_cast<Morphology::EStructuringElementType>(type);
 		file.close();
 
 		// Jesli mamy wlaczonego auto-refresha, deaktywujemy go na chwile
@@ -283,13 +271,13 @@ void MainWindow::openSETriggered()
 		// Ustaw ksztalt elementu strukturalnego
 		switch(etype)
 		{
-		case SET_Rect:
+		case Morphology::SET_Rect:
 			ui.rbRect->setChecked(true); break;
-		case SET_Ellipse:
+		case Morphology::SET_Ellipse:
 			ui.rbEllipse->setChecked(true); break;
-		case SET_Cross:
+		case Morphology::SET_Cross:
 			ui.rbCross->setChecked(true); break;
-		case SET_Diamond:
+		case Morphology::SET_Diamond:
 		default:
 			ui.rbDiamond->setChecked(true); break;
 		}
@@ -317,11 +305,11 @@ void MainWindow::saveSETriggered()
 
 	if(!filename.isEmpty())
 	{
-		EStructuringElementType type;
-		if(ui.rbRect->isChecked()) type = SET_Rect;
-		else if(ui.rbEllipse->isChecked()) type = SET_Ellipse;
-		else if(ui.rbCross->isChecked()) type = SET_Cross;
-		else type = SET_Diamond;
+		Morphology::EStructuringElementType type;
+		if(ui.rbRect->isChecked()) type = Morphology::SET_Rect;
+		else if(ui.rbEllipse->isChecked()) type = Morphology::SET_Ellipse;
+		else if(ui.rbCross->isChecked()) type = Morphology::SET_Cross;
+		else type = Morphology::SET_Diamond;
 
 		int xradius = ui.hsXElementSize->value();
 		int yradius = ui.hsYElementSize->value();
@@ -438,7 +426,7 @@ void MainWindow::invertChanged(int state)
 {
 	Q_UNUSED(state);
 	
-	negateImage(src);
+	CvUtil::negateImage(src);
 	setOpenCLSourceImage();
 	refresh();
 }
@@ -446,7 +434,7 @@ void MainWindow::invertChanged(int state)
 void MainWindow::bayerIndexChanged(int i)
 {
 	if(oclSupported)
-		ocl->setBayerFilter(static_cast<EBayerCode>(i));
+		ocl->setBayerFilter(static_cast<Morphology::EBayerCode>(i));
 }
 // -------------------------------------------------------------------------
 void MainWindow::noneOperationToggled(bool checked)
@@ -644,7 +632,7 @@ void MainWindow::timerEvent(QTimerEvent* event)
 		cvtColor(src, src, CV_BGR2GRAY);
 
 	if(ui.cbInvert->isChecked())
-		negateImage(src);
+		CvUtil::negateImage(src);
 
 	setOpenCLSourceImage();
 	refresh();
@@ -658,25 +646,25 @@ void MainWindow::initOpenCL(int method)
 	if (method == 1) ocl = new MorphOpenCLImage();
 	else ocl = new MorphOpenCLBuffer();
 
-	ocl->errorCallback = [this](const QString& message, cl_int err)
+	ocl->setErrorCallback([this](const QString& message, cl_int err)
 	{
 		Q_UNUSED(err);
 		QMessageBox::critical(this, "OpenCL error",
 			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
 			QMessageBox::Ok);
 		oclSupported = false;
-	};
+	});
 
 	oclSupported = true;
 	oclSupported &= ocl->initOpenCL();
 
-	ocl->errorCallback = [this](const QString& message, cl_int err)
+	ocl->setErrorCallback([this](const QString& message, cl_int err)
 	{
 		Q_UNUSED(err);
 		QMessageBox::critical(this, "OpenCL error",
 			QString("%1\nError: %2").arg(message).arg(ocl->openCLErrorCodeStr(err)),
 			QMessageBox::Ok);
-	};
+	});
 
 	if(oclSupported)
 	{
@@ -788,7 +776,7 @@ void MainWindow::morphologyOpenCV()
 #endif
 
 	int iters = 1;
-	EOperationType opType = operationType();
+	Morphology::EOperationType opType = operationType();
 	cv::Mat src_ = src;
 
 	if(ui.cmbBayer->currentIndex() != 0)
@@ -806,25 +794,25 @@ void MainWindow::morphologyOpenCV()
 	}
 
 	// Operacje hit-miss
-	if (opType == OT_Outline ||
-		opType == OT_Skeleton ||
-		opType == OT_Skeleton_ZhangSuen)
+	if (opType == Morphology::OT_Outline ||
+		opType == Morphology::OT_Skeleton ||
+		opType == Morphology::OT_Skeleton_ZhangSuen)
 	{
 		switch (opType)
 		{
-		case OT_Outline:
+		case Morphology::OT_Outline:
 			{
-				morphologyOutline(src_, dst);
+				Morphology::outline(src_, dst);
 				break;
 			}
-		case OT_Skeleton:
+		case Morphology::OT_Skeleton:
 			{
-				iters = morphologySkeleton(src_, dst);
+				iters = Morphology::skeleton(src_, dst);
 				break;
 			}
-		case OT_Skeleton_ZhangSuen:
+		case Morphology::OT_Skeleton_ZhangSuen:
 			{
-				iters = morphologySkeletonZhangSuen(src_, dst);
+				iters = Morphology::skeletonZhangSuen(src_, dst);
 				break;
 			}
 		default: break;
@@ -835,13 +823,13 @@ void MainWindow::morphologyOpenCV()
 		int op_type;
 		switch(opType)
 		{
-		case OT_Erode: op_type = cv::MORPH_ERODE; break;
-		case OT_Dilate: op_type = cv::MORPH_DILATE; break;
-		case OT_Open: op_type = cv::MORPH_OPEN; break;
-		case OT_Close: op_type = cv::MORPH_CLOSE; break;
-		case OT_Gradient: op_type = cv::MORPH_GRADIENT; break;
-		case OT_TopHat: op_type = cv::MORPH_TOPHAT; break;
-		case OT_BlackHat: op_type = cv::MORPH_BLACKHAT; break;
+		case Morphology::OT_Erode: op_type = cv::MORPH_ERODE; break;
+		case Morphology::OT_Dilate: op_type = cv::MORPH_DILATE; break;
+		case Morphology::OT_Open: op_type = cv::MORPH_OPEN; break;
+		case Morphology::OT_Close: op_type = cv::MORPH_CLOSE; break;
+		case Morphology::OT_Gradient: op_type = cv::MORPH_GRADIENT; break;
+		case Morphology::OT_TopHat: op_type = cv::MORPH_TOPHAT; break;
+		case Morphology::OT_BlackHat: op_type = cv::MORPH_BLACKHAT; break;
 		default: op_type = cv::MORPH_ERODE; break;
 		}
 
@@ -871,7 +859,7 @@ void MainWindow::morphologyOpenCV()
 void MainWindow::morphologyOpenCL()
 {
 	cv::Mat element = standardStructuringElement();
-	EOperationType opType = operationType();
+	Morphology::EOperationType opType = operationType();
 	int iters;
 	
 	ocl->error = false;
@@ -902,6 +890,7 @@ void MainWindow::morphologyOpenCL()
 // -------------------------------------------------------------------------
 cv::Mat MainWindow::standardStructuringElement()
 {
+	using namespace Morphology;
 	EStructuringElementType type;
 
 	if(ui.rbRect->isChecked()) type = SET_Rect;
@@ -909,14 +898,16 @@ cv::Mat MainWindow::standardStructuringElement()
 	else if(ui.rbCross->isChecked()) type = SET_Cross;
 	else type = SET_Diamond;
 
-	return ::standardStructuringElement(
+	return Morphology::standardStructuringElement(
 		ui.hsXElementSize->value(),
 		ui.hsYElementSize->value(),
 		type, krotation);
 }
 // -------------------------------------------------------------------------
-EOperationType MainWindow::operationType()
+Morphology::EOperationType MainWindow::operationType()
 {
+	using namespace Morphology;
+
 	if(ui.rbErode->isChecked()) { return OT_Erode; }
 	else if(ui.rbDilate->isChecked()) { return  OT_Dilate; }
 	else if(ui.rbOpen->isChecked()) { return OT_Open; }

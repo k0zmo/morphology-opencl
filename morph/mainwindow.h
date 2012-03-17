@@ -2,6 +2,7 @@
 
 #include <QtGui/QMainWindow>
 #include "ui_mainwindow.h"
+
 #include "morphocl.h"
 
 #define CV_NO_BACKWARD_COMPATIBILITY
@@ -11,10 +12,10 @@
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
-
 public:
-	MainWindow(QString filename, QWidget *parent = 0, Qt::WFlags flags = 0);
-	~MainWindow();
+	MainWindow(QString filename, QWidget *parent = 0,
+		Qt::WFlags flags = 0);
+	virtual ~MainWindow();
 
 private:
 	Ui::mainWindowClass ui;
@@ -48,7 +49,7 @@ private:
 	cv::Mat standardStructuringElement();
 
 	// Zwraca obecnie aktywna operacje morfologiczna
-	EOperationType operationType();
+	Morphology::EOperationType operationType();
 
 	// Odswieza widok, jesli trzeba wykona od nowa wskazana operacje
 	void refresh();

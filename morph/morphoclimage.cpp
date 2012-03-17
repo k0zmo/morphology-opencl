@@ -147,7 +147,8 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 	}
 }
 // -------------------------------------------------------------------------
-double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& iters)
+double MorphOpenCLImage::morphology(Morphology::EOperationType opType, 
+	cv::Mat& dst, int& iters)
 {
 	iters = 1;
 	cl_ulong elapsed = 0;
@@ -160,7 +161,7 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 	cl::Image2D* clSrcImage = &sourceImage.gpu;
 	cl::Image2D bayered;
 
-	if(bayerFilter != BC_None)
+	if(bayerFilter != Morphology::BC_None)
 	{
 		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
 		bayered = createImage2D(CL_MEM_READ_WRITE);
@@ -172,34 +173,34 @@ double MorphOpenCLImage::morphology(EOperationType opType, cv::Mat& dst, int& it
 
 	switch(opType)
 	{
-	case OT_Erode:
+	case Morphology::OT_Erode:
 		elapsed += morphologyErode(*clSrcImage, clDstImage);
 		break;
-	case OT_Dilate:
+	case Morphology::OT_Dilate:
 		elapsed += morphologyDilate(*clSrcImage, clDstImage);
 		break;
-	case OT_Open:
+	case Morphology::OT_Open:
 		elapsed += morphologyOpen(*clSrcImage, clDstImage);
 		break;
-	case OT_Close:
+	case Morphology::OT_Close:
 		elapsed += morphologyClose(*clSrcImage, clDstImage);
 		break;
-	case OT_Gradient:
+	case Morphology::OT_Gradient:
 		elapsed += morphologyGradient(*clSrcImage, clDstImage);
 		break;
-	case OT_TopHat:
+	case Morphology::OT_TopHat:
 		elapsed += morphologyTopHat(*clSrcImage, clDstImage);
 		break;
-	case OT_BlackHat:
+	case Morphology::OT_BlackHat:
 		elapsed += morphologyBlackHat(*clSrcImage, clDstImage);
 		break;
-	case OT_Outline:
+	case Morphology::OT_Outline:
 		elapsed += morphologyOutline(*clSrcImage, clDstImage);
 		break;
-	case OT_Skeleton:
+	case Morphology::OT_Skeleton:
 		elapsed += morphologySkeleton(*clSrcImage, clDstImage, iters);
 		break;
-	case OT_Skeleton_ZhangSuen:
+	case Morphology::OT_Skeleton_ZhangSuen:
 		elapsed += morphologySkeletonZhangSuen(*clSrcImage, clDstImage, iters);
 		break;
 	}
@@ -453,7 +454,8 @@ cl_ulong MorphOpenCLImage::morphologySkeletonZhangSuen(cl::Image2D& src,
 
 	cl::Buffer clLut(context, 
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(lutTable), lutTable, &err);
+		sizeof(Morphology::skeletonZHLutTable),
+		Morphology::skeletonZHLutTable, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
 	if(err != CL_SUCCESS)
 		return 0;

@@ -1,15 +1,18 @@
-#include "morphop.h"
+#include "morphoperators.h"
+
+namespace Morphology {
 
 const int OBJ = 255;
 const int BCK = 0;
 
 #ifdef _MSC_VER
-#define force_inline __forceinline
+	#define force_inline __forceinline
 #elif defined(__GNUC__)
-#define force_inline inline __attribute__((always_inline))
+	#define force_inline inline __attribute__((always_inline))
 #endif
 
-int lutTable[256]  = {
+// -------------------------------------------------------------------------
+int skeletonZHLutTable[256]  = {
 	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
 	0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -19,7 +22,6 @@ int lutTable[256]  = {
 	2,3,1,3,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	2,3,0,1,0,0,0,1,0,0,0,0,0,0,0,0,3,3,0,1,0,0,0,0,2,2,0,0,2,0,0,0
 };
-
 // -------------------------------------------------------------------------
 cv::Mat structuringElementDiamond(int radius)
 {
@@ -114,7 +116,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 			cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
 			cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
 			cv::Mat dst;
-			cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_NEAREST);
+			cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_LINEAR);
 			return dst;
 		};
 
@@ -209,7 +211,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	return element;
 }
 // -------------------------------------------------------------------------
-void morphologyOutline(const cv::Mat& src, cv::Mat& dst)
+void outline(const cv::Mat& src, cv::Mat& dst)
 {
 	dst = src.clone();
 
@@ -271,7 +273,7 @@ void morphologyOutline(const cv::Mat& src, cv::Mat& dst)
 	}
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter1(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter1(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy
 	// 1|1|1
@@ -302,7 +304,7 @@ force_inline int _morphologySkeleton_iter1(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter2(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter2(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 90 w lewo
 	// 1|X|0
@@ -333,7 +335,7 @@ force_inline int _morphologySkeleton_iter2(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter3(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter3(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 180 w lewo
 	// 0|0|0
@@ -364,7 +366,7 @@ force_inline int _morphologySkeleton_iter3(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter4(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter4(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 270 w lewo
 	// 0|X|1
@@ -395,7 +397,7 @@ force_inline int _morphologySkeleton_iter4(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter5(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter5(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi
 	// X|1|X
@@ -426,7 +428,7 @@ force_inline int _morphologySkeleton_iter5(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter6(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter6(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 90 stopni w lewo
 	// X|1|X
@@ -456,7 +458,7 @@ force_inline int _morphologySkeleton_iter6(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter7(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter7(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 180 stopni w lewo
 	// X|0|0
@@ -487,7 +489,7 @@ force_inline int _morphologySkeleton_iter7(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-force_inline int _morphologySkeleton_iter8(const cv::Mat& src, cv::Mat& dst)
+force_inline int _skeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 270 stopni w lewo
 	// 0|0|X
@@ -517,55 +519,55 @@ force_inline int _morphologySkeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 // -------------------------------------------------------------------------
-int morphologySkeleton(const cv::Mat& _src, cv::Mat &dst)
+int skeleton(const cv::Mat& _src, cv::Mat &dst)
 {
 	int niters = 0;
 
 	cv::Mat src = _src.clone();
 	dst = src.clone();
 
- 	while(true) 
- 	{
- 		// iteracja
- 		++niters;
-  		int d = 0;
+	while(true) 
+	{
+		// iteracja
+		++niters;
+		int d = 0;
 
-		d += _morphologySkeleton_iter1(src, dst);
+		d += _skeleton_iter1(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter2(src, dst);
+		d += _skeleton_iter2(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter3(src, dst);
+		d += _skeleton_iter3(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter4(src, dst);
+		d += _skeleton_iter4(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter5(src, dst);
+		d += _skeleton_iter5(src, dst);
 		dst.copyTo(src);
 
-		d += _morphologySkeleton_iter6(src, dst);
+		d += _skeleton_iter6(src, dst);
 		dst.copyTo(src);
 
- 		d += _morphologySkeleton_iter7(src, dst);
- 		dst.copyTo(src);
- 
- 		d += _morphologySkeleton_iter8(src, dst);
- 		
- 		printf("Iteration: %3d, pixel changed: %5d\r", niters, d);
- 
- 		if(d == 0)
- 			break;
- 
- 		dst.copyTo(src);
- 	}
- 	printf("\n");
+		d += _skeleton_iter7(src, dst);
+		dst.copyTo(src);
+
+		d += _skeleton_iter8(src, dst);
+
+		printf("Iteration: %3d, pixel changed: %5d\r", niters, d);
+
+		if(d == 0)
+			break;
+
+		dst.copyTo(src);
+	}
+	printf("\n");
 
 	return niters;
 }
 // -------------------------------------------------------------------------
-int morphologySkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
+int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 {
 	// Based on ImageJ implementation of skeletonization which is
 	// based on an a thinning algorithm by by Zhang and Suen (CACM, March 1984, 236-239)
@@ -612,8 +614,8 @@ int morphologySkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 						((p6&0x01) << 3) |
 						((p3&0x01) << 2) |
 						((p2&0x01) << 1) |
-						 (p1&0x01);
-					int code = lutTable[index];
+						(p1&0x01);
+					int code = skeletonZHLutTable[index];
 
 					//odd pass
 					if((pass & 1) == 1)
@@ -652,3 +654,5 @@ int morphologySkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 
 	return niters;
 }
+
+} // end of namespace

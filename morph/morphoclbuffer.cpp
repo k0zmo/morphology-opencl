@@ -196,7 +196,8 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 	}
 }
 // -------------------------------------------------------------------------
-double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& iters)
+double MorphOpenCLBuffer::morphology(Morphology::EOperationType opType, 
+	cv::Mat& dst, int& iters)
 {
 	int dstSizeX = sourceBuffer.cpu->cols;
 	int dstSizeY = sourceBuffer.cpu->rows;
@@ -212,7 +213,7 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 	cl::Buffer* clSrcImage = &sourceBuffer.gpu;
 	cl::Buffer bayered;
 
-	if(bayerFilter != BC_None)
+	if(bayerFilter != Morphology::BC_None)
 	{
 		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
 		bayered = createBuffer(CL_MEM_READ_WRITE);
@@ -224,52 +225,52 @@ double MorphOpenCLBuffer::morphology(EOperationType opType, cv::Mat& dst, int& i
 
 	switch(opType)
 	{
-	case OT_Erode:
+	case Morphology::OT_Erode:
 		elapsed += morphologyErode(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
-	case OT_Dilate:
+	case Morphology::OT_Dilate:
 		elapsed += morphologyDilate(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
-	case OT_Open:
+	case Morphology::OT_Open:
 		elapsed += morphologyOpen(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
-	case OT_Close:
+	case Morphology::OT_Close:
 		elapsed += morphologyClose(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
-	case OT_Gradient:
+	case Morphology::OT_Gradient:
 		elapsed += morphologyGradient(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*2;
 		dstSizeY -= kradiusy*2;
 		break;
-	case OT_TopHat:
+	case Morphology::OT_TopHat:
 		elapsed += morphologyTopHat(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
-	case OT_BlackHat:
+	case Morphology::OT_BlackHat:
 		elapsed += morphologyBlackHat(*clSrcImage, clDst);
 		dstSizeX -= kradiusx*4;
 		dstSizeY -= kradiusy*4;
 		break;
-	case OT_Outline:
+	case Morphology::OT_Outline:
 		elapsed += morphologyOutline(*clSrcImage, clDst);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
-	case OT_Skeleton:
+	case Morphology::OT_Skeleton:
 		elapsed += morphologySkeleton(*clSrcImage, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
 		break;
-	case OT_Skeleton_ZhangSuen:
+	case Morphology::OT_Skeleton_ZhangSuen:
 		elapsed += morphologySkeletonZhangSuen(*clSrcImage, clDst, iters);
 		dstSizeX -= 2;
 		dstSizeY -= 2;
@@ -584,7 +585,8 @@ cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
 
 	cl::Buffer clLut(context, 
 		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-		sizeof(lutTable), lutTable, &err);
+		sizeof(Morphology::skeletonZHLutTable),
+		Morphology::skeletonZHLutTable, &err);
 	clError("Error while creating temporary OpenCL atomic counter", err);
 	if(err != CL_SUCCESS)
 		return 0;

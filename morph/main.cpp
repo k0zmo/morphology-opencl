@@ -1,7 +1,8 @@
-#include "mainwindow.h"
 #include <QtGui/QApplication>
 #include <QSettings>
 #include <QFileDialog>
+
+#include "mainwindow.h"
 
 int main(int argc, char *argv[])
 {

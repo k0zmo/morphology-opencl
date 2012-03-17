@@ -12,22 +12,27 @@ int roundUp(int value, int multiple)
 		return value + (multiple - v);
 	return value;
 }
-
+// -------------------------------------------------------------------------
 MorphOpenCL::MorphOpenCL()
-: error(false),
-errorCallback(nullptr),
-kradiusx(0),
-kradiusy(0),
-sharedw(-1), 
-sharedh(-1),
-useShared(false),
-bayerFilter(BC_None)
+: error(false)
+, cb(nullptr)
+, kradiusx(0)
+, kradiusy(0)
+, sharedw(-1) 
+, sharedh(-1)
+, useShared(false)
+, bayerFilter(Morphology::BC_None)
 {
 	// Wczytaj opcje z pliku konfiguracyjnego
 	QSettings settings("./settings.cfg", QSettings::IniFormat);
 	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
 	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
 	useShared      = settings.value("opencl/glinterop", "true").toBool();
+}
+// -------------------------------------------------------------------------
+MorphOpenCL::~MorphOpenCL()
+{
+
 }
 // -------------------------------------------------------------------------
 bool MorphOpenCL::initOpenCL()
@@ -239,8 +244,8 @@ void MorphOpenCL::clError(const QString& message, cl_int err)
 	if(err != CL_SUCCESS)
 	{
 		error = true;
-		if(errorCallback != nullptr)
-			errorCallback(message, err);
+		if(cb != nullptr)
+			cb(message, err);
 	}
 }
 // -------------------------------------------------------------------------
@@ -311,36 +316,36 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 	return program;
 }
 // -------------------------------------------------------------------------
-void MorphOpenCL::recompile(EOperationType opType, int coordsSize)
+void MorphOpenCL::recompile(Morphology::EOperationType opType, int coordsSize)
 {
-	static int prevCoordsSize[OT_Gradient+1] = {0};
+	static int prevCoordsSize[Morphology::OT_Gradient+1] = {0};
 	SKernelParameters* kparams;
 	cl::Kernel* kernel;
 
-	if(opType == OT_Erode)
+	if(opType == Morphology::OT_Erode)
 	{
 		kparams = &erodeParams;
 		kernel = &kernelErode;
 	}
-	else if(opType == OT_Dilate)
+	else if(opType == Morphology::OT_Dilate)
 	{
 		kparams = &dilateParams;
 		kernel = &kernelDilate;
 	}
-	else if(opType == OT_Gradient)
+	else if(opType == Morphology::OT_Gradient)
 	{
 		kparams = &gradientParams;
 		kernel = &kernelGradient;
 	}
 	else
 	{
-		if(opType == OT_TopHat ||
-		   opType == OT_BlackHat ||
-		   opType == OT_Open ||
-		   opType == OT_Close)
+		if(opType == Morphology::OT_TopHat ||
+		   opType == Morphology::OT_BlackHat ||
+		   opType == Morphology::OT_Open ||
+		   opType == Morphology::OT_Close)
 		{
-			recompile(OT_Erode, coordsSize);
-			recompile(OT_Dilate, coordsSize);
+			recompile(Morphology::OT_Erode, coordsSize);
+			recompile(Morphology::OT_Dilate, coordsSize);
 		}
 		return;
 	}

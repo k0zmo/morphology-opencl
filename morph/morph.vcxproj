@@ -93,6 +93,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cvutils.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_mainwindow.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -121,7 +122,7 @@
     <ClCompile Include="morphocl.cpp" />
     <ClCompile Include="morphoclbuffer.cpp" />
     <ClCompile Include="morphoclimage.cpp" />
-    <ClCompile Include="morphop.cpp" />
+    <ClCompile Include="morphoperators.cpp" />
     <ClCompile Include="precompiled.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -138,6 +139,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\moc.exe"   -DNOMINMAX -DUNICODE -DWIN32 -DQT_LARGEFILE_SUPPORT -DQT_NO_DEBUG -DNDEBUG -DQT_CORE_LIB -DQT_GUI_LIB -D_CRT_SECURE_NO_WARNINGS -DQT_DLL -DQT_OPENGL_LIB -DGLEW_STATIC  "-I." "-I.\GeneratedFiles" "-I$(QTDIR)\include" "-I.\GeneratedFiles\$(ConfigurationName)\." "-I$(QTDIR)\include\qtmain" "-I$(QTDIR)\include\QtCore" "-I$(QTDIR)\include\QtGui" "-I." "-I$(QTDIR)\include\QtOpenGL" "-I$(OPENCVDIR)\include" "-I$(AMDAPPSDKROOT)\include" "-I." "-I." "-I." "mainwindow.h" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp" "-fprecompiled.h" "-f..\..\mainwindow.h"</Command>
     </CustomBuild>
+    <ClInclude Include="cvutils.h" />
     <ClInclude Include="GeneratedFiles\ui_mainwindow.h" />
     <ClInclude Include="GeneratedFiles\ui_sepreview.h" />
     <ClInclude Include="GeneratedFiles\ui_settings.h" />
@@ -145,7 +147,7 @@
     <ClInclude Include="morphocl.h" />
     <ClInclude Include="morphoclbuffer.h" />
     <ClInclude Include="morphoclimage.h" />
-    <ClInclude Include="morphop.h" />
+    <ClInclude Include="morphoperators.h" />
     <ClInclude Include="precompiled.h" />
   </ItemGroup>
   <ItemGroup>

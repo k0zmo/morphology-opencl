@@ -5,14 +5,20 @@
 #include <CL/cl.hpp>
 #include <QString>
 
-#include "morphop.h"
+#include "morphoperators.h"
 
 class MorphOpenCL
 {
 public:
 	MorphOpenCL();
+	virtual ~MorphOpenCL();
 
-	std::function<void(const QString&, cl_int)> errorCallback;
+	// Callback wywolywany gdy wystapi blad zgloszony przez OpenCLa
+	typedef std::function<void(const QString&, cl_int)> ErrorCallback;
+
+	void setErrorCallback(ErrorCallback cb)
+	{ this->cb = cb; }
+
 	static QString openCLErrorCodeStr(cl_int errcode);
 
 	// Inicjalizuje OpenCL'a
@@ -23,18 +29,18 @@ public:
 	virtual void setSourceImage(const cv::Mat* src, GLuint glresource) = 0;
 
 	// Ustawia czy przed filtracja wlasciwa wykonana zostanie interpolacja bayera
-	void setBayerFilter(EBayerCode code)
+	void setBayerFilter(Morphology::EBayerCode code)
 	{ bayerFilter = code; }
 
 	// Ustawia element strukturalny
 	int setStructuringElement(const cv::Mat& selement);
 
 	// Wykonanie operacji morfologicznej, zwraca czas trwania
-	virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters) = 0;
+	virtual double morphology(Morphology::EOperationType opType, cv::Mat& dst, int& iters) = 0;
 
 	// Rekompiluje kod kernela odpowiedzialny za wskazana operacje
 	// (Ma sens dla dylatacji i erozji)
-	void recompile(EOperationType opType, int coordsSize);
+	void recompile(Morphology::EOperationType opType, int coordsSize);
 
 	bool usingShared() const { return useShared; }
 
@@ -47,6 +53,7 @@ protected:
 	cl::Context context;
 	cl::Device dev;
 	cl::CommandQueue cq;
+	ErrorCallback cb;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
 	cl::Buffer clStructuringElementCoords;
@@ -61,7 +68,7 @@ protected:
 
 	int sharedw, sharedh;
 	bool useShared;
-	EBayerCode bayerFilter;
+	Morphology::EBayerCode bayerFilter;
 
 	struct SKernelParameters
 	{

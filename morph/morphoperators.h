@@ -3,10 +3,7 @@
 #define CV_NO_BACKWARD_COMPATIBILITY
 #include <opencv2/imgproc/imgproc.hpp>
 
-// Obiekt - bialy
-extern const int OBJ;
-// Tlo - czarne
-extern const int BCK;
+namespace Morphology {
 
 enum EOperationType
 {
@@ -39,17 +36,19 @@ enum EBayerCode
 	BC_GreenBlue
 };
 
-
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructuringElementType type, int rotation = 0);
 
 // Operacja morfologiczna - kontrur
-void morphologyOutline(const cv::Mat& src, cv::Mat& dst);
-// Operacja morfologiczna - szkieletyzacja
-int morphologySkeleton(const cv::Mat& src, cv::Mat& dst);
-// Operacja morfologiczna - Zhang and Suen
-int morphologySkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst);
+void outline(const cv::Mat& src, cv::Mat& dst);
 
-// Tablica LUT do szkieletyzacji Zhang'a i Suen'a
-extern int lutTable[256];
+// Operacja morfologiczna - szkieletyzacja
+int skeleton(const cv::Mat& src, cv::Mat& dst);
+
+// Operacja morfologiczna - Zhang and Suen
+int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst);
+
+extern int skeletonZHLutTable[256];
+
+}

@@ -44,42 +44,39 @@
     <ClCompile Include="precompiled.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="morphocl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_mainwindow.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_mainwindow.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="mainwindow.cpp">
+    <ClCompile Include="glew.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="morphop.cpp">
+    <ClCompile Include="morphoperators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="morphoclimage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="morphoclbuffer.cpp">
+    <ClCompile Include="cvutils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="glwidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="glew.c">
+    <ClCompile Include="morphocl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="morphoclbuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="morphoclimage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mainwindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precompiled.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="morphocl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="morphop.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_mainwindow.h">
@@ -88,25 +85,31 @@
     <ClInclude Include="GeneratedFiles\ui_sepreview.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="morphoclimage.h">
+    <ClInclude Include="GeneratedFiles\ui_settings.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cvutils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="morphoclbuffer.h">
+    <ClInclude Include="morphoperators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="glwidget.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GeneratedFiles\ui_settings.h">
-      <Filter>Generated Files</Filter>
+    <ClInclude Include="morphocl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="morphoclbuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="morphoclimage.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="morph.qrc">
       <Filter>Resource Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="mainwindow.h">
-      <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="mainwindow.ui">
       <Filter>Form Files</Filter>
@@ -116,6 +119,9 @@
     </CustomBuild>
     <CustomBuild Include="settings.ui">
       <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="mainwindow.h">
+      <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

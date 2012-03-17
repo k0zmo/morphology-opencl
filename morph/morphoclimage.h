@@ -8,10 +8,12 @@ public:
 	MorphOpenCLImage();
 	virtual ~MorphOpenCLImage();
 
-	/*override*/ virtual bool initOpenCL();
-	/*override*/ virtual void setSourceImage(const cv::Mat* src);
-	/*override*/ virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
-	/*override*/ virtual double morphology(EOperationType opType, cv::Mat& dst, int& iters);
+	virtual bool initOpenCL();
+	virtual void setSourceImage(const cv::Mat* src);
+	virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
+	virtual double morphology(Morphology::EOperationType opType,
+		cv::Mat& dst, int& iters);
+
 private:
 	// Reprezentuje obraz zrodlowy, wszystkie operacje beda odwolywac sie do jego rozmiaru czy formatu
 	struct SImage
