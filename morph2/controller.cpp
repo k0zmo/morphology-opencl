@@ -155,18 +155,24 @@ void Controller::onOpenStructuringElementTriggered()
 	}
 	else
 	{
-		strm >> ksize;
+		int w, h;
+		strm >> w >> h;
 		
-		customSe = cv::Mat(cv::Size(ksize.height(), ksize.width()),
-			CV_8UC1);
+		customSe = cv::Mat(cv::Size(w, h), CV_8UC1);
 
-		strm.readRawData((char*)customSe.data, ksize.height()*ksize.width());
+		char* ptr = customSe.ptr<char>(0);
+		for(int i = 0; i < customSe.rows; ++i)
+		{
+			strm.readRawData(ptr, customSe.cols);
+			ptr += customSe.step1();
+		}
 
-		ksize = (ksize - QSize(1,1)) / 2;
+		ksize = QSize(w-1, h-1) / 2;
+
 		resizeCustomSe = false;
 		mw->setStructuringElementType(etype);
-		resizeCustomSe = false;
 		mw->setStructuringElementSize(ksize);
+		resizeCustomSe = true;
 	}	
 
 	file.close();
@@ -198,6 +204,8 @@ void Controller::onSaveStructuringElementTriggered()
 	{
 		strm << customSe.cols << customSe.rows;
 
+		// Musimy zapisywac rzad po rzedzie - zdaje sie, 
+		// ze OpenCV przechowuje male obrazy z wyrownaniem do 32 bajtow
 		const char* ptr = customSe.ptr<char>(0);
 		for(int i = 0; i < customSe.rows; ++i)
 		{
@@ -207,7 +215,6 @@ void Controller::onSaveStructuringElementTriggered()
 	}
 
 	file.close();
-
 }
 
 void Controller::onInvertChanged(int state)
@@ -322,8 +329,6 @@ void Controller::onStructuringElementChanged()
 			}
 		}
 
-		resizeCustomSe = true;
-
 		emit structuringElementChanged(customSe);
 	}	
 }
@@ -379,6 +384,7 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 
 	resizeCustomSe = false;
 	mw->setStructuringElementType(Morphology::SET_Custom);
+	resizeCustomSe = true;
 }
 
 void Controller::onShowSourceImage()
