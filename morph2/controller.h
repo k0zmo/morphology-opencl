@@ -57,10 +57,12 @@ private:
 	bool oclSupported;
 	bool useOpenCL;
 	bool autoTrigger;
+	bool resizeCustomSe;
 
 	cv::VideoCapture camera;
 	cv::Mat src;
 	cv::Mat dst;
+	cv::Mat customSe;
 
 private slots:
 	void onFromCameraTriggered(bool state);
@@ -79,6 +81,7 @@ private slots:
 
 	void onStructuringElementChanged();
 	void onStructuringElementPreviewPressed();
+	void onStructuringElementModified(const cv::Mat& customSe);
 
 	void onShowSourceImage();
 	void onRecompute();
@@ -91,8 +94,8 @@ private:
 	void initializeOpenCL(EOpenCLMethod method);
 	void setOpenCLSourceImage();
 
-	void processOpenCL();
-	void processOpenCV();
+	void processOpenCL(Morphology::EOperationType op, const cv::Mat& se);
+	void processOpenCV(Morphology::EOperationType op, const cv::Mat& se);
 
 	void previewCpuImage(const cv::Mat& image);
 	void previewGpuImage();

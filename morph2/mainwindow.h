@@ -41,6 +41,15 @@ public:
 
 	void setOpenCLCheckableAndChecked(bool state);
 
+	void setStructuringElementPreviewButtonText(const QString& text)
+	{ pbShowSE->setText(text); }
+
+	void setEnabledStructuringElementRotation(bool state)
+	{ 
+		dialRotation->setEnabled(state);
+		pbResetRotation->setEnabled(state);
+	}
+
 private:
 	QRadioButton* operationToRadioBox(Morphology::EOperationType op);
 

@@ -25,7 +25,8 @@ enum EStructuringElementType
 {
 	SET_Rect,
 	SET_Ellipse,
-	SET_Cross
+	SET_Cross,
+	SET_Custom
 };
 
 enum EBayerCode
@@ -40,6 +41,9 @@ enum EBayerCode
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructuringElementType type, int rotation = 0);
+
+// Obraca dany element strukturalny
+cv::Mat rotateStructuringElement(int rotation, const cv::Mat& _element);
 
 int process(const cv::Mat& src, cv::Mat& dst,
 	EOperationType op, const cv::Mat& se = cv::Mat());

@@ -18,19 +18,19 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>274</width>
-    <height>274</height>
+    <width>1000</width>
+    <height>1000</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Strucuring element</string>
   </property>
   <property name="modal">
-   <bool>true</bool>
+   <bool>false</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <widget class="QLabel" name="lbSEPreview">
+    <widget class="PreviewLabel" name="previewLabel">
      <property name="minimumSize">
       <size>
        <width>256</width>
@@ -98,10 +98,20 @@
      <property name="text">
       <string/>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
     </widget>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PreviewLabel</class>
+   <extends>QLabel</extends>
+   <header>sepreview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

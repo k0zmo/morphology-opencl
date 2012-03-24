@@ -18,6 +18,7 @@ Controller::Controller()
 	, oclSupported(false)
 	, useOpenCL(false)
 	, autoTrigger(false)
+	, resizeCustomSe(true)
 {
 }
 
@@ -132,6 +133,7 @@ void Controller::onOpenStructuringElementTriggered()
 	file.open(QIODevice::ReadOnly);
 	QDataStream strm(&file);
 	strm >> magic;
+
 	if(magic != 0x1337U)
 	{
 		QMessageBox::critical(nullptr, "Error",
@@ -140,13 +142,34 @@ void Controller::onOpenStructuringElementTriggered()
 		return;
 	}
 
-	strm >> type >> ksize >> rotation;
+	strm >> type;
 	etype = static_cast<Morphology::EStructuringElementType>(type);
-	file.close();
 
-	mw->setStructuringElementType(etype);
-	mw->setStructuringElementSize(ksize);
-	mw->setStructuringElementRotation(rotation);
+	if(etype != Morphology::SET_Custom)
+	{
+		strm >> ksize >> rotation;
+		
+		mw->setStructuringElementType(etype);
+		mw->setStructuringElementSize(ksize);
+		mw->setStructuringElementRotation(rotation);
+	}
+	else
+	{
+		strm >> ksize;
+		
+		customSe = cv::Mat(cv::Size(ksize.height(), ksize.width()),
+			CV_8UC1);
+
+		strm.readRawData((char*)customSe.data, ksize.height()*ksize.width());
+
+		ksize = (ksize - QSize(1,1)) / 2;
+		resizeCustomSe = false;
+		mw->setStructuringElementType(etype);
+		resizeCustomSe = false;
+		mw->setStructuringElementSize(ksize);
+	}	
+
+	file.close();
 }
 
 void Controller::onSaveStructuringElementTriggered()
@@ -157,15 +180,34 @@ void Controller::onSaveStructuringElementTriggered()
 	if(filename.isEmpty())
 		return;
 
-	auto type = mw->structuringElementType();
-	QSize ksize = mw->structuringElementSize();
-	int rotation = mw->structuringElementRotation();
-
 	QFile file(filename);
 	file.open(QIODevice::WriteOnly);
 	QDataStream strm(&file);
-	strm << 0x1337U << type << ksize << rotation;
+
+	auto type = mw->structuringElementType();
+	strm << 0x1337U << type;
+
+	if(type != Morphology::SET_Custom)
+	{
+		QSize ksize = mw->structuringElementSize();
+		int rotation = mw->structuringElementRotation();
+
+		strm << ksize << rotation;
+	}
+	else
+	{
+		strm << customSe.cols << customSe.rows;
+
+		const char* ptr = customSe.ptr<char>(0);
+		for(int i = 0; i < customSe.rows; ++i)
+		{
+			strm.writeRawData(ptr, customSe.cols);
+			ptr += customSe.step1();
+		}
+	}
+
 	file.close();
+
 }
 
 void Controller::onInvertChanged(int state)
@@ -257,22 +299,49 @@ void Controller::onBayerIndexChanged(int bcode)
 
 void Controller::onStructuringElementChanged()
 {
-	cv::Mat se = standardStructuringElement();
-	emit structuringElementChanged(se);
+	if(mw->structuringElementType() != Morphology::SET_Custom)
+	{
+		mw->setEnabledStructuringElementRotation(true);
+		cv::Mat se(standardStructuringElement());
+		emit structuringElementChanged(se);
+	}
+	else
+	{
+		mw->setEnabledStructuringElementRotation(false);
+
+		if(resizeCustomSe)
+		{
+			QSize sesize(mw->structuringElementSize());
+			sesize = sesize * 2 + QSize(1,1);
+
+			if(customSe.rows != sesize.height() ||
+			   customSe.cols != sesize.width())
+			{
+				customSe = cv::Mat(sesize.height(), sesize.width(),
+					CV_8UC1, cv::Scalar(0));
+			}
+		}
+
+		resizeCustomSe = true;
+
+		emit structuringElementChanged(customSe);
+	}	
 }
 
 void Controller::onStructuringElementPreviewPressed()
 {
 	static bool activated = false;
-	static SEPreview* d;
+	static StructuringElementPreview* d;
 	static QPoint pos(mw->pos() + QPoint(mw->geometry().width(), 0));
 
 	if(!activated)
 	{
 		// Wygeneruj element strukturalny
-		cv::Mat se = standardStructuringElement();
+		cv::Mat se = mw->structuringElementType() != Morphology::SET_Custom ?
+			standardStructuringElement() : customSe;
+		mw->setStructuringElementPreviewButtonText("Hide structuring element");
 
-		d = new SEPreview(mw);
+		d = new StructuringElementPreview(mw);
 		d->setAttribute(Qt::WA_DeleteOnClose);
 		d->move(pos);
 		d->setModal(false);
@@ -281,15 +350,35 @@ void Controller::onStructuringElementPreviewPressed()
 
 		connect(this, SIGNAL(structuringElementChanged(cv::Mat)), 
 			d, SLOT(onStructuringElementChanged(cv::Mat)));
+		connect(d, SIGNAL(closed()), 
+			this, SLOT(onStructuringElementPreviewPressed()));
 
 		activated = true;
 	}
 	else
 	{
+		// Wywolywane przez nacisniecie 'Hide..." LUB przez zamkniecie manualne okna dialogowego
+		mw->setStructuringElementPreviewButtonText("Show structuring element");
+
+		// Jesli jestesmy w sytuacji 1. to nalezy najpierw rozlaczyc signal - inaczej
+		// close() wywola kolejnego closeEvent'a ktory stworzy na nowo okno
+		disconnect(d, SIGNAL(closed()), 
+			this, SLOT(onStructuringElementPreviewPressed()));
+
 		pos = d->pos();
 		activated = false;
 		d->close();	
 	}
+}
+
+void Controller::onStructuringElementModified(const cv::Mat& _customSe)
+{
+	customSe = _customSe;
+	QSize sesize(customSe.cols, customSe.rows);
+	sesize = (sesize - QSize(1,1)) / 2;
+
+	resizeCustomSe = false;
+	mw->setStructuringElementType(Morphology::SET_Custom);
 }
 
 void Controller::onShowSourceImage()
@@ -310,11 +399,15 @@ void Controller::onRecompute()
 	if(mw->isNoneOperationChecked())
 		return;
 
+	cv::Mat se = mw->structuringElementType() == Morphology::SET_Custom ?
+		customSe : standardStructuringElement();
+	Morphology::EOperationType op = mw->morphologyOperation();
+
 	// Przetworz obraz
 	if(!useOpenCL)
-		processOpenCV();
+		processOpenCV(op, se);
 	else
-		processOpenCL();
+		processOpenCL(op, se);
 
 #if USE_GLWIDGET == 1
 	// Pokaz obraz wynikowy
@@ -439,10 +532,9 @@ void Controller::setOpenCLSourceImage()
 	}
 }
 
-void Controller::processOpenCV()
+void Controller::processOpenCV(Morphology::EOperationType op, const cv::Mat& se)
 {
-	Morphology::EOperationType opType = mw->morphologyOperation();
-	cv::Mat src_ = src;
+	cv::Mat src_(src);
 
 	ElapsedTimer timer;
 	timer.start();
@@ -462,33 +554,28 @@ void Controller::processOpenCV()
 		cvtColor(src_, src_, CV_BGR2GRAY);
 	}
 
-	cv::Mat se = standardStructuringElement();
-
-	int iters = Morphology::process(src_, dst, opType, se);
+	int iters = Morphology::process(src_, dst, op, se);
 	double delapsed = timer.elapsed();
 
 	// Wyswietl statystyki
 	showStats(iters, delapsed);
 }
 
-void Controller::processOpenCL()
+void Controller::processOpenCL(Morphology::EOperationType op, const cv::Mat& se)
 {
-	Morphology::EOperationType opType = mw->morphologyOperation();
 	ocl->error = false;
-
-	cv::Mat se = standardStructuringElement();
 	int csize = ocl->setStructuringElement(se);
 
 	if(ocl->error) 
 		return;
 
-	ocl->recompile(opType, csize);
+	ocl->recompile(op, csize);
 
 	if(ocl->error) 
 		return;
 
 	int iters;
-	double delapsed = ocl->morphology(opType, dst, iters);
+	double delapsed = ocl->morphology(op, dst, iters);
 
 	// Wyswietl statystyki
 	showStats(iters, delapsed);

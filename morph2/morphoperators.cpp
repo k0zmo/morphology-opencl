@@ -47,109 +47,112 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		element = cv::getStructuringElement(cv::MORPH_CROSS, elem_size, anchor);
 	}
 
+	return rotateStructuringElement(rotation, element);
+}
+
+cv::Mat rotateStructuringElement(int rotation, const cv::Mat& _element)
+{
 	// Rotacja elementu strukturalnego
-	if(rotation != 0)
+	if(rotation == 0)
+		return _element;
+
+	rotation %= 360;
+
+	auto rotateImage = [](const cv::Mat& source, double angle) -> cv::Mat
 	{
-		rotation %= 360;
+		cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
+		cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
+		cv::Mat dst;
+		cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_LINEAR);
+		return dst;
+	};
 
-		auto rotateImage = [](const cv::Mat& source, double angle) -> cv::Mat
-		{
-			cv::Point2f srcCenter(source.cols/2.0f, source.rows/2.0f);
-			cv::Mat rotMat = cv::getRotationMatrix2D(srcCenter, angle, 1.0f);
-			cv::Mat dst;
-			cv::warpAffine(source, dst, rotMat, source.size(), cv::INTER_LINEAR);
-			return dst;
-		};
+	int s = 2 * std::max(_element.rows, _element.cols);
+	int b = s/4;
 
-		int s = 2 * std::max(element.rows, element.cols);
-		int b = s/4;
+	cv::Mat tmp(cv::Size(s, s), CV_8U, cv::Scalar(0));
+	cv::copyMakeBorder(_element, tmp, b,b,b,b, cv::BORDER_CONSTANT);
+	cv::Mat element(rotateImage(tmp, rotation));
 
-		cv::Mat tmp(cv::Size(s, s), CV_8U, cv::Scalar(0));
-		cv::copyMakeBorder(element, tmp, b,b,b,b, cv::BORDER_CONSTANT);
-		element = rotateImage(tmp, rotation);
+	// Trzeba teraz wyciac niepotrzebny nadmiar pikseli ramkowych
+	int top = 0, 
+		bottom = element.rows, 
+		left = 0,
+		right = element.cols;
 
-		// Trzeba teraz wyciac niepotrzebny nadmiar pikseli ramkowych
-		int top = 0, 
-			bottom = element.rows, 
-			left = 0,
-			right = element.cols;
+	// Zwraca true jesli wskazany wiersz w danej macierzy nie jest "pusty" (nie ma samych 0)
+	auto checkRow = [](int row, const cv::Mat& e) -> bool
+	{
+		const uchar* p = e.ptr<uchar>(row);
+		for(int x = 0; x < e.cols; ++x)
+			if(p[x] != 0)
+				return true;
+		return false;
+	};
 
-		// Zwraca true jesli wskazany wiersz w danej macierzy nie jest "pusty" (nie ma samych 0)
-		auto checkRow = [](int row, const cv::Mat& e) -> bool
-		{
-			const uchar* p = e.ptr<uchar>(row);
-			for(int x = 0; x < e.cols; ++x)
-				if(p[x] != 0)
-					return true;
-			return false;
-		};
+	// Zwraca true jesli wskazana kolumna w danej macierzy nie jest "pusta" (nie ma samych 0)
+	auto checkColumn = [](int column, const cv::Mat& e) -> bool
+	{
+		for(int y = 0; y < e.rows; ++y)
+			if(e.at<uchar>(y, column) != 0)
+				return true;
+		return false;
+	};
 
-		// Zwraca true jesli wskazana kolumna w danej macierzy nie jest "pusta" (nie ma samych 0)
-		auto checkColumn = [](int column, const cv::Mat& e) -> bool
-		{
-			for(int y = 0; y < e.rows; ++y)
-				if(e.at<uchar>(y, column) != 0)
-					return true;
-			return false;
-		};
-
-		// Kadruj gore
-		for(int y = 0; y < element.rows; ++y)
-		{
-			if (checkRow(y, element))
-				break;
-			++top;
-		}
-
-		// Kadruj dol
-		for(int y = element.rows-1; y >= 0; --y)
-		{
-			if (checkRow(y, element))
-				break;
-			--bottom;
-		}
-
-		// Kadruj lewa strone
-		for(int x = 0; x < element.cols; ++x)
-		{
-			if (checkColumn(x, element))
-				break;
-			++left;
-		}
-
-		// Kadruj prawa strone
-		for(int x = element.cols-1; x >= 0; --x)
-		{
-			if (checkColumn(x, element))
-				break;
-			--right;
-		}
-
-		int width = right-left;
-		int height = bottom-top;
-
-		// Zalozenie jest ze element strukturalny ma rozmair 2n+1,
-		// ponizsze dwa bloki strzega tego warunku
-
-		if(!(width % 2))
-		{
-			width++; 
-			// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
-			if(left+width > element.cols) 
-				--left;
-		}
-		if(!(height % 2))
-		{
-			height++;
-			// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
-			if(top+height > element.rows) 
-				--top;
-		}
-
-		element = element(cv::Rect(left, top, width, height));
+	// Kadruj gore
+	for(int y = 0; y < element.rows; ++y)
+	{
+		if (checkRow(y, element))
+			break;
+		++top;
 	}
 
-	return element;
+	// Kadruj dol
+	for(int y = element.rows-1; y >= 0; --y)
+	{
+		if (checkRow(y, element))
+			break;
+		--bottom;
+	}
+
+	// Kadruj lewa strone
+	for(int x = 0; x < element.cols; ++x)
+	{
+		if (checkColumn(x, element))
+			break;
+		++left;
+	}
+
+	// Kadruj prawa strone
+	for(int x = element.cols-1; x >= 0; --x)
+	{
+		if (checkColumn(x, element))
+			break;
+		--right;
+	}
+
+	int width = right-left;
+	int height = bottom-top;
+
+	// Zalozenie jest ze element strukturalny ma rozmair 2n+1,
+	// ponizsze dwa bloki strzega tego warunku
+
+	if(!(width % 2))
+	{
+		width++; 
+		// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
+		if(left+width > element.cols) 
+			--left;
+	}
+	if(!(height % 2))
+	{
+		height++;
+		// jesli wyjdziemy za zakres to zmniejsz poczatek ROI
+		if(top+height > element.rows) 
+			--top;
+	}
+
+	return element(cv::Rect(left, top, width, height));
 }
 
 void outline(const cv::Mat& src, cv::Mat& dst)

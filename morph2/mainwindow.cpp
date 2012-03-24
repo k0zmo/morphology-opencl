@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	connect(rbRect, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
 	connect(rbEllipse, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
 	connect(rbCross, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
+	connect(rbCustom, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
 
 	// Rozmiar elementu strukturalnego
 	connect(cbSquare, SIGNAL(stateChanged(int)), SLOT(onElementSizeRatioChanged(int)));
@@ -107,7 +108,8 @@ Morphology::EStructuringElementType MainWindow::structuringElementType() const
 
 	if(rbRect->isChecked())         return SET_Rect;
 	else if(rbEllipse->isChecked()) return SET_Ellipse;
-	else                            return SET_Cross;
+	else if(rbCross->isChecked())   return SET_Cross;
+	else                            return SET_Custom;
 }
 
 void MainWindow::setStructuringElementType(
@@ -121,6 +123,8 @@ void MainWindow::setStructuringElementType(
 		rbEllipse->setChecked(true); break;
 	case Morphology::SET_Cross:
 		rbCross->setChecked(true); break;
+	case Morphology::SET_Custom:
+		rbCustom->setChecked(true); break;
 	}
 }
 
