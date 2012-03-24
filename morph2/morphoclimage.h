@@ -8,7 +8,7 @@ public:
 	MorphOpenCLImage();
 	virtual ~MorphOpenCLImage();
 
-	virtual bool initOpenCL();
+	virtual bool initialize();
 	virtual void setSourceImage(const cv::Mat* src);
 	virtual void setSourceImage(const cv::Mat* src, GLuint glresource);
 	virtual double morphology(Morphology::EOperationType opType,

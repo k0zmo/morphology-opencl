@@ -8,15 +8,15 @@ MorphOpenCLBuffer::MorphOpenCLBuffer()
 {
 	glGenBuffers(1, &pboStaging);
 }
-// -------------------------------------------------------------------------
+
 MorphOpenCLBuffer::~MorphOpenCLBuffer()
 {
 	glDeleteBuffers(1, &pboStaging);
 }
-// -------------------------------------------------------------------------
-bool MorphOpenCLBuffer::initOpenCL()
+
+bool MorphOpenCLBuffer::initialize()
 {
-	MorphOpenCL::initOpenCL();
+	MorphOpenCL::initialize();
 	if(error) return false;
 
 	QSettings s("./settings.cfg", QSettings::IniFormat);
@@ -111,7 +111,7 @@ bool MorphOpenCLBuffer::initOpenCL()
 
 	return true;
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 {
 	cl_int err;
@@ -175,7 +175,7 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 
 	delete [] ptr;
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 {
 	setSourceImage(newSrc);
@@ -196,7 +196,7 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 		clError("Can't create shared GL/CL 1D buffer", err);
 	}
 }
-// -------------------------------------------------------------------------
+
 double MorphOpenCLBuffer::morphology(Morphology::EOperationType opType, 
 	cv::Mat& dst, int& iters)
 {
@@ -308,7 +308,7 @@ double MorphOpenCLBuffer::morphology(Morphology::EOperationType opType,
 		return totalTime;
 	}
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::readBack(const cl::Buffer& source,
 	cv::Mat &dst, int dstSizeX, int dstSizeY)
 {
@@ -373,7 +373,7 @@ cl_ulong MorphOpenCLBuffer::readBack(const cl::Buffer& source,
 
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl::Buffer MorphOpenCLBuffer::createBuffer(cl_mem_flags memFlags)
 {
 	cl_int err;
@@ -385,7 +385,7 @@ cl::Buffer MorphOpenCLBuffer::createBuffer(cl_mem_flags memFlags)
 
 	return buffer;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::copyBuffer(const cl::Buffer& src, cl::Buffer& dst)
 {
 	cl::Event evt;
@@ -396,19 +396,19 @@ cl_ulong MorphOpenCLBuffer::copyBuffer(const cl::Buffer& src, cl::Buffer& dst)
 	evt.wait();
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyErode(cl::Buffer& src, cl::Buffer& dst)
 {
 	//printf(" *** erode\n");
 	return executeMorphologyKernel(&kernelErode, src, dst);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyDilate( cl::Buffer& src, cl::Buffer& dst )
 {
 	//printf(" *** dilate\n");
 	return executeMorphologyKernel(&kernelDilate, src, dst);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyOpen(cl::Buffer& src, cl::Buffer& dst)
 {
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -423,7 +423,7 @@ cl_ulong MorphOpenCLBuffer::morphologyOpen(cl::Buffer& src, cl::Buffer& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
 {
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -438,7 +438,7 @@ cl_ulong MorphOpenCLBuffer::morphologyClose(cl::Buffer& src, cl::Buffer& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
 {
 	//dst = dilate(src) - erode(src);
@@ -460,7 +460,7 @@ cl_ulong MorphOpenCLBuffer::morphologyGradient(cl::Buffer& src, cl::Buffer& dst)
 	return elapsed;
 #endif
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)
 {
 	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
@@ -478,7 +478,7 @@ cl_ulong MorphOpenCLBuffer::morphologyTopHat(cl::Buffer& src, cl::Buffer& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyBlackHat(cl::Buffer& src, cl::Buffer& dst)
 {
 	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
@@ -496,7 +496,7 @@ cl_ulong MorphOpenCLBuffer::morphologyBlackHat(cl::Buffer& src, cl::Buffer& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologyOutline(cl::Buffer& src, cl::Buffer& dst)
 {
 	// Skopiuj obraz zrodlowy do docelowego
@@ -508,7 +508,7 @@ cl_ulong MorphOpenCLBuffer::morphologyOutline(cl::Buffer& src, cl::Buffer& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologySkeleton(cl::Buffer& src, 
 	cl::Buffer& dst, int& iters)
 {
@@ -564,7 +564,7 @@ cl_ulong MorphOpenCLBuffer::morphologySkeleton(cl::Buffer& src,
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
 	cl::Buffer& dst, int& iters)
 {
@@ -626,7 +626,7 @@ cl_ulong MorphOpenCLBuffer::morphologySkeletonZhangSuen(cl::Buffer& src,
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel, 
 	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer)
 {
@@ -687,7 +687,7 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel, 
 	const cl::Buffer& clSrcBuffer, cl::Buffer& clDstBuffer, 
 	const cl::Buffer* clLut, cl::Buffer* clAtomicCounter)
@@ -727,7 +727,7 @@ cl_ulong MorphOpenCLBuffer::executeHitMissKernel(cl::Kernel* kernel,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	const cl::Buffer& clBBuffer, cl::Buffer& clDstBuffer)
 {
@@ -760,7 +760,7 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLBuffer::executeBayerFilter(cl::Kernel* kernel, 
 	const cl::Buffer& clSrc, const cl::Buffer& clDst)
 {

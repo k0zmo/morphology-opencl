@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <author>Kajetan Śwerik</author>
- <class>mainWindowClass</class>
- <widget class="QMainWindow" name="mainWindowClass">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -20,7 +20,7 @@
   <property name="windowTitle">
    <string>Morph OpenCL</string>
   </property>
-  <widget class="QWidget" name="centralWidget">
+  <widget class="QWidget" name="qcentralWidget">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
      <horstretch>0</horstretch>
@@ -82,9 +82,9 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="rbDiamond">
+          <widget class="QRadioButton" name="rbCustom">
            <property name="text">
-            <string>Diamond</string>
+            <string>Custom</string>
            </property>
           </widget>
          </item>
@@ -400,7 +400,7 @@
            <item row="8" column="0" colspan="2">
             <widget class="QCheckBox" name="cbAutoTrigger">
              <property name="text">
-              <string>Run on every change</string>
+              <string>Recompute on every change</string>
              </property>
             </widget>
            </item>
@@ -475,40 +475,7 @@
        </spacer>
       </item>
       <item row="0" column="0" rowspan="3">
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <item>
-         <widget class="GLWidget" name="glWidget" native="true">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>10</width>
-            <height>10</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::MinimumExpanding</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>0</width>
-            <height>0</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
+       <layout class="QVBoxLayout" name="previewVerticalLayout"/>
       </item>
      </layout>
     </item>
@@ -530,8 +497,8 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusBar"/>
-  <widget class="QMenuBar" name="menuBar">
+  <widget class="QStatusBar" name="qstatusBar"/>
+  <widget class="QMenuBar" name="qmenuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -637,14 +604,6 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>GLWidget</class>
-   <extends>QWidget</extends>
-   <header>glwidget.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <tabstops>
   <tabstop>rbNone</tabstop>
   <tabstop>cbInvert</tabstop>
@@ -659,7 +618,6 @@
   <tabstop>rbRect</tabstop>
   <tabstop>rbEllipse</tabstop>
   <tabstop>rbCross</tabstop>
-  <tabstop>rbDiamond</tabstop>
   <tabstop>cbSquare</tabstop>
   <tabstop>hsXElementSize</tabstop>
   <tabstop>hsYElementSize</tabstop>

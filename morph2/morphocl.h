@@ -7,6 +7,12 @@
 
 #include "morphoperators.h"
 
+enum EOpenCLMethod
+{
+	OM_Buffer1D,
+	OM_Buffer2D
+};
+
 class MorphOpenCL
 {
 public:
@@ -22,7 +28,7 @@ public:
 	static QString openCLErrorCodeStr(cl_int errcode);
 
 	// Inicjalizuje OpenCL'a
-	virtual bool initOpenCL();	
+	virtual bool initialize();	
 
 	// Ustawia obraz zrodlowy do operacji morfologicznych
 	virtual void setSourceImage(const cv::Mat* src) = 0;

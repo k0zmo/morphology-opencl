@@ -11,7 +11,7 @@ const int BCK = 0;
 	#define force_inline inline __attribute__((always_inline))
 #endif
 
-// -------------------------------------------------------------------------
+
 int skeletonZHLutTable[256]  = {
 	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
 	0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,3,0,2,2,
@@ -22,62 +22,7 @@ int skeletonZHLutTable[256]  = {
 	2,3,1,3,0,0,1,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	2,3,0,1,0,0,0,1,0,0,0,0,0,0,0,0,3,3,0,1,0,0,0,0,2,2,0,0,2,0,0,0
 };
-// -------------------------------------------------------------------------
-cv::Mat structuringElementDiamond(int radius)
-{
-	int a = radius;
-	int s = 2 * radius + 1;
 
-	cv::Mat element = cv::Mat(s, s, CV_8U, cv::Scalar(1));
-
-	// top-left
-	int y = a;
-	for(int j = 0; j < a; ++j)
-	{
-		for(int i = 0; i < y; ++i)
-		{
-			element.at<uchar>(j, i) = 0;
-		}
-		--y;
-	}
-
-
-	// top-right
-	y = a + 1;
-	for(int j = 0; j < a; ++j)
-	{
-		for(int i = y; i < s; ++i)
-		{
-			element.at<uchar>(j, i) = 0;
-		}
-		++y;
-	}
-
-	// bottom-left
-	y = 1;
-	for(int j = a; j < s; ++j)
-	{
-		for(int i = 0; i < y; ++i)
-		{
-			element.at<uchar>(j, i) = 0;
-		}
-		++y;
-	}
-
-	// bottom-right
-	y = s - 1;
-	for(int j = a; j < s; ++j)
-	{
-		for(int i = y; i < s; ++i)
-		{
-			element.at<uchar>(j, i) = 0;
-		}
-		--y;
-	}
-
-	return element;
-}
-// -------------------------------------------------------------------------
 cv::Mat standardStructuringElement(int xradius, int yradius,
 	EStructuringElementType type, int rotation)
 {
@@ -97,13 +42,9 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 	{
 		element = cv::getStructuringElement(cv::MORPH_ELLIPSE, elem_size, anchor);
 	}
-	else if(type == SET_Cross)
+	else /*if(type == SET_Cross)*/
 	{
 		element = cv::getStructuringElement(cv::MORPH_CROSS, elem_size, anchor);
-	}
-	else
-	{
-		element = structuringElementDiamond(std::min(anchor.x, anchor.y));
 	}
 
 	// Rotacja elementu strukturalnego
@@ -210,7 +151,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 
 	return element;
 }
-// -------------------------------------------------------------------------
+
 void outline(const cv::Mat& src, cv::Mat& dst)
 {
 	dst = src.clone();
@@ -272,7 +213,7 @@ void outline(const cv::Mat& src, cv::Mat& dst)
 		}
 	}
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter1(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy
@@ -303,7 +244,7 @@ force_inline int _skeleton_iter1(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter2(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 90 w lewo
@@ -334,7 +275,7 @@ force_inline int _skeleton_iter2(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter3(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 180 w lewo
@@ -365,7 +306,7 @@ force_inline int _skeleton_iter3(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter4(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny pierwszy - 270 w lewo
@@ -396,7 +337,7 @@ force_inline int _skeleton_iter4(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter5(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi
@@ -427,7 +368,7 @@ force_inline int _skeleton_iter5(const cv::Mat& src, cv::Mat& dst)
 
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter6(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 90 stopni w lewo
@@ -457,7 +398,7 @@ force_inline int _skeleton_iter6(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter7(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 180 stopni w lewo
@@ -488,7 +429,7 @@ force_inline int _skeleton_iter7(const cv::Mat& src, cv::Mat& dst)
 
 	return d;
 }
-// -------------------------------------------------------------------------
+
 force_inline int _skeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 {
 	// Element strukturalny drugi - 270 stopni w lewo
@@ -518,7 +459,7 @@ force_inline int _skeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 	}
 	return d;
 }
-// -------------------------------------------------------------------------
+
 int skeleton(const cv::Mat& _src, cv::Mat &dst)
 {
 	int niters = 0;
@@ -566,7 +507,7 @@ int skeleton(const cv::Mat& _src, cv::Mat &dst)
 
 	return niters;
 }
-// -------------------------------------------------------------------------
+
 int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 {
 	// Based on ImageJ implementation of skeletonization which is
@@ -653,6 +594,60 @@ int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 	printf("\n");
 
 	return niters;
+}
+
+int process(const cv::Mat& src, cv::Mat& dst,
+	EOperationType op, const cv::Mat& se)
+{
+	int iters = 1;
+
+	// Operacje hit-miss
+	if (op == OT_Outline ||
+		op == OT_Skeleton ||
+		op == OT_Skeleton_ZhangSuen)
+	{
+		switch (op)
+		{
+		case OT_Outline:
+			{
+				outline(src, dst);
+				break;
+			}
+		case OT_Skeleton:
+			{
+				iters = skeleton(src, dst);
+				break;
+			}
+		case Morphology::OT_Skeleton_ZhangSuen:
+			{
+				iters = skeletonZhangSuen(src, dst);
+				break;
+			}
+		default: break;
+		}
+	}
+	else
+	{
+		int op_type;
+		switch(op)
+		{
+		case OT_Erode: op_type = cv::MORPH_ERODE; break;
+		case OT_Dilate: op_type = cv::MORPH_DILATE; break;
+		case OT_Open: op_type = cv::MORPH_OPEN; break;
+		case OT_Close: op_type = cv::MORPH_CLOSE; break;
+		case OT_Gradient: op_type = cv::MORPH_GRADIENT; break;
+		case OT_TopHat: op_type = cv::MORPH_TOPHAT; break;
+		case OT_BlackHat: op_type = cv::MORPH_BLACKHAT; break;
+		default: op_type = cv::MORPH_ERODE; break;
+		}
+
+		if(se.rows == 0 || se.cols == 0)
+			return 0;
+
+		cv::morphologyEx(src, dst, op_type, se);
+	}
+
+	return iters;
 }
 
 } // end of namespace

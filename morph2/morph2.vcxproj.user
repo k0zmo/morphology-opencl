@@ -4,5 +4,8 @@
     <QTDIR>D:\Programowanie\QtSDK\Desktop\Qt\4.8.0\msvc2010</QTDIR>
     <LocalDebuggerEnvironment Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">PATH=$(QTDIR)\bin%3b$(PATH)</LocalDebuggerEnvironment>
     <LocalDebuggerEnvironment Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">PATH=$(QTDIR)\bin%3b$(PATH)</LocalDebuggerEnvironment>
+    <ShowAllFiles>false</ShowAllFiles>
+    <LocalDebuggerWorkingDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

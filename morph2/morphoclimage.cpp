@@ -6,14 +6,14 @@ MorphOpenCLImage::MorphOpenCLImage()
 	: MorphOpenCL()
 {
 }
-// -------------------------------------------------------------------------
+
 MorphOpenCLImage::~MorphOpenCLImage()
 {
 }
-// -------------------------------------------------------------------------
-bool MorphOpenCLImage::initOpenCL()
+
+bool MorphOpenCLImage::initialize()
 {
-	MorphOpenCL::initOpenCL();
+	MorphOpenCL::initialize();
 	if(error) return false;
 
 	// Pobierz obslugiwane formaty obrazow
@@ -97,7 +97,7 @@ bool MorphOpenCLImage::initOpenCL()
 
 	return true;
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 {
 	cl_int err;
@@ -131,7 +131,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc)
 	cl_ulong delta = elapsedEvent(evt);
 	printf("Transfering source image to GPU took %.05lf ms\n", delta * 0.000001);	
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 {
 	setSourceImage(newSrc);
@@ -146,7 +146,7 @@ void MorphOpenCLImage::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 		clError("Can't create shared GL/CL 2D buffer", err);
 	}
 }
-// -------------------------------------------------------------------------
+
 double MorphOpenCLImage::morphology(Morphology::EOperationType opType, 
 	cv::Mat& dst, int& iters)
 {
@@ -227,7 +227,7 @@ double MorphOpenCLImage::morphology(Morphology::EOperationType opType,
 		return totalTime;
 	}
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::readBack(cl::Image2D& source, cv::Mat &dst)
 {
 	dst = cv::Mat(sourceImage.cpu->size(), CV_8U, cv::Scalar(0));
@@ -253,7 +253,7 @@ cl_ulong MorphOpenCLImage::readBack(cl::Image2D& source, cv::Mat &dst)
 
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::copyImage2D(const cl::Image2D& src, cl::Image2D& dst)
 {
 	cl::size_t<3> origin;
@@ -271,7 +271,7 @@ cl_ulong MorphOpenCLImage::copyImage2D(const cl::Image2D& src, cl::Image2D& dst)
 	evt.wait();
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl::Image2D MorphOpenCLImage::createImage2D(cl_mem_flags memFlags)
 {
 	cl_int err;
@@ -282,17 +282,17 @@ cl::Image2D MorphOpenCLImage::createImage2D(cl_mem_flags memFlags)
 	clError("Error while creating OpenCL image2D.", err);
 	return img;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyErode(cl::Image2D& src, cl::Image2D& dst)
 {
 	return executeMorphologyKernel(&kernelErode, src, dst);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyDilate(cl::Image2D& src, cl::Image2D& dst)
 {
 	return executeMorphologyKernel(&kernelDilate, src, dst);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyOpen(cl::Image2D& src, cl::Image2D& dst)
 {
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -305,7 +305,7 @@ cl_ulong MorphOpenCLImage::morphologyOpen(cl::Image2D& src, cl::Image2D& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyClose(cl::Image2D& src, cl::Image2D& dst)
 {
 	// Potrzebowac bedziemy dodatkowego bufora tymczasowego
@@ -318,7 +318,7 @@ cl_ulong MorphOpenCLImage::morphologyClose(cl::Image2D& src, cl::Image2D& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyGradient(cl::Image2D& src, cl::Image2D& dst)
 {
 #if 1
@@ -336,7 +336,7 @@ cl_ulong MorphOpenCLImage::morphologyGradient(cl::Image2D& src, cl::Image2D& dst
 	return elapsed;
 #endif
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyTopHat(cl::Image2D& src, cl::Image2D& dst)
 {
 	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
@@ -350,7 +350,7 @@ cl_ulong MorphOpenCLImage::morphologyTopHat(cl::Image2D& src, cl::Image2D& dst)
 	elapsed += executeSubtractKernel(src, tmpImage2, dst);
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyBlackHat(cl::Image2D& src, cl::Image2D& dst)
 {
 	// Potrzebowac bedziemy dodatkowych buforow tymczasowych
@@ -364,7 +364,7 @@ cl_ulong MorphOpenCLImage::morphologyBlackHat(cl::Image2D& src, cl::Image2D& dst
 	elapsed += executeSubtractKernel(tmpImage2, src, dst);
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologyOutline(cl::Image2D& src, cl::Image2D& dst)
 {
 	// Skopiuj obraz zrodlowy do docelowego
@@ -376,7 +376,7 @@ cl_ulong MorphOpenCLImage::morphologyOutline(cl::Image2D& src, cl::Image2D& dst)
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologySkeleton(cl::Image2D& src, cl::Image2D& dst,
 	int& iters)
 {
@@ -432,7 +432,7 @@ cl_ulong MorphOpenCLImage::morphologySkeleton(cl::Image2D& src, cl::Image2D& dst
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::morphologySkeletonZhangSuen(cl::Image2D& src, 
 	cl::Image2D& dst, int& iters)
 {
@@ -494,7 +494,7 @@ cl_ulong MorphOpenCLImage::morphologySkeletonZhangSuen(cl::Image2D& src,
 
 	return elapsed;
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel, 
 	const cl::Image2D& clSrcImage, cl::Image2D& clDstImage)
 {
@@ -526,7 +526,7 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel, 
 	const cl::Image2D& clSrcImage, cl::Image2D& clDstImage,
 	const cl::Buffer* clLut, cl::Buffer* clAtomicCnt)
@@ -561,7 +561,7 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	const cl::Image2D& clBImage, cl::Image2D& clDstImage)
 {
@@ -591,7 +591,7 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 	// Ile czasu to zajelo
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCLImage::executeBayerFilter(cl::Kernel* kernel, 
 	const cl::Image2D& clSrcImage, const cl::Image2D& clDstImage)
 {

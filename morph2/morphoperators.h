@@ -1,6 +1,7 @@
 #pragma once
 
 #define CV_NO_BACKWARD_COMPATIBILITY
+#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 namespace Morphology {
@@ -16,15 +17,15 @@ enum EOperationType
 	OT_BlackHat,
 	OT_Outline,
 	OT_Skeleton,
-	OT_Skeleton_ZhangSuen
+	OT_Skeleton_ZhangSuen,
+	OT_None
 };
 
 enum EStructuringElementType
 {
 	SET_Rect,
 	SET_Ellipse,
-	SET_Cross,
-	SET_Diamond
+	SET_Cross
 };
 
 enum EBayerCode
@@ -39,6 +40,9 @@ enum EBayerCode
 // Zwraca element strukturalny
 cv::Mat standardStructuringElement(int xradius, int yradius, 
 	EStructuringElementType type, int rotation = 0);
+
+int process(const cv::Mat& src, cv::Mat& dst,
+	EOperationType op, const cv::Mat& se = cv::Mat());
 
 // Operacja morfologiczna - kontrur
 void outline(const cv::Mat& src, cv::Mat& dst);

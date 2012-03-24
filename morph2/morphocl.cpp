@@ -12,7 +12,7 @@ int roundUp(int value, int multiple)
 		return value + (multiple - v);
 	return value;
 }
-// -------------------------------------------------------------------------
+
 MorphOpenCL::MorphOpenCL()
 : error(false)
 , cb(nullptr)
@@ -29,13 +29,13 @@ MorphOpenCL::MorphOpenCL()
 	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
 	useShared      = settings.value("opencl/glinterop", "true").toBool();
 }
-// -------------------------------------------------------------------------
+
 MorphOpenCL::~MorphOpenCL()
 {
 
 }
-// -------------------------------------------------------------------------
-bool MorphOpenCL::initOpenCL()
+
+bool MorphOpenCL::initialize()
 {
 	// Connect to a compute device
 	std::vector<cl::Platform> platforms;
@@ -184,7 +184,7 @@ bool MorphOpenCL::initOpenCL()
 
 	return true;
 }
-// -------------------------------------------------------------------------
+
 int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 {
 	std::vector<cl_int2> coords;
@@ -238,7 +238,7 @@ int MorphOpenCL::setStructuringElement(const cv::Mat& selement)
 
 	return csize;
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCL::clError(const QString& message, cl_int err)
 {
 	if(err != CL_SUCCESS)
@@ -248,14 +248,14 @@ void MorphOpenCL::clError(const QString& message, cl_int err)
 			cb(message, err);
 	}
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCL::elapsedEvent(const cl::Event& evt)
 {
 	cl_ulong eventstart = evt.getProfilingInfo<CL_PROFILING_COMMAND_START>();
 	cl_ulong eventend = evt.getProfilingInfo<CL_PROFILING_COMMAND_END>();
 	return (cl_ulong)(eventend - eventstart);
 }
-// -------------------------------------------------------------------------
+
 cl::Program MorphOpenCL::createProgram(const QString& progFile, 
 	const QString& options)
 {
@@ -270,7 +270,7 @@ cl::Program MorphOpenCL::createProgram(const QString& progFile,
 
 	return createProgram(b.c_str(), oname);
 }
-// -------------------------------------------------------------------------
+
 cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options)
 {
 	if(error) return cl::Program();
@@ -315,7 +315,7 @@ cl::Program MorphOpenCL::createProgram(const char* progFile, const char* options
 	}
 	return program;
 }
-// -------------------------------------------------------------------------
+
 void MorphOpenCL::recompile(Morphology::EOperationType opType, int coordsSize)
 {
 	static int prevCoordsSize[Morphology::OT_Gradient+1] = {0};
@@ -359,7 +359,7 @@ void MorphOpenCL::recompile(Morphology::EOperationType opType, int coordsSize)
 	cl::Program prog = createProgram(kparams->programName,opts);
 	*kernel = createKernel(prog, kparams->kernelName);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
 {
 	// Zapisuje wartosc 0 do wskazanego bufora
@@ -372,7 +372,7 @@ cl_ulong MorphOpenCL::zeroAtomicCounter(const cl::Buffer& clAtomicCounter)
 	evt.wait();
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl_ulong MorphOpenCL::readAtomicCounter(cl_uint& v, 
 	const cl::Buffer& clAtomicCounter)
 {
@@ -385,7 +385,7 @@ cl_ulong MorphOpenCL::readAtomicCounter(cl_uint& v,
 	evt.wait();
 	return elapsedEvent(evt);
 }
-// -------------------------------------------------------------------------
+
 cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog, 
 	const char* kernelName)
 {
@@ -399,14 +399,14 @@ cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog,
 	printf("[OK]\n");
 	return k;
 }
-// -------------------------------------------------------------------------
+
 cl::Kernel MorphOpenCL::createKernel(const cl::Program& prog, 
 	const QString& kernelName)
 {
 	std::string b = kernelName.toStdString();
 	return createKernel(prog, b.c_str());
 }
-// -------------------------------------------------------------------------
+
 QString MorphOpenCL::openCLErrorCodeStr(cl_int errcode)
 {
 	switch(errcode)
