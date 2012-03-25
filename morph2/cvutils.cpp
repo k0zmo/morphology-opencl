@@ -1,6 +1,6 @@
 #include "cvutils.h"
 
-namespace CvUtil {
+namespace cvu {
 
 QImage toQImage(const cv::Mat& image)
 {
@@ -33,6 +33,41 @@ void negateImage(cv::Mat& src)
 		*p++ = 255 - i;
 	}
 	cv::LUT(src, lut, src);
+}
+
+void negate(const cv::Mat& src, cv::Mat& dst)
+{
+	//cv::Mat src = _src.getMat();
+	//_dst.create(src.size(), CV_MAKETYPE(src.depth(), src.channels()));
+
+	//cv::Mat lut(1, 256, CV_8U);
+	//uchar* p = lut.ptr<uchar>();
+
+	//for(int i = 0; i < lut.cols; ++i)
+	//	*p++ = 255 - i;
+
+	//cv::LUT(_src, lut, _dst);
+	cv::Mat lut(1, 256, CV_8U);
+	uchar* p = lut.ptr<uchar>();
+
+	for(int i = 0; i < lut.cols; ++i)
+		*p++ = 255 - i;
+
+	cv::LUT(src, lut, dst);
+}
+
+void bayerFilter(const cv::Mat& src, cv::Mat& dst, EBayerCode bc)
+{
+	// Jest bug dla CV_BayerXX2GRAY i trzeba wykonac sciezke okrezna
+	switch(bc)
+	{
+	case BC_RedGreen:  cv::cvtColor(src, dst, CV_BayerRG2BGR); break;
+	case BC_GreenRed:  cv::cvtColor(src, dst, CV_BayerGR2BGR); break;
+	case BC_BlueGreen: cv::cvtColor(src, dst, CV_BayerBG2BGR); break;
+	case BC_GreenBlue: cv::cvtColor(src, dst, CV_BayerGB2BGR); break;
+	default: break;
+	}
+	cvtColor(dst, dst, CV_BGR2GRAY);
 }
 
 void convert01To0255(cv::Mat& src)

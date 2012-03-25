@@ -13,21 +13,16 @@ int roundUp(int value, int multiple)
 	return value;
 }
 
-MorphOpenCL::MorphOpenCL()
+MorphOpenCL::MorphOpenCL(const Configuration& conf)
 : error(false)
 , cb(nullptr)
+, conf(conf)
 , kradiusx(0)
 , kradiusy(0)
 , sharedw(-1) 
 , sharedh(-1)
-, useShared(false)
-, bayerFilter(Morphology::BC_None)
+, bayerFilter(cvu::BC_None)
 {
-	// Wczytaj opcje z pliku konfiguracyjnego
-	QSettings settings("./settings.cfg", QSettings::IniFormat);
-	workGroupSizeX = settings.value("opencl/workgroupsizex", 16).toInt();
-	workGroupSizeY = settings.value("opencl/workgroupsizey", 16).toInt();
-	useShared      = settings.value("opencl/glinterop", "true").toBool();
 }
 
 MorphOpenCL::~MorphOpenCL()
@@ -98,7 +93,7 @@ bool MorphOpenCL::initialize()
 
 	// Stworz kontekst
 	context = cl::Context(CL_DEVICE_TYPE_ALL,
-		useShared ? properties_interop : properties, 
+		conf.glInterop ? properties_interop : properties, 
 		nullptr, nullptr, &err);
 	clError("Failed to create compute context!", err);
 	if(error) return false;
@@ -147,14 +142,14 @@ bool MorphOpenCL::initialize()
 	cl_device_type deviceType;
 	dev.getInfo(CL_DEVICE_TYPE, &deviceType);
 	if(deviceType != CL_DEVICE_TYPE_GPU)
-		useShared = false;
+		conf.glInterop = false;
 
 	cl_uint maxComputeUnits, maxClockFreq;
 	cl_ulong maxMemAllocSize, localMemSize;
 	cl_device_local_mem_type localMemType;
 
 	printf("\n********************************************************\n");
-	printf("Using CL/GL interop: %s\n", useShared ? "yes" : "no");
+	printf("Using CL/GL interop: %s\n", conf.glInterop ? "yes" : "no");
 
 	dev.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &maxComputeUnits);
 	printf("Compute units: %d\n", maxComputeUnits);

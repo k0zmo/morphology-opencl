@@ -5,7 +5,7 @@
 class MorphOpenCLBuffer : public MorphOpenCL
 {
 public:
-	MorphOpenCLBuffer();
+	MorphOpenCLBuffer(const Configuration& conf);
 	virtual ~MorphOpenCLBuffer();
 
 	virtual bool initialize();

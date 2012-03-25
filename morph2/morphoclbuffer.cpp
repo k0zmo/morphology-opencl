@@ -1,17 +1,16 @@
 #include <GL/glew.h>
-#include <QSettings>
 
 #include "morphoclbuffer.h"
 
-MorphOpenCLBuffer::MorphOpenCLBuffer()
-	: MorphOpenCL()
+MorphOpenCLBuffer::MorphOpenCLBuffer(const Configuration& conf)
+	: MorphOpenCL(conf)
 {
-	glGenBuffers(1, &pboStaging);
 }
 
 MorphOpenCLBuffer::~MorphOpenCLBuffer()
 {
-	glDeleteBuffers(1, &pboStaging);
+	if(conf.glInterop && glDeleteBuffers)
+		glDeleteBuffers(1, &pboStaging);
 }
 
 bool MorphOpenCLBuffer::initialize()
@@ -19,11 +18,10 @@ bool MorphOpenCLBuffer::initialize()
 	MorphOpenCL::initialize();
 	if(error) return false;
 
-	QSettings s("./settings.cfg", QSettings::IniFormat);
 	QString opts = "-Ikernels-buffer1D/";
 
 	// Typ danych (uchar czy uint)
-	if(s.value("opencl/datatype", "0").toInt() == 0)
+	if(conf.dataType == 0)
 	{
 		useUint = false;
 		opts += " -DUSE_UCHAR";
@@ -35,7 +33,7 @@ bool MorphOpenCLBuffer::initialize()
 		printf("Using uint/uint4 as a type\n");
 	}
 
-	if(s.value("opencl/atomiccounters", false).toBool())
+	if(conf.atomicCounters)
 	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
 		printf("Using atomic counters instead of global atomic operations\n");
@@ -44,17 +42,17 @@ bool MorphOpenCLBuffer::initialize()
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-buffer1D/erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel-buffer1D/erode", "erode").toString();
+	erodeParams.kernelName = conf.erode_1d;
 	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	dilateParams.programName = "kernels-buffer1D/dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel-buffer1D/dilate", "dilate").toString();
+	dilateParams.kernelName = conf.dilate_1d;
 	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	gradientParams.programName = "kernels-buffer1D/gradient.cl";
 	gradientParams.options = opts;
-	gradientParams.kernelName = s.value("kernel-buffer1D/gradient", "gradient").toString();
+	gradientParams.kernelName = conf.gradient_1d;
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy
@@ -66,7 +64,7 @@ bool MorphOpenCLBuffer::initialize()
 	kernelErode = createKernel(program, erodeParams.kernelName);
 	kernelDilate = createKernel(program, dilateParams.kernelName);
 	kernelGradient = createKernel(program, gradientParams.kernelName);
-	kernelSubtract = createKernel(program, s.value("kernel-buffer1D/subtract", "subtract").toString());
+	kernelSubtract = createKernel(program, conf.subtract_1d);
 
 	kernelBayer[0] = createKernel(programBayer, "convert_rg2gray");
 	kernelBayer[1] = createKernel(programBayer, "convert_gr2gray");
@@ -74,12 +72,12 @@ bool MorphOpenCLBuffer::initialize()
 	kernelBayer[3] = createKernel(programBayer, "convert_gb2gray");
 
 	// subtract4 (wymaga wyrownania wierszy danych do 4 bajtow) czy subtract
-	QString sub = s.value("kernel-buffer1D/subtract", "subtract").toString();
+	QString sub = conf.subtract_1d;
 	if(sub.endsWith("4")) sub4 = true;
 	else sub4 = false;
 
 	// hitmiss
-	QString localHitmissStr = s.value("kernel-buffer1D/hitmiss", "global").toString();
+	QString localHitmissStr = conf.hitmiss_1d;
 	bool localHitmiss = localHitmissStr.contains("local");
 
 	kernelOutline = createKernel(program, (localHitmiss ? "outline4_local" : "outline"));
@@ -109,6 +107,9 @@ bool MorphOpenCLBuffer::initialize()
 		kernelSkeleton_pass[1] = createKernel(program, "skeletonZhang4_pass2_local");
 	}
 
+	if(conf.glInterop && glGenBuffers)
+		glGenBuffers(1, &pboStaging);
+
 	return true;
 }
 
@@ -117,8 +118,8 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc)
 	cl_int err;
 	sourceBuffer.cpu = newSrc;
 
-	sourceBuffer.gpuWidth = roundUp(newSrc->cols, workGroupSizeX);
-	sourceBuffer.gpuHeight = roundUp(newSrc->rows, workGroupSizeY);
+	sourceBuffer.gpuWidth = roundUp(newSrc->cols, conf.workgroupSizeX);
+	sourceBuffer.gpuHeight = roundUp(newSrc->rows, conf.workgroupSizeY);
 	sourceBuffer.gpu = cl::Buffer(context, CL_MEM_READ_ONLY,
 		bufferSize(), nullptr, &err);
 	clError("Error while creating OpenCL source buffer", err);
@@ -180,6 +181,9 @@ void MorphOpenCLBuffer::setSourceImage(const cv::Mat* newSrc, GLuint glresource)
 {
 	setSourceImage(newSrc);
 
+	if(!conf.glInterop)
+		return;
+
 	if(newSrc->cols != sharedw || newSrc->rows != sharedh)
 	{
 		sharedw = newSrc->cols;
@@ -208,13 +212,13 @@ double MorphOpenCLBuffer::morphology(Morphology::EOperationType opType,
 
 	// Bufor docelowy
 	cl::Buffer clDst;
-	if(useShared) clDst = shared;
+	if(conf.glInterop) clDst = shared;
 	else clDst = createBuffer(CL_MEM_WRITE_ONLY);
 
 	cl::Buffer* clSrcImage = &sourceBuffer.gpu;
 	cl::Buffer bayered;
 
-	if(bayerFilter != Morphology::BC_None)
+	if(bayerFilter != cvu::BC_None)
 	{
 		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
 		bayered = createBuffer(CL_MEM_READ_WRITE);
@@ -279,7 +283,7 @@ double MorphOpenCLBuffer::morphology(Morphology::EOperationType opType,
 	}
 
 	// Zczytaj wynik z karty (tylko w przypadku nie dzielenia zasobu)
-	if(!useShared)
+	if(!conf.glInterop)
 	{
 		cl_ulong readingTime = readBack(clDst, dst, dstSizeX, dstSizeY);
 
@@ -647,12 +651,12 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	err |= kernel->setArg(4, imageSize);
 	clError("Error while setting kernel arguments", err);
 
-	int globalItemsX = roundUp(sourceBuffer.cpu->cols - apronX, workGroupSizeX);
-	int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, workGroupSizeX);
+	int globalItemsX = roundUp(sourceBuffer.cpu->cols - apronX, conf.workgroupSizeX);
+	int globalItemsY = roundUp(sourceBuffer.cpu->rows - apronY, conf.workgroupSizeX);
 
 	cl::NDRange offset = cl::NullRange;
 	cl::NDRange gridDim(globalItemsX, globalItemsY);
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	std::string kernelName = kernel->getInfo<CL_KERNEL_FUNCTION_NAME>();
 	bool useLocal = kernelName.find("_local") != std::string::npos;
@@ -660,8 +664,8 @@ cl_ulong MorphOpenCLBuffer::executeMorphologyKernel(cl::Kernel* kernel,
 	if(useLocal)
 	{
 		cl_int2 sharedSize = {
-			roundUp(workGroupSizeX + apronX, 4),
-			workGroupSizeY + apronY
+			roundUp(conf.workgroupSizeX + apronX, 4),
+			conf.workgroupSizeY + apronY
 		};
 		size_t sharedBlockSize = sharedSize.s[0] * sharedSize.s[1];
 		if(useUint) sharedBlockSize *= sizeof(cl_uint);
@@ -738,7 +742,7 @@ cl_ulong MorphOpenCLBuffer::executeSubtractKernel(const cl::Buffer& clABuffer,
 	if(sub4) xitems /= 4;
 
 	cl::NDRange offset = cl::NullRange;
-	cl::NDRange blockDim(workGroupSizeX * workGroupSizeY);
+	cl::NDRange blockDim(conf.workgroupSizeX * conf.workgroupSizeY);
 	cl::NDRange gridDim(roundUp(xitems * sourceBuffer.gpuHeight, blockDim[0]));
 
 	// Ustaw argumenty kernela
@@ -777,9 +781,9 @@ cl_ulong MorphOpenCLBuffer::executeBayerFilter(cl::Kernel* kernel,
 
 	cl::NDRange offset(1, 1);
 	cl::NDRange gridDim(
-		roundUp(sourceBuffer.cpu->cols - 2, workGroupSizeX),
-		roundUp(sourceBuffer.cpu->rows - 2, workGroupSizeY));
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+		roundUp(sourceBuffer.cpu->cols - 2, conf.workgroupSizeX),
+		roundUp(sourceBuffer.cpu->rows - 2, conf.workgroupSizeY));
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;

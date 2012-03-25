@@ -56,6 +56,8 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	connect(pbShowSE, SIGNAL(pressed()), gC, SLOT(onStructuringElementPreviewPressed()));
 	connect(pbRun, SIGNAL(pressed()), gC, SLOT(onRecompute()));
 
+	cbInvert->setVisible(false);
+
 	// Wartosci domyslne
 	rbNone->toggle();
 	rbEllipse->toggle();

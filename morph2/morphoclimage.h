@@ -5,7 +5,7 @@
 class MorphOpenCLImage : public MorphOpenCL
 {
 public:
-	MorphOpenCLImage();
+	MorphOpenCLImage(const Configuration& conf);
 	virtual ~MorphOpenCLImage();
 
 	virtual bool initialize();

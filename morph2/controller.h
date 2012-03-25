@@ -8,6 +8,7 @@
 #include "morphoclimage.h"
 #include "morphoperators.h"
 #include "configuration.h"
+#include "procthread.h"
 
 #define CV_NO_BACKWARD_COMPATIBILITY
 #include <opencv2/imgproc/imgproc.hpp>
@@ -54,6 +55,10 @@ private:
 	GLWidget* previewWidget;
 	MorphOpenCL* ocl;
 
+	BlockingQueue<ProcessingItem> procQueue;
+	ProcThread procThread;
+
+	bool negateSource;
 	bool oclSupported;
 	bool useOpenCL;
 	bool autoTrigger;
@@ -85,6 +90,8 @@ private slots:
 
 	void onShowSourceImage();
 	void onRecompute();
+
+	void onProcessingDone(const ProcessedItem& item);
 
 private:
 	void openFile(const QString& filename);

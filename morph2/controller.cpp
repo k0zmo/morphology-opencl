@@ -8,17 +8,23 @@
 #include "settings.h"
 #include "sepreview.h"
 
+#include "procthread.h"
+
 #define USE_GLWIDGET 0
+#define DISABLE_OPENCL 1
 
 Controller* Controller::msSingleton = nullptr;
 
 Controller::Controller()
 	: mw(nullptr)
 	, ocl(nullptr)
+	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
 	, autoTrigger(false)
 	, resizeCustomSe(true)
+	, procQueue(2)
+	, procThread(procQueue)
 {
 }
 
@@ -61,17 +67,42 @@ void Controller::start()
 	mw->setPreviewWidget(previewLabel);
 #endif
 
-	//initializeOpenCL(OM_Buffer1D);
+#if DISABLE_OPENCL == 0
+	int method = 0;
+	printf("There are 2 methods implemented:\n"
+		"\t1) 2D buffer (image object)\n"
+		"\t2) 1D buffer (buffer object)\n");
+	while (method != 1 && method != 2)
+	{
+		printf("Choose method: ");
+		int r = scanf("%d", &method);
+		// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
+		// trzeba oproznic stdin, inaczej wpadniemy w nieskonczona petle
+		if(r != 1)
+		{
+			char buf[128];
+			fgets(buf, 128, stdin);
+		}
+	}
+
+	EOpenCLMethod emethod = static_cast<EOpenCLMethod>(method);
+	initializeOpenCL(emethod);
+#else
 	mw->setOpenCLCheckableAndChecked(false);
+#endif
 
 	connect(mw, SIGNAL(recomputeNeeded()), this, SLOT(onRecompute()));
 	connect(mw, SIGNAL(sourceImageShowed()), this, SLOT(onShowSourceImage()));
 	connect(mw, SIGNAL(structuringElementChanged()), this, SLOT(onStructuringElementChanged()));
+	connect(&procThread, SIGNAL(processingDone(ProcessedItem)), this, SLOT(onProcessingDone(ProcessedItem)));
 
 	openFile(defImage);
 	onShowSourceImage();
 
 	mw->show();
+
+	qRegisterMetaType<ProcessedItem>("ProcessedItem");
+	procThread.start();
 }
 
 void Controller::onFromCameraTriggered(bool state)
@@ -219,9 +250,9 @@ void Controller::onSaveStructuringElementTriggered()
 
 void Controller::onInvertChanged(int state)
 {
-	Q_UNUSED(state);
+	negateSource = state;
 
-	CvUtil::negateImage(src);
+	cvu::negateImage(src);
 	setOpenCLSourceImage();
 
 	if(mw->isNoneOperationChecked())
@@ -298,7 +329,7 @@ void Controller::onAutoTriggerChanged(int state)
 void Controller::onBayerIndexChanged(int bcode)
 {
 	if(oclSupported)
-		ocl->setBayerFilter(static_cast<Morphology::EBayerCode>(bcode));
+		ocl->setBayerFilter(static_cast<cvu::EBayerCode>(bcode));
 
 	if(autoTrigger)
 		onRecompute();
@@ -409,6 +440,7 @@ void Controller::onRecompute()
 		customSe : standardStructuringElement();
 	Morphology::EOperationType op = mw->morphologyOperation();
 
+#if 0
 	// Przetworz obraz
 	if(!useOpenCL)
 		processOpenCV(op, se);
@@ -425,6 +457,18 @@ void Controller::onRecompute()
 
 	// Pozwol go zapisac (dla operacji None wylaczamy taka opcje)
 	mw->allowImageSave();
+#else
+
+	ProcessingItem item = {
+		/*.invert =*/ negateSource,
+		/*.op =*/ op,
+		/*.bc =*/ static_cast<cvu::EBayerCode>(mw->bayerIndex()),
+		/*.se =*/ se,
+		/*.src =*/ src
+	};
+
+	procQueue.enqueue(item);
+#endif
 }
 
 void Controller::openFile(const QString& filename)
@@ -472,8 +516,8 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 {
 	switch(method)
 	{
-	case OM_Buffer1D: ocl = new MorphOpenCLBuffer; break;
-	case OM_Buffer2D: ocl = new MorphOpenCLImage; break;
+	case OM_Buffer1D: ocl = new MorphOpenCLBuffer(conf); break;
+	case OM_Buffer2D: ocl = new MorphOpenCLImage(conf); break;
 	default: return;
 	}
 
@@ -591,7 +635,7 @@ void Controller::previewCpuImage(const cv::Mat& image)
 {
 #if USE_GLWIDGET == 1
 	QSize surfaceSize(image.cols, image.rows);
-	double fx = CvUtil::scaleCoeff(
+	double fx = cvu::scaleCoeff(
 		cv::Size(conf.maxImageWidth, conf.maxImageHeight),
 		image.size());
 
@@ -604,13 +648,37 @@ void Controller::previewCpuImage(const cv::Mat& image)
 #else
 	cv::Mat img(image);
 	cv::Size imgSize(conf.maxImageWidth, conf.maxImageHeight);
-	CvUtil::resizeWithAspect(img, imgSize);
-	QImage qimg(CvUtil::toQImage(img));
+	cvu::resizeWithAspect(img, imgSize);
+	QImage qimg(cvu::toQImage(img));
 	previewLabel->setPixmap(QPixmap::fromImage(qimg));
 #endif
 }
 
 void Controller::previewGpuImage()
 {
-	// TODO
+#if USE_GLWIDGET == 1
+	// Mozna by przy wczytywaniu ustawic te wielkosci
+
+	//QSize surfaceSize(src.cols, src.rows);
+	//double fx = CvUtil::scaleCoeff(
+	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
+	//	image.size());
+	//surfaceSize.setWidth(surfaceSize.width() * fx);
+	//surfaceSize.setHeight(surfaceSize.height() * fx);
+	//previewWidget->setMinimumSize(surfaceSize);
+	//previewWidget->setMaximumSize(surfaceSize);
+
+	previewWidget->updateGL();
+#endif
+}
+
+void Controller::onProcessingDone(const ProcessedItem& item)
+{
+	dst = item.dst;
+	previewCpuImage(dst);
+
+	// Pozwol go zapisac (dla operacji None wylaczamy taka opcje)
+	mw->allowImageSave();
+
+	showStats(item.iters, item.delapsed);
 }

@@ -6,6 +6,8 @@
 #include <QString>
 
 #include "morphoperators.h"
+#include "configuration.h"
+#include "cvutils.h"
 
 enum EOpenCLMethod
 {
@@ -16,7 +18,7 @@ enum EOpenCLMethod
 class MorphOpenCL
 {
 public:
-	MorphOpenCL();
+	MorphOpenCL(const Configuration& conf);
 	virtual ~MorphOpenCL();
 
 	// Callback wywolywany gdy wystapi blad zgloszony przez OpenCLa
@@ -35,7 +37,7 @@ public:
 	virtual void setSourceImage(const cv::Mat* src, GLuint glresource) = 0;
 
 	// Ustawia czy przed filtracja wlasciwa wykonana zostanie interpolacja bayera
-	void setBayerFilter(Morphology::EBayerCode code)
+	void setBayerFilter(cvu::EBayerCode code)
 	{ bayerFilter = code; }
 
 	// Ustawia element strukturalny
@@ -48,10 +50,10 @@ public:
 	// (Ma sens dla dylatacji i erozji)
 	void recompile(Morphology::EOperationType opType, int coordsSize);
 
-	bool usingShared() const { return useShared; }
+	bool usingShared() const { return conf.glInterop; }
 
 	inline void setWorkGroupSize(int x, int y)
-	{ workGroupSizeX = x; workGroupSizeY = y; }
+	{ conf.workgroupSizeX = x; conf.workgroupSizeY = y; }
 
 	bool error;
 
@@ -60,6 +62,7 @@ protected:
 	cl::Device dev;
 	cl::CommandQueue cq;
 	ErrorCallback cb;
+	Configuration conf;
 
 	// Bufor ze wspolrzednymi elementu strukturalnego
 	cl::Buffer clStructuringElementCoords;
@@ -67,14 +70,9 @@ protected:
 	int csize;
 
 	int kradiusx, kradiusy;
-	
-	// Rozmiar grupy roboczej
-	int workGroupSizeX;
-	int workGroupSizeY;
-
 	int sharedw, sharedh;
-	bool useShared;
-	Morphology::EBayerCode bayerFilter;
+
+	cvu::EBayerCode bayerFilter;
 
 	struct SKernelParameters
 	{

@@ -1,9 +1,7 @@
 #include "morphoclimage.h"
 
-#include <QSettings>
-
-MorphOpenCLImage::MorphOpenCLImage()
-	: MorphOpenCL()
+MorphOpenCLImage::MorphOpenCLImage(const Configuration& conf)
+	: MorphOpenCL(conf)
 {
 }
 
@@ -44,10 +42,9 @@ bool MorphOpenCLImage::initialize()
 	}
 	if(error) return false;
 
-	QSettings s("./settings.cfg", QSettings::IniFormat);
 	QString opts = "-Ikernels-buffer2D/";
 	
-	if(s.value("opencl/atomiccounters", false).toBool())
+	if(conf.atomicCounters)
 	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
 		printf("Using atomic counters instead of global atomic operations\n");
@@ -56,17 +53,17 @@ bool MorphOpenCLImage::initialize()
 	// do ewentualnej rekompilacji z podaniem innego parametry -D
 	erodeParams.programName = "kernels-buffer2D/erode.cl";
 	erodeParams.options = opts;
-	erodeParams.kernelName = s.value("kernel-buffer2D/erode", "erode").toString();
+	erodeParams.kernelName = conf.erode_2d;
 	erodeParams.needRecompile = erodeParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	dilateParams.programName = "kernels-buffer2D/dilate.cl";
 	dilateParams.options = opts;
-	dilateParams.kernelName = s.value("kernel-buffer2D/dilate", "dilate").toString();
+	dilateParams.kernelName = conf.dilate_2d;
 	dilateParams.needRecompile = dilateParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	gradientParams.programName = "kernels-buffer2D/gradient.cl";
 	gradientParams.options = opts;
-	gradientParams.kernelName = s.value("kernel-buffer2D/gradient", "gradient").toString();
+	gradientParams.kernelName = conf.gradient_2d;
 	gradientParams.needRecompile = gradientParams.kernelName.contains("_pragma", Qt::CaseSensitive);
 
 	// Wczytaj programy
@@ -155,13 +152,13 @@ double MorphOpenCLImage::morphology(Morphology::EOperationType opType,
 
 	// Obraz docelowy
 	cl::Image2D clDstImage;
-	if(useShared) clDstImage = shared;
+	if(conf.glInterop) clDstImage = shared;
 	else clDstImage = createImage2D(CL_MEM_WRITE_ONLY);
 
 	cl::Image2D* clSrcImage = &sourceImage.gpu;
 	cl::Image2D bayered;
 
-	if(bayerFilter != Morphology::BC_None)
+	if(bayerFilter != cvu::BC_None)
 	{
 		cl::Kernel* kernel = &kernelBayer[bayerFilter - 1];
 		bayered = createImage2D(CL_MEM_READ_WRITE);
@@ -206,7 +203,7 @@ double MorphOpenCLImage::morphology(Morphology::EOperationType opType,
 	}
 
 	// Zczytaj wynik z karty (tylko w przypadku nie dzielenia zasobu)
-	if(!useShared)
+	if(!conf.glInterop)
 	{
 		cl_ulong readingTime = readBack(clDstImage, dst);
 
@@ -511,9 +508,9 @@ cl_ulong MorphOpenCLImage::executeMorphologyKernel(cl::Kernel* kernel,
 
 	cl::NDRange offset = cl::NullRange;
 	cl::NDRange gridDim(
-		roundUp(sourceImage.cpu->cols, workGroupSizeX),
-		roundUp(sourceImage.cpu->rows, workGroupSizeY));
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+		roundUp(sourceImage.cpu->cols, conf.workgroupSizeX),
+		roundUp(sourceImage.cpu->rows, conf.workgroupSizeY));
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;	
@@ -546,9 +543,9 @@ cl_ulong MorphOpenCLImage::executeHitMissKernel(cl::Kernel* kernel,
 
 	cl::NDRange offset(1, 1);
 	cl::NDRange gridDim(
-		roundUp(sourceImage.cpu->cols - 2, workGroupSizeX),
-		roundUp(sourceImage.cpu->rows - 2, workGroupSizeY));
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+		roundUp(sourceImage.cpu->cols - 2, conf.workgroupSizeX),
+		roundUp(sourceImage.cpu->rows - 2, conf.workgroupSizeY));
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;
@@ -576,9 +573,9 @@ cl_ulong MorphOpenCLImage::executeSubtractKernel(const cl::Image2D& clAImage,
 
 	cl::NDRange offset = cl::NullRange;
 	cl::NDRange gridDim(
-		roundUp(sourceImage.cpu->cols, workGroupSizeX),
-		roundUp(sourceImage.cpu->rows, workGroupSizeY));
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+		roundUp(sourceImage.cpu->cols, conf.workgroupSizeX),
+		roundUp(sourceImage.cpu->rows, conf.workgroupSizeY));
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;	
@@ -605,9 +602,9 @@ cl_ulong MorphOpenCLImage::executeBayerFilter(cl::Kernel* kernel,
 
 	cl::NDRange offset(1, 1);
 	cl::NDRange gridDim(
-		roundUp(sourceImage.cpu->cols - 2, workGroupSizeX),
-		roundUp(sourceImage.cpu->rows - 2, workGroupSizeY));
-	cl::NDRange blockDim(workGroupSizeX, workGroupSizeY);
+		roundUp(sourceImage.cpu->cols - 2, conf.workgroupSizeX),
+		roundUp(sourceImage.cpu->rows - 2, conf.workgroupSizeY));
+	cl::NDRange blockDim(conf.workgroupSizeX, conf.workgroupSizeY);
 
 	// Odpal kernela
 	cl::Event evt;
