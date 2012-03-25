@@ -2,6 +2,8 @@
 #include "elapsedtimer.h"
 #include "cvutils.h"
 
+#include <QDebug>
+
 ProcThread::ProcThread(BlockingQueue<ProcessingItem>& queue)
 	: QThread(nullptr)
 	, queue(queue)
@@ -18,6 +20,10 @@ void ProcThread::run()
 	{
 		ProcessingItem item = queue.dequeue();
 
+		//qDebug() << endl << "New processing job:" << "\n\toperation:" << 
+		//	item.op << "\n\tbayer code:" << item.bc << 
+		//	"\n\tnegate:" << item.negate << endl;
+
 		// Brak operacji, zwroc obraz zrodlowy
 		if(!item.negate && 
 			item.bc == cvu::BC_None &&
@@ -29,6 +35,7 @@ void ProcThread::run()
 				/*.dst = */ item.src
 			};
 			emit processingDone(pitem);
+			continue;
 		}
 
 		// Zacznij liczyc czas

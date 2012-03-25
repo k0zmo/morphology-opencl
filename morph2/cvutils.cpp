@@ -24,28 +24,8 @@ QImage toQImage(const cv::Mat& image)
 	return QImage();
 }
 
-void negateImage(cv::Mat& src)
-{
-	cv::Mat lut(1, 256, CV_8U);
-	uchar* p = lut.ptr<uchar>();
-	for(int i = 0; i < lut.cols; ++i)
-	{
-		*p++ = 255 - i;
-	}
-	cv::LUT(src, lut, src);
-}
-
 void negate(const cv::Mat& src, cv::Mat& dst)
 {
-	//cv::Mat src = _src.getMat();
-	//_dst.create(src.size(), CV_MAKETYPE(src.depth(), src.channels()));
-
-	//cv::Mat lut(1, 256, CV_8U);
-	//uchar* p = lut.ptr<uchar>();
-
-	//for(int i = 0; i < lut.cols; ++i)
-	//	*p++ = 255 - i;
-
 	//cv::LUT(_src, lut, _dst);
 	cv::Mat lut(1, 256, CV_8U);
 	uchar* p = lut.ptr<uchar>();

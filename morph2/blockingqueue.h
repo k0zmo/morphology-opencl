@@ -5,8 +5,7 @@
 #include <QWaitCondition>
 
 #define CV_NO_BACKWARD_COMPATIBILITY
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
 
 #include "morphoperators.h"
 #include "cvutils.h"
@@ -76,8 +75,8 @@ private:
 struct ProcessingItem
 {
 	bool negate;
-	Morphology::EOperationType op;
 	cvu::EBayerCode bc;
+	Morphology::EOperationType op;
 	cv::Mat se;
 	cv::Mat src;
 };

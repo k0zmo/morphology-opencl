@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	connect(actionSettings, SIGNAL(triggered()), gC, SLOT(onSettingsTriggered()));
 
 	// Operacje
-	connect(rbNone, SIGNAL(toggled(bool)), SLOT(onNoneOperationToggled(bool)));
+	connect(rbNone, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
 	connect(rbErode, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
 	connect(rbDilate, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
 	connect(rbOpen, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
@@ -38,10 +38,10 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	connect(rbSkeletonZhang, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
 
 	// Element strukturalny
-	connect(rbRect, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
-	connect(rbEllipse, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
-	connect(rbCross, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
-	connect(rbCustom, SIGNAL(toggled(bool)), SLOT(onStructuringElementToggled(bool)));
+	connect(rbRect, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
+	connect(rbEllipse, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
+	connect(rbCross, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
+	connect(rbCustom, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
 
 	// Rozmiar elementu strukturalnego
 	connect(cbSquare, SIGNAL(stateChanged(int)), SLOT(onElementSizeRatioChanged(int)));
@@ -56,19 +56,19 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	connect(pbShowSE, SIGNAL(pressed()), gC, SLOT(onStructuringElementPreviewPressed()));
 	connect(pbRun, SIGNAL(pressed()), gC, SLOT(onRecompute()));
 
-	cbInvert->setVisible(false);
-
 	// Wartosci domyslne
 	rbNone->toggle();
 	rbEllipse->toggle();
 	cbSquare->setChecked(true);
-
 	lbXElementSize->setText(QString::fromLatin1("Horizontal: 3"));
 	lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
 	lbRotation->setText(QString::fromLatin1("0"));
 
+	// Pasek stanu
 	statusBarLabel = new QLabel(this);
 	statusBar()->addPermanentWidget(statusBarLabel);
+	cameraStatusLabel = new QLabel(this);
+	statusBar()->addPermanentWidget(cameraStatusLabel);
 }
 
 MainWindow::~MainWindow()
@@ -198,56 +198,51 @@ QRadioButton* MainWindow::operationToRadioBox(Morphology::EOperationType op)
 	}
 }
 
-void MainWindow::onNoneOperationToggled(bool checked)
-{
-	if(!checked)
-	{
-		pbRun->setEnabled(true);
-		return;
-	}
-
-	gbElement->setEnabled(true);
-	gbElementSize->setEnabled(true);
-	pbRun->setEnabled(false);
-	actionSave->setEnabled(false);
-
-	emit sourceImageShowed();
-}
-
 void MainWindow::onOperationToggled(bool checked)
 {
 	if(!checked)
 		return;
 
-	// Operacje hit-miss
+	// Dla braku operacji
+	//pbRun->setEnabled(!rbNone->isChecked());
+
+	// Deaktywuj wybor elementu strukturalnego
+	// dla operacji hitmiss oraz braku operacji
 	if (rbOutline->isChecked() ||
 		rbSkeleton->isChecked() ||
-		rbSkeletonZhang->isChecked())
+		rbSkeletonZhang->isChecked() ||
+		rbNone->isChecked())
 	{
-		// deaktywuj wybor elementu strukturalnego
 		gbElement->setEnabled(false);
 		gbElementSize->setEnabled(false);
 	}
 	else
 	{
-		// aktywuj wybor elementu strukturalnego
+		// Aktywuj wybor elementu strukturalnego
 		gbElement->setEnabled(true);
 		gbElementSize->setEnabled(true);
 	}
 
-	if(cbAutoTrigger->isChecked())
+	if(cbAutoTrigger->isChecked() || 
+	   rbNone->isChecked() ||
+	   actionCameraInput->isChecked())
+	{
 		emit recomputeNeeded();
+	}
 }
 
-void MainWindow::onStructuringElementToggled(bool checked)
+void MainWindow::onElementTypeToggled(bool checked)
 {
 	if(!checked)
 		return;
 
 	emit structuringElementChanged();
 
-	if(cbAutoTrigger->isChecked())
+	if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
+	   actionCameraInput->isChecked())
+	{
 		emit recomputeNeeded();
+	}
 }
 
 void MainWindow::onElementSizeRatioChanged(int state)
@@ -298,8 +293,14 @@ void MainWindow::onElementSizeChanged(int value)
 
 	// Czy trzeba ponownie wykonac obliczenia w zwiazku ze zmiana 
 	// rozmiaru elementu strukturalnego
-	if (!disableRecomputing && cbAutoTrigger->isChecked())
-		emit recomputeNeeded();
+	if (!disableRecomputing)
+	{
+		if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
+		   actionCameraInput->isChecked())
+		{
+			emit recomputeNeeded();
+		}
+	}		
 
 	disableRecomputing = false;
 }
@@ -313,8 +314,11 @@ void MainWindow::onElementRotationChanged(int value)
 
 	emit structuringElementChanged();
 
-	if(cbAutoTrigger->isChecked())
+	if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
+	   actionCameraInput->isChecked())
+	{
 		emit recomputeNeeded();
+	}
 }
 
 void MainWindow::onElementRotationResetPressed()

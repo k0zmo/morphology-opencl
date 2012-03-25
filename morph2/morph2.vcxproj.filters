@@ -128,23 +128,23 @@
     <ClCompile Include="glwidget.cpp">
       <Filter>Source Files\View</Filter>
     </ClCompile>
-    <ClCompile Include="capthread.cpp">
-      <Filter>Header Files\Controller</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_capthread.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_capthread.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="procthread.cpp">
-      <Filter>Header Files\Controller</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_procthread.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_procthread.cpp">
       <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="procthread.cpp">
+      <Filter>Source Files\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="capthread.cpp">
+      <Filter>Source Files\Controller</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

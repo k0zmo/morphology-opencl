@@ -9,6 +9,7 @@
 #include "sepreview.h"
 
 #include "procthread.h"
+#include "capthread.h"
 
 #define USE_GLWIDGET 0
 #define DISABLE_OPENCL 1
@@ -23,13 +24,29 @@ Controller::Controller()
 	, useOpenCL(false)
 	, autoTrigger(false)
 	, resizeCustomSe(true)
-	, procQueue(2)
-	, procThread(procQueue)
+	, cameraConnected(false)
+	, procQueue(3)
+	, procThread(nullptr)
+	, capThread(nullptr)
 {
 }
 
 Controller::~Controller()
 {
+	// Zatrzymaj watki
+	if(procThread)
+	{
+		procThread->terminate();
+		delete procThread;
+	}
+
+	if(capThread)
+	{
+		capThread->closeCamera();
+		capThread->terminate();
+		delete capThread;
+	}
+
 	delete mw;
 	delete ocl;
 }
@@ -51,6 +68,7 @@ void Controller::start()
 
 	mw = new MainWindow;
 
+	// Utworz kontrolke podgladu obrazu
 #if USE_GLWIDGET == 1
 	previewWidget = new GLWidget(mw->centralWidget());
 	previewWidget->setMinimumSize(QSize(10, 10));
@@ -67,6 +85,7 @@ void Controller::start()
 	mw->setPreviewWidget(previewLabel);
 #endif
 
+	// Inicjalizuj (sprobuj) OpenCLa
 #if DISABLE_OPENCL == 0
 	int method = 0;
 	printf("There are 2 methods implemented:\n"
@@ -91,23 +110,60 @@ void Controller::start()
 	mw->setOpenCLCheckableAndChecked(false);
 #endif
 
-	connect(mw, SIGNAL(recomputeNeeded()), this, SLOT(onRecompute()));
-	connect(mw, SIGNAL(sourceImageShowed()), this, SLOT(onShowSourceImage()));
-	connect(mw, SIGNAL(structuringElementChanged()), this, SLOT(onStructuringElementChanged()));
-	connect(&procThread, SIGNAL(processingDone(ProcessedItem)), this, SLOT(onProcessingDone(ProcessedItem)));
+	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
+	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
+
+	// Odpal watek przetwarzajacy obraz
+	procThread = new ProcThread(procQueue);
+
+	// Customowe typy nalezy zarejstrowac dla polaczen typu QueuedConnection (miedzywatkowe)
+	qRegisterMetaType<ProcessedItem>("ProcessedItem");
+	connect(procThread, SIGNAL(processingDone(ProcessedItem)), SLOT(onProcessingDone(ProcessedItem)));
+	
+	procThread->start(QThread::HighPriority);
 
 	openFile(defImage);
-	onShowSourceImage();
+	onRecompute();
 
+	mw->setCameraStatusBarState(false);
 	mw->show();
-
-	qRegisterMetaType<ProcessedItem>("ProcessedItem");
-	procThread.start();
 }
 
 void Controller::onFromCameraTriggered(bool state)
 {
+	if(state)
+	{
+		capThread = new CapThread(procQueue);
+		if(!(cameraConnected = capThread->openCamera(0)))
+		{
+			mw->setFromCamera(false);
 
+			QMessageBox::critical(mw, "Error", 
+				"Cannot establish connection to selected camera device.", 
+				QMessageBox::Ok);
+		}
+		else
+		{
+			Morphology::EOperationType op = mw->morphologyOperation();
+			cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
+			cv::Mat se = structuringElement();
+
+			capThread->setJobDescription(negateSource, bc, op, se);
+			capThread->start(QThread::LowPriority);
+		}
+	}
+	else
+	{
+		capThread->closeCamera();
+		capThread->terminate();
+		delete capThread;
+		capThread = 0;
+		cameraConnected = false;
+
+		// src = [Ostatnia klatka z kamery czy zostajemy przy ostatnim wczytanym obrazie z dysku] ?
+	}
+
+	mw->setCameraStatusBarState(cameraConnected);
 }
 
 void Controller::onOpenFileTriggered()
@@ -120,15 +176,13 @@ void Controller::onOpenFileTriggered()
 
 	openFile(filename);
 
-	if(autoTrigger && !mw->isNoneOperationChecked())
-	{
-		onRecompute();
-	}
+	if(mw->morphologyOperation() != Morphology::OT_None)
+		// wywola onRecompute()
+		mw->setMorphologyOperation(Morphology::OT_None); 
 	else
-	{
-		mw->setMorphologyOperation(Morphology::OT_None);
-		onShowSourceImage();
-	}	
+		// jesli wybrane wczesniej bylo None to nie zostal
+		// wyemitowany zaden sygnal
+		onRecompute();
 
 	mw->resize(1, 1);
 }
@@ -221,11 +275,13 @@ void Controller::onSaveStructuringElementTriggered()
 	file.open(QIODevice::WriteOnly);
 	QDataStream strm(&file);
 
+	// Serializuje magic'a oraz typ elementu strukturalnego
 	auto type = mw->structuringElementType();
 	strm << 0x1337U << type;
 
 	if(type != Morphology::SET_Custom)
 	{
+		// Serializuj parametry SE
 		QSize ksize = mw->structuringElementSize();
 		int rotation = mw->structuringElementRotation();
 
@@ -233,6 +289,7 @@ void Controller::onSaveStructuringElementTriggered()
 	}
 	else
 	{
+		// Serializuj wszystkie wartosci pikseli
 		strm << customSe.cols << customSe.rows;
 
 		// Musimy zapisywac rzad po rzedzie - zdaje sie, 
@@ -252,20 +309,20 @@ void Controller::onInvertChanged(int state)
 {
 	negateSource = state;
 
-	cvu::negateImage(src);
-	setOpenCLSourceImage();
-
-	if(mw->isNoneOperationChecked())
-		onShowSourceImage();
-	else if(autoTrigger)
+	if(!cameraConnected && 
+		(autoTrigger || mw->isNoneOperationChecked()))
 		onRecompute();
+	else if(cameraConnected)
+		if(capThread)
+			capThread->setNegateImage(state);
 }
 
 void Controller::onOpenCLTriggered(bool state)
 {
 	useOpenCL = state;
 
-	if(autoTrigger)
+	if(!cameraConnected && autoTrigger && 
+		!mw->isNoneOperationChecked())
 		onRecompute();
 }
 
@@ -283,7 +340,7 @@ void Controller::onPickMethodTriggerd()
 
 	EOpenCLMethod method;
 
-	// Co wybrano
+	// Jaki "silnik" wybrano
 	if(msgBox.clickedButton() == buffer1D)
 		method = OM_Buffer1D;
 	else if(msgBox.clickedButton() == buffer2D)
@@ -291,10 +348,9 @@ void Controller::onPickMethodTriggerd()
 	else
 		return;
 
-	// Reinicjalizuj modul OpenCLa
+	// Reinicjalizuj modul OpenCLa z wybranym silnikiem
 	delete ocl;
 	initializeOpenCL(method);
-	setOpenCLSourceImage();
 }
 
 void Controller::onSettingsTriggered()
@@ -318,7 +374,8 @@ void Controller::onAutoTriggerChanged(int state)
 	if(state == Qt::Checked)
 	{
 		autoTrigger = true;
-		onRecompute();
+		if(!cameraConnected)
+			onRecompute();
 	}
 	else
 	{
@@ -328,11 +385,17 @@ void Controller::onAutoTriggerChanged(int state)
 
 void Controller::onBayerIndexChanged(int bcode)
 {
-	if(oclSupported)
-		ocl->setBayerFilter(static_cast<cvu::EBayerCode>(bcode));
+	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(bcode);
 
-	if(autoTrigger)
+	if(oclSupported)
+		ocl->setBayerFilter(bc);
+
+	// Dla no-op rowniez chcemy to wykonac
+	if(!cameraConnected && (autoTrigger || cameraConnected))
 		onRecompute();
+	else if(cameraConnected)
+		if(capThread)
+			capThread->setBayerCode(bc);
 }
 
 void Controller::onStructuringElementChanged()
@@ -418,57 +481,54 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 	resizeCustomSe = true;
 }
 
-void Controller::onShowSourceImage()
-{
-	Q_ASSERT(mw->isNoneOperationChecked());
-
-#if USE_GLWIDGET == 1
-	// Pokaz obraz wynikowy
-	if(useOpenCL && ocl->usingShared())
-		previewGpuImage();
-	else
-#endif
-		previewCpuImage(src);
-}
-
 void Controller::onRecompute()
 {
-	if(mw->isNoneOperationChecked())
-		return;
-
-	cv::Mat se = mw->structuringElementType() == Morphology::SET_Custom ?
-		customSe : standardStructuringElement();
 	Morphology::EOperationType op = mw->morphologyOperation();
+	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
+	cv::Mat se = structuringElement();
 
-#if 0
-	// Przetworz obraz
-	if(!useOpenCL)
-		processOpenCV(op, se);
-	else
-		processOpenCL(op, se);
+	if(cameraConnected)
+	{
+		if(capThread)
+			capThread->setJobDescription(negateSource, bc, op, se);
+		return;
+	}
 
-#if USE_GLWIDGET == 1
-	// Pokaz obraz wynikowy
-	if(useOpenCL && ocl->usingShared())
-		previewGpuImage();
-	else
-#endif
-		previewCpuImage(dst);
+	//if(!useOpenCL)
+	// procQueue.enqueue(item);
+	//else
+	// procOpenCLQueue.enqueue(item);
 
-	// Pozwol go zapisac (dla operacji None wylaczamy taka opcje)
-	mw->allowImageSave();
-#else
-
-	ProcessingItem item = {
-		/*.invert =*/ negateSource,
-		/*.op =*/ op,
-		/*.bc =*/ static_cast<cvu::EBayerCode>(mw->bayerIndex()),
-		/*.se =*/ se,
-		/*.src =*/ src
-	};
-
+	ProcessingItem item = { negateSource, bc, op, se, src };
 	procQueue.enqueue(item);
-#endif
+}
+
+void Controller::onProcessingDone(const ProcessedItem& item)
+{
+	//#if USE_GLWIDGET == 1
+	//	// Pokaz obraz wynikowy
+	//	if(useOpenCL && ocl->usingShared())
+	//		previewGpuImage();
+	//	else
+	//#endif
+	//		previewCpuImage(dst);
+
+	//	void Controller::onShowSourceImage()
+	//	{
+	//		Q_ASSERT(mw->isNoneOperationChecked());
+	//
+	//#if USE_GLWIDGET == 1
+	//		// Pokaz obraz wynikowy
+	//		if(useOpenCL && ocl->usingShared())
+	//			previewGpuImage();
+	//		else
+	//#endif
+	//			previewCpuImage(src);
+	//	}
+
+	dst = item.dst;
+	previewCpuImage(dst);
+	showStats(item.iters, item.delapsed);
 }
 
 void Controller::openFile(const QString& filename)
@@ -478,16 +538,12 @@ void Controller::openFile(const QString& filename)
 	int depth = src.depth();
 	int channels = src.channels();
 
-	qDebug("depth:%d channels:%d\n", depth, channels);
-
 	Q_ASSERT(depth == CV_8U);
 
 	if(channels == 3)
 		cvtColor(src, src, CV_BGR2GRAY);
 	else if(channels == 4)
 		cvtColor(src, src, CV_BGRA2GRAY);
-
-	setOpenCLSourceImage();
 }
 
 cv::Mat Controller::standardStructuringElement()
@@ -503,6 +559,14 @@ cv::Mat Controller::standardStructuringElement()
 		type, rotation);
 }
 
+cv::Mat Controller::structuringElement()
+{
+	Morphology::EOperationType op = mw->morphologyOperation();
+	return (op == Morphology::OT_None) ? cv::Mat() : 
+		((mw->structuringElementType() == Morphology::SET_Custom) ?
+			customSe : standardStructuringElement());
+}
+
 void Controller::showStats(int iters, double elapsed)
 {
 	QString txt;
@@ -512,8 +576,39 @@ void Controller::showStats(int iters, double elapsed)
 	mw->setStatusBarText(txt);
 }
 
+void Controller::previewCpuImage(const cv::Mat& image)
+{
+#if USE_GLWIDGET == 1
+	QSize surfaceSize(image.cols, image.rows);
+	double fx = cvu::scaleCoeff(
+		cv::Size(conf.maxImageWidth, conf.maxImageHeight),
+		image.size());
+
+	surfaceSize.setWidth(surfaceSize.width() * fx);
+	surfaceSize.setHeight(surfaceSize.height() * fx);
+
+	previewWidget->setMinimumSize(surfaceSize);
+	previewWidget->setMaximumSize(surfaceSize);
+	previewWidget->setSurface(image);
+#else
+	static const cv::Size imgSize(conf.maxImageWidth, conf.maxImageHeight);
+
+	cv::Mat img(image);
+	double fx = cvu::scaleCoeff(imgSize, image.size());
+	cv::resize(img, img, cv::Size(), fx, fx, cv::INTER_LINEAR);
+	//cvu::resizeWithAspect(img, imgSize);
+
+	// Konwersja cv::Mat -> QImage -> QPixmap
+	QImage qimg(cvu::toQImage(img));
+	previewLabel->setPixmap(QPixmap::fromImage(qimg));
+#endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Controller::initializeOpenCL(EOpenCLMethod method)
 {
+	// Inicjalizuj odpowiedni silnik
 	switch(method)
 	{
 	case OM_Buffer1D: ocl = new MorphOpenCLBuffer(conf); break;
@@ -536,7 +631,7 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 	oclSupported = true;
 	oclSupported &= ocl->initialize();
 
-	// A bit ugly :)
+	// Troche paskudne rozwiazanie :)
 	ocl->setErrorCallback(
 		[this](const QString& message, cl_int err)
 	{
@@ -565,120 +660,58 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 	}
 }
 
-void Controller::setOpenCLSourceImage()
-{
-	if(oclSupported)
-	{
-		if(ocl->usingShared())
-		{
-			GLuint glresource = previewWidget->createEmptySurface
-				(src.cols, src.rows);
-			ocl->setSourceImage(&src, glresource);
-		}
-		else
-		{
-			ocl->setSourceImage(&src);
-		}
-	}
-}
+//void Controller::setOpenCLSourceImage()
+//{
+//	if(oclSupported)
+//	{
+//		if(ocl->usingShared())
+//		{
+//			GLuint glresource = previewWidget->createEmptySurface
+//				(src.cols, src.rows);
+//			ocl->setSourceImage(&src, glresource);
+//		}
+//		else
+//		{
+//			ocl->setSourceImage(&src);
+//		}
+//	}
+//}
+//
+//void Controller::processOpenCL(Morphology::EOperationType op, const cv::Mat& se)
+//{
+//	ocl->error = false;
+//	int csize = ocl->setStructuringElement(se);
+//
+//	if(ocl->error) 
+//		return;
+//
+//	ocl->recompile(op, csize);
+//
+//	if(ocl->error) 
+//		return;
+//
+//	int iters;
+//	double delapsed = ocl->morphology(op, dst, iters);
+//
+//	// Wyswietl statystyki
+//	showStats(iters, delapsed);
+//}
 
-void Controller::processOpenCV(Morphology::EOperationType op, const cv::Mat& se)
-{
-	cv::Mat src_(src);
 
-	ElapsedTimer timer;
-	timer.start();
-
-	// Filtr Bayer'a
-	if(mw->bayerIndex() != 0)
-	{
-		// Jest bug dla CV_BayerXX2GRAY i trzeba wykonac sciezke okrezna
-		switch(mw->bayerIndex())
-		{
-		case 1: cv::cvtColor(src, src_, CV_BayerRG2BGR); break;
-		case 2: cv::cvtColor(src, src_, CV_BayerGR2BGR); break;
-		case 3: cv::cvtColor(src, src_, CV_BayerBG2BGR); break;
-		case 4: cv::cvtColor(src, src_, CV_BayerGB2BGR); break;
-		default: break;
-		}
-		cvtColor(src_, src_, CV_BGR2GRAY);
-	}
-
-	int iters = Morphology::process(src_, dst, op, se);
-	double delapsed = timer.elapsed();
-
-	// Wyswietl statystyki
-	showStats(iters, delapsed);
-}
-
-void Controller::processOpenCL(Morphology::EOperationType op, const cv::Mat& se)
-{
-	ocl->error = false;
-	int csize = ocl->setStructuringElement(se);
-
-	if(ocl->error) 
-		return;
-
-	ocl->recompile(op, csize);
-
-	if(ocl->error) 
-		return;
-
-	int iters;
-	double delapsed = ocl->morphology(op, dst, iters);
-
-	// Wyswietl statystyki
-	showStats(iters, delapsed);
-}
-
-void Controller::previewCpuImage(const cv::Mat& image)
-{
-#if USE_GLWIDGET == 1
-	QSize surfaceSize(image.cols, image.rows);
-	double fx = cvu::scaleCoeff(
-		cv::Size(conf.maxImageWidth, conf.maxImageHeight),
-		image.size());
-
-	surfaceSize.setWidth(surfaceSize.width() * fx);
-	surfaceSize.setHeight(surfaceSize.height() * fx);
-
-	previewWidget->setMinimumSize(surfaceSize);
-	previewWidget->setMaximumSize(surfaceSize);
-	previewWidget->setSurface(image);
-#else
-	cv::Mat img(image);
-	cv::Size imgSize(conf.maxImageWidth, conf.maxImageHeight);
-	cvu::resizeWithAspect(img, imgSize);
-	QImage qimg(cvu::toQImage(img));
-	previewLabel->setPixmap(QPixmap::fromImage(qimg));
-#endif
-}
-
-void Controller::previewGpuImage()
-{
-#if USE_GLWIDGET == 1
-	// Mozna by przy wczytywaniu ustawic te wielkosci
-
-	//QSize surfaceSize(src.cols, src.rows);
-	//double fx = CvUtil::scaleCoeff(
-	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
-	//	image.size());
-	//surfaceSize.setWidth(surfaceSize.width() * fx);
-	//surfaceSize.setHeight(surfaceSize.height() * fx);
-	//previewWidget->setMinimumSize(surfaceSize);
-	//previewWidget->setMaximumSize(surfaceSize);
-
-	previewWidget->updateGL();
-#endif
-}
-
-void Controller::onProcessingDone(const ProcessedItem& item)
-{
-	dst = item.dst;
-	previewCpuImage(dst);
-
-	// Pozwol go zapisac (dla operacji None wylaczamy taka opcje)
-	mw->allowImageSave();
-
-	showStats(item.iters, item.delapsed);
-}
+//void Controller::previewGpuImage()
+//{
+//#if USE_GLWIDGET == 1
+//	// Mozna by przy wczytywaniu ustawic te wielkosci
+//
+//	//QSize surfaceSize(src.cols, src.rows);
+//	//double fx = CvUtil::scaleCoeff(
+//	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
+//	//	image.size());
+//	//surfaceSize.setWidth(surfaceSize.width() * fx);
+//	//surfaceSize.setHeight(surfaceSize.height() * fx);
+//	//previewWidget->setMinimumSize(surfaceSize);
+//	//previewWidget->setMaximumSize(surfaceSize);
+//
+//	previewWidget->updateGL();
+//#endif
+//}

@@ -8,11 +8,14 @@
 #include "morphoclimage.h"
 #include "morphoperators.h"
 #include "configuration.h"
-#include "procthread.h"
+#include "blockingqueue.h"
 
 #define CV_NO_BACKWARD_COMPATIBILITY
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
+class CapThread;
+class ProcThread;
 
 template <typename T>
 class Singleton
@@ -56,13 +59,15 @@ private:
 	MorphOpenCL* ocl;
 
 	BlockingQueue<ProcessingItem> procQueue;
-	ProcThread procThread;
+	ProcThread* procThread;
+	CapThread* capThread;
 
 	bool negateSource;
 	bool oclSupported;
 	bool useOpenCL;
 	bool autoTrigger;
 	bool resizeCustomSe;
+	bool cameraConnected;
 
 	cv::VideoCapture camera;
 	cv::Mat src;
@@ -88,25 +93,20 @@ private slots:
 	void onStructuringElementPreviewPressed();
 	void onStructuringElementModified(const cv::Mat& customSe);
 
-	void onShowSourceImage();
 	void onRecompute();
-
 	void onProcessingDone(const ProcessedItem& item);
 
 private:
 	void openFile(const QString& filename);
 	cv::Mat standardStructuringElement();
+	cv::Mat structuringElement();
 	void showStats(int iters, double elapsed);
+	void previewCpuImage(const cv::Mat& image);
 
 	void initializeOpenCL(EOpenCLMethod method);
-	void setOpenCLSourceImage();
-
-	void processOpenCL(Morphology::EOperationType op, const cv::Mat& se);
-	void processOpenCV(Morphology::EOperationType op, const cv::Mat& se);
-
-	void previewCpuImage(const cv::Mat& image);
-	void previewGpuImage();
-
+	//void setOpenCLSourceImage();
+	//void processOpenCL(Morphology::EOperationType op, const cv::Mat& se);
+	//void previewGpuImage();
 signals:
 	void structuringElementChanged(const cv::Mat& se);
 };

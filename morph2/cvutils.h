@@ -22,7 +22,6 @@ enum EBayerCode
 QImage toQImage(const cv::Mat& image);
 
 // Negacja danego obrazu (w miejscu)
-void negateImage(cv::Mat& src);
 void negate(const cv::Mat& src, cv::Mat& dst);
 void bayerFilter(const cv::Mat& src, cv::Mat& dst, EBayerCode bc);
 

@@ -14,54 +14,75 @@ public:
 
 	void setPreviewWidget(QWidget* previewWidget);
 
-	void allowImageSave()
-	{ actionSave->setEnabled(true); }
-
+	// Zwraca wybrany indeks filtru bajera (0 dla zadnego)
 	int bayerIndex() const
 	{ return cmbBayer->currentIndex(); }
 
+	// Zwraca wybrana operacje morfologiczna
 	Morphology::EOperationType morphologyOperation() const;
+	// Ustawia wybrana operacje morfologiczna
 	void setMorphologyOperation(Morphology::EOperationType op)
 	{ operationToRadioBox(op)->setChecked(true); }
 
+	// Czy wybrano brak operacji (morfologicznej)
 	bool isNoneOperationChecked() const
 	{ return rbNone->isChecked(); }
 
+	// Zwraca wybrany typ elementu strukturalnego
 	Morphology::EStructuringElementType structuringElementType() const;
+	// Ustawia typ elementu strukturalnego
 	void setStructuringElementType(Morphology::EStructuringElementType type);
 
+	// Zwraca wybrany rozmiar elementu strukturalnego
 	QSize structuringElementSize() const;
+	// Ustawia rozmiar elementu strukturalnego
 	void setStructuringElementSize(const QSize& size);
 
+	// Zwraca wybrana rotacje elementu strukturalnego
 	int structuringElementRotation() const;
+	// Ustawia rotacje elementu strukturalnego
 	void setStructuringElementRotation(int rotation);
 
+	// Ustawia tekst na pasku stanu 
 	void setStatusBarText(const QString& message)
 	{ statusBarLabel->setText(message); }
 
+	void setCameraStatusBarState(bool connected)
+	{ 
+		cameraStatusLabel->setText(connected ? 
+			"Camera: Connected" : "Camera: Not connected");
+	}
+
+	// Ustawia mozliwosc zaznaczenia "silnika" OpenCL
 	void setOpenCLCheckableAndChecked(bool state);
 
+	// Ustawia tekst na przycisku `Show structuring element`
 	void setStructuringElementPreviewButtonText(const QString& text)
 	{ pbShowSE->setText(text); }
 
+	// Ustawia dostepnosc kontrolki odpowiadajacej za wybor rotacji el. strukturalnego
 	void setEnabledStructuringElementRotation(bool state)
 	{ 
 		dialRotation->setEnabled(state);
 		pbResetRotation->setEnabled(state);
 	}
 
+	void setFromCamera(bool state)
+	{ actionCameraInput->setChecked(state); }
+
 private:
+	//Zwraca kontrolke reprezentujaca daneaoperacje morfologiczna
 	QRadioButton* operationToRadioBox(Morphology::EOperationType op);
 
 private:
 	bool disableRecomputing;
 	QLabel* statusBarLabel;
+	QLabel* cameraStatusLabel;
 	QSpacerItem* spacer;
 
 private slots:
-	void onNoneOperationToggled(bool checked);
 	void onOperationToggled(bool checked);
-	void onStructuringElementToggled(bool checked);
+	void onElementTypeToggled(bool checked);
 	void onElementSizeRatioChanged(int state);
 	void onElementSizeChanged(int value);
 	void onElementRotationChanged(int value);
@@ -69,6 +90,5 @@ private slots:
 
 signals:
 	void structuringElementChanged();
-	void sourceImageShowed();
 	void recomputeNeeded();
 };
