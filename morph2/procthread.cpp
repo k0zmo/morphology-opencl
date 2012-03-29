@@ -7,6 +7,7 @@
 ProcThread::ProcThread(BlockingQueue<ProcessingItem>& queue)
 	: QThread(nullptr)
 	, queue(queue)
+	, stopped(false)
 {
 }
 
@@ -14,11 +15,23 @@ ProcThread::~ProcThread()
 {
 }
 
+void ProcThread::stop()
+{
+	QMutexLocker locker(&stopMutex);
+	stopped = true;
+}
+
 void ProcThread::run()
 {
-	forever
+	while(true)
 	{
 		ProcessingItem item = queue.dequeue();
+
+		{
+			QMutexLocker locker(&stopMutex);
+			if(stopped)
+				break;
+		}
 
 		//qDebug() << endl << "New processing job:" << "\n\toperation:" << 
 		//	item.op << "\n\tbayer code:" << item.bc << 

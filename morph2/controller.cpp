@@ -34,17 +34,28 @@ Controller::Controller()
 Controller::~Controller()
 {
 	// Zatrzymaj watki
-	if(procThread)
+	if(capThread && capThread->isRunning())
 	{
-		procThread->terminate();
-		delete procThread;
+		capThread->stop();
+		capThread->wait();
+		capThread->closeCamera();
+		delete capThread;
 	}
 
-	if(capThread)
+	if(procThread && procThread->isRunning())
 	{
-		capThread->closeCamera();
-		capThread->terminate();
-		delete capThread;
+		procThread->stop();
+
+		// W przypadku gdy kolejka zadan jest pusta watek by nie puscil
+		if(procQueue.isEmpty())
+		{
+			ProcessingItem item = { false, cvu::BC_None,
+				Morphology::OT_None, cv::Mat(), cv::Mat() };
+			procQueue.enqueue(item);
+		}
+
+		procThread->wait();
+		delete procThread;
 	}
 
 	delete mw;
@@ -150,17 +161,27 @@ void Controller::onFromCameraTriggered(bool state)
 
 			capThread->setJobDescription(negateSource, bc, op, se);
 			capThread->start(QThread::LowPriority);
+
+			mw->setEnabledSaveOpenFile(false);
 		}
 	}
 	else
 	{
+		if(capThread->isRunning())
+		{
+			capThread->stop();
+			capThread->wait();
+		}
+
+		// src = [Ostatnia klatka z kamery czy zostajemy przy ostatnim wczytanym obrazie z dysku]
+		src = capThread->currentFrame().clone();
 		capThread->closeCamera();
-		capThread->terminate();
+
 		delete capThread;
 		capThread = 0;
 		cameraConnected = false;
 
-		// src = [Ostatnia klatka z kamery czy zostajemy przy ostatnim wczytanym obrazie z dysku] ?
+		mw->setEnabledSaveOpenFile(true);
 	}
 
 	mw->setCameraStatusBarState(cameraConnected);

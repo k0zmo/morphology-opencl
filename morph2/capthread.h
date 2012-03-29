@@ -16,6 +16,7 @@ public:
 
 	bool openCamera(int camId);
 	void closeCamera();
+	void stop();
 
 	virtual void run();
 
@@ -36,14 +37,20 @@ public:
 	int frameWidth() const 
 	{ return width; }
 
+	cv::Mat currentFrame() const;
+
 private:
 	cv::VideoCapture camera;
+	cv::Mat frame;
 	BlockingQueue<ProcessingItem>& queue;
 	QMutex jobDescMutex;
+	QMutex stopThreadMutex;
 	ProcessingItem item;
 
 	int channels; // np. 3
 	int depth; // np. CV_8U
 	int width;
 	int height;
+
+	bool stopped;
 };

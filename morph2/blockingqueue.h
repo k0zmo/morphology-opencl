@@ -63,6 +63,14 @@ public:
 		fullQueueWait.wakeOne();
 	}
 
+	bool isEmpty()
+	{
+		QMutexLocker locker(&dequeueMutex);
+		QMutexLocker locker2(&enqueueMutex);
+
+		return queue.isEmpty();
+	}
+
 private:
 	int maxSize;
 	QQueue<T> queue;

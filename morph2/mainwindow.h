@@ -70,6 +70,12 @@ public:
 	void setFromCamera(bool state)
 	{ actionCameraInput->setChecked(state); }
 
+	void setEnabledSaveOpenFile(bool state)
+	{
+		actionOpen->setEnabled(state);
+		actionSave->setEnabled(state);
+	}
+
 private:
 	//Zwraca kontrolke reprezentujaca daneaoperacje morfologiczna
 	QRadioButton* operationToRadioBox(Morphology::EOperationType op);

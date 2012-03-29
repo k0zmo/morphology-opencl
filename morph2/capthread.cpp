@@ -9,6 +9,7 @@ CapThread::CapThread( BlockingQueue<ProcessingItem>& queue)
 	, depth(0)
 	, width(0) 
 	, height(0)
+	, stopped(false)
 {
 	item.op = Morphology::OT_None;
 	item.bc = cvu::BC_None;
@@ -46,19 +47,33 @@ void CapThread::closeCamera()
 		camera.release();
 }
 
+void CapThread::stop()
+{
+	QMutexLocker locker(&stopThreadMutex);
+	stopped = true;
+}
+
 void CapThread::run()
 {
 	while(true)
 	{
-		camera >> item.src;
-
-		// TODO: hardcoded
-		if(item.src.channels() != 1)
 		{
-			int code = (item.src.channels() == 3) ? 
-				CV_BGR2GRAY : CV_BGRA2GRAY;
-			cvtColor(item.src, item.src, code);
+			QMutexLocker locker(&stopThreadMutex);
+			if(stopped)
+				break;
 		}
+
+		camera >> frame;
+
+		// Nie wiem czy to do konca jest poprawne
+		if(frame.channels() != 1)
+		{
+			int code = (frame.channels() == 3) ? 
+				CV_BGR2GRAY : CV_BGRA2GRAY;
+			cvtColor(frame, frame, code);
+		}
+
+		item.src = frame;
 
 		{
 			QMutexLocker locker(&jobDescMutex);
@@ -99,4 +114,9 @@ void CapThread::setJobDescription(bool negate, cvu::EBayerCode bc,
 	item.bc = bc;
 	item.op = op;
 	item.se = se;
+}
+
+cv::Mat CapThread::currentFrame() const
+{
+	return frame;
 }
