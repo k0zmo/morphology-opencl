@@ -87,26 +87,26 @@ void MainWindow::setPreviewWidget(QWidget* previewWidget)
 	previewVerticalLayout->addItem(spacer);
 }
 
-Morphology::EOperationType MainWindow::morphologyOperation() const
+cvu::EMorphOperation MainWindow::morphologyOperation() const
 {
-	using namespace Morphology;
+	using namespace cvu;
 
-	if(rbErode->isChecked())              { return OT_Erode; }
-	else if(rbDilate->isChecked())        { return OT_Dilate; }
-	else if(rbOpen->isChecked())          { return OT_Open; }
-	else if(rbClose->isChecked())         { return OT_Close; }
-	else if(rbGradient->isChecked())      { return OT_Gradient; }
-	else if(rbTopHat->isChecked())        { return OT_TopHat; }
-	else if(rbBlackHat->isChecked())      { return OT_BlackHat; }
-	else if(rbOutline->isChecked())       { return OT_Outline; }
-	else if(rbSkeleton->isChecked())      { return OT_Skeleton; }
-	else if(rbSkeletonZhang->isChecked()) { return OT_Skeleton_ZhangSuen; }
-	else                                  { return OT_None; }
+	if(rbErode->isChecked())              { return MO_Erode; }
+	else if(rbDilate->isChecked())        { return MO_Dilate; }
+	else if(rbOpen->isChecked())          { return MO_Open; }
+	else if(rbClose->isChecked())         { return MO_Close; }
+	else if(rbGradient->isChecked())      { return MO_Gradient; }
+	else if(rbTopHat->isChecked())        { return MO_TopHat; }
+	else if(rbBlackHat->isChecked())      { return MO_BlackHat; }
+	else if(rbOutline->isChecked())       { return MO_Outline; }
+	else if(rbSkeleton->isChecked())      { return MO_Skeleton; }
+	else if(rbSkeletonZhang->isChecked()) { return MO_Skeleton_ZhangSuen; }
+	else                                  { return MO_None; }
 }
 
-Morphology::EStructuringElementType MainWindow::structuringElementType() const
+cvu::EStructuringElementType MainWindow::structuringElementType() const
 {
-	using namespace Morphology;
+	using namespace cvu;
 
 	if(rbRect->isChecked())         return SET_Rect;
 	else if(rbEllipse->isChecked()) return SET_Ellipse;
@@ -115,17 +115,17 @@ Morphology::EStructuringElementType MainWindow::structuringElementType() const
 }
 
 void MainWindow::setStructuringElementType(
-	Morphology::EStructuringElementType type)
+	cvu::EStructuringElementType type)
 {
 	switch(type)
 	{
-	case Morphology::SET_Rect:
+	case cvu::SET_Rect:
 		rbRect->setChecked(true); break;
-	case Morphology::SET_Ellipse:
+	case cvu::SET_Ellipse:
 		rbEllipse->setChecked(true); break;
-	case Morphology::SET_Cross:
+	case cvu::SET_Cross:
 		rbCross->setChecked(true); break;
-	case Morphology::SET_Custom:
+	case cvu::SET_Custom:
 		rbCustom->setChecked(true); break;
 	}
 }
@@ -177,23 +177,23 @@ void MainWindow::setStructuringElementRotation(int angle)
 	dialRotation->setValue(angle);
 }
 
-QRadioButton* MainWindow::operationToRadioBox(Morphology::EOperationType op)
+QRadioButton* MainWindow::operationToRadioBox(cvu::EMorphOperation op)
 {
-	using namespace Morphology;
+	using namespace cvu;
 
 	switch(op)
 	{
-	case OT_None:     return rbNone;
-	case OT_Erode:    return rbErode;
-	case OT_Dilate:   return rbDilate;
-	case OT_Open:     return rbOpen;
-	case OT_Close:    return rbClose;
-	case OT_Gradient: return rbGradient;
-	case OT_TopHat:   return rbTopHat;
-	case OT_BlackHat: return rbBlackHat;
-	case OT_Outline:  return rbOutline;
-	case OT_Skeleton: return rbSkeleton;
-	case OT_Skeleton_ZhangSuen: rbSkeletonZhang;
+	case MO_None:     return rbNone;
+	case MO_Erode:    return rbErode;
+	case MO_Dilate:   return rbDilate;
+	case MO_Open:     return rbOpen;
+	case MO_Close:    return rbClose;
+	case MO_Gradient: return rbGradient;
+	case MO_TopHat:   return rbTopHat;
+	case MO_BlackHat: return rbBlackHat;
+	case MO_Outline:  return rbOutline;
+	case MO_Skeleton: return rbSkeleton;
+	case MO_Skeleton_ZhangSuen: return rbSkeletonZhang;
 	default:          return rbNone;
 	}
 }

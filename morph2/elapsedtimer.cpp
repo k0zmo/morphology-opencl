@@ -6,7 +6,7 @@ void ElapsedTimer::start()
 	QueryPerformanceFrequency(&mfreq);
 	QueryPerformanceCounter(&mstart);
 #else
-	gettimeofday(&mstart, NULL);
+	gettimeofday(&mstart, nullptr);
 #endif
 }
 
@@ -17,7 +17,7 @@ double ElapsedTimer::elapsed()
 	double elapsed = (static_cast<double>(mend.QuadPart - mstart.QuadPart) / 
 		static_cast<double>(mfreq.QuadPart)) * 1000.0f;
 #else
-	gettimeofday(&mend, NULL);
+	gettimeofday(&mend, nullptr);
 	double elapsed = (static_cast<double>(mend.tv_sec - mstart.tv_sec) * 1000 +
 		0.001f * static_cast<double>(mend.tv_usec - mstart.tv_usec));
 #endif

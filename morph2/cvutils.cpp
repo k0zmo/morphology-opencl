@@ -1,5 +1,7 @@
 #include "cvutils.h"
 
+#include <QImage>
+
 namespace cvu {
 
 QImage toQImage(const cv::Mat& image)

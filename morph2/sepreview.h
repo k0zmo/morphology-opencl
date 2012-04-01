@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QLabel>
 #include <opencv2/core/core.hpp>
 
 class PreviewLabel : public QLabel

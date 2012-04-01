@@ -14,11 +14,12 @@
 #define USE_GLWIDGET 0
 #define DISABLE_OPENCL 1
 
-Controller* Controller::msSingleton = nullptr;
+template<>
+Controller* Singleton<Controller>::msSingleton = nullptr;
 
 Controller::Controller()
 	: mw(nullptr)
-	, ocl(nullptr)
+//	, ocl(nullptr)
 	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
@@ -50,7 +51,7 @@ Controller::~Controller()
 		if(procQueue.isEmpty())
 		{
 			ProcessingItem item = { false, cvu::BC_None,
-				Morphology::OT_None, cv::Mat(), cv::Mat() };
+				cvu::MO_None, cv::Mat(), cv::Mat() };
 			procQueue.enqueue(item);
 		}
 
@@ -59,7 +60,7 @@ Controller::~Controller()
 	}
 
 	delete mw;
-	delete ocl;
+//	delete ocl;
 }
 
 void Controller::start()
@@ -155,7 +156,7 @@ void Controller::onFromCameraTriggered(bool state)
 		}
 		else
 		{
-			Morphology::EOperationType op = mw->morphologyOperation();
+			cvu::EMorphOperation op = mw->morphologyOperation();
 			cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
 			cv::Mat se = structuringElement();
 
@@ -197,9 +198,9 @@ void Controller::onOpenFileTriggered()
 
 	openFile(filename);
 
-	if(mw->morphologyOperation() != Morphology::OT_None)
+	if(mw->morphologyOperation() != cvu::MO_None)
 		// wywola onRecompute()
-		mw->setMorphologyOperation(Morphology::OT_None); 
+		mw->setMorphologyOperation(cvu::MO_None); 
 	else
 		// jesli wybrane wczesniej bylo None to nie zostal
 		// wyemitowany zaden sygnal
@@ -229,7 +230,7 @@ void Controller::onOpenStructuringElementTriggered()
 		return;
 
 	// Dane do deserializacji
-	Morphology::EStructuringElementType etype;
+	cvu::EStructuringElementType etype;
 	int rotation, type;
 	QSize ksize;
 	unsigned magic;
@@ -249,9 +250,9 @@ void Controller::onOpenStructuringElementTriggered()
 	}
 
 	strm >> type;
-	etype = static_cast<Morphology::EStructuringElementType>(type);
+	etype = static_cast<cvu::EStructuringElementType>(type);
 
-	if(etype != Morphology::SET_Custom)
+	if(etype != cvu::SET_Custom)
 	{
 		strm >> ksize >> rotation;
 		
@@ -300,7 +301,7 @@ void Controller::onSaveStructuringElementTriggered()
 	auto type = mw->structuringElementType();
 	strm << 0x1337U << type;
 
-	if(type != Morphology::SET_Custom)
+	if(type != cvu::SET_Custom)
 	{
 		// Serializuj parametry SE
 		QSize ksize = mw->structuringElementSize();
@@ -370,7 +371,7 @@ void Controller::onPickMethodTriggerd()
 		return;
 
 	// Reinicjalizuj modul OpenCLa z wybranym silnikiem
-	delete ocl;
+//	delete ocl;
 	initializeOpenCL(method);
 }
 
@@ -408,8 +409,8 @@ void Controller::onBayerIndexChanged(int bcode)
 {
 	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(bcode);
 
-	if(oclSupported)
-		ocl->setBayerFilter(bc);
+//	if(oclSupported)
+//		ocl->setBayerFilter(bc);
 
 	// Dla no-op rowniez chcemy to wykonac
 	if(!cameraConnected && (autoTrigger || cameraConnected))
@@ -421,7 +422,7 @@ void Controller::onBayerIndexChanged(int bcode)
 
 void Controller::onStructuringElementChanged()
 {
-	if(mw->structuringElementType() != Morphology::SET_Custom)
+	if(mw->structuringElementType() != cvu::SET_Custom)
 	{
 		mw->setEnabledStructuringElementRotation(true);
 		cv::Mat se(standardStructuringElement());
@@ -457,7 +458,7 @@ void Controller::onStructuringElementPreviewPressed()
 	if(!activated)
 	{
 		// Wygeneruj element strukturalny
-		cv::Mat se = mw->structuringElementType() != Morphology::SET_Custom ?
+		cv::Mat se = mw->structuringElementType() != cvu::SET_Custom ?
 			standardStructuringElement() : customSe;
 		mw->setStructuringElementPreviewButtonText("Hide structuring element");
 
@@ -498,13 +499,13 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 	sesize = (sesize - QSize(1,1)) / 2;
 
 	resizeCustomSe = false;
-	mw->setStructuringElementType(Morphology::SET_Custom);
+	mw->setStructuringElementType(cvu::SET_Custom);
 	resizeCustomSe = true;
 }
 
 void Controller::onRecompute()
 {
-	Morphology::EOperationType op = mw->morphologyOperation();
+	cvu::EMorphOperation op = mw->morphologyOperation();
 	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
 	cv::Mat se = structuringElement();
 
@@ -560,6 +561,8 @@ void Controller::openFile(const QString& filename)
 	int channels = src.channels();
 
 	Q_ASSERT(depth == CV_8U);
+	Q_UNUSED(depth);
+	Q_UNUSED(channels);
 
 	if(channels == 3)
 		cvtColor(src, src, CV_BGR2GRAY);
@@ -569,22 +572,22 @@ void Controller::openFile(const QString& filename)
 
 cv::Mat Controller::standardStructuringElement()
 {
-	using namespace Morphology;
+	using namespace cvu;
 	
 	EStructuringElementType type = mw->structuringElementType();
 	QSize elementSize = mw->structuringElementSize();
 	int rotation = mw->structuringElementRotation();
 
-	return Morphology::standardStructuringElement(
+	return cvu::standardStructuringElement(
 		elementSize.width(), elementSize.height(),
 		type, rotation);
 }
 
 cv::Mat Controller::structuringElement()
 {
-	Morphology::EOperationType op = mw->morphologyOperation();
-	return (op == Morphology::OT_None) ? cv::Mat() : 
-		((mw->structuringElementType() == Morphology::SET_Custom) ?
+	cvu::EMorphOperation op = mw->morphologyOperation();
+	return (op == cvu::MO_None) ? cv::Mat() : 
+		((mw->structuringElementType() == cvu::SET_Custom) ?
 			customSe : standardStructuringElement());
 }
 
@@ -629,6 +632,7 @@ void Controller::previewCpuImage(const cv::Mat& image)
 
 void Controller::initializeOpenCL(EOpenCLMethod method)
 {
+#if 0
 	// Inicjalizuj odpowiedni silnik
 	switch(method)
 	{
@@ -679,6 +683,7 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 
 		mw->setOpenCLCheckableAndChecked(false);
 	}
+#endif
 }
 
 //void Controller::setOpenCLSourceImage()
@@ -698,7 +703,7 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 //	}
 //}
 //
-//void Controller::processOpenCL(Morphology::EOperationType op, const cv::Mat& se)
+//void Controller::processOpenCL(cvu::EOperationType op, const cv::Mat& se)
 //{
 //	ocl->error = false;
 //	int csize = ocl->setStructuringElement(se);

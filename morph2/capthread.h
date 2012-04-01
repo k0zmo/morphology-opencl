@@ -22,11 +22,11 @@ public:
 
 	void setNegateImage(bool negate);
 	void setBayerCode(cvu::EBayerCode bc);
-	void setMorpgologyOperation(Morphology::EOperationType op);
+	void setMorpgologyOperation(cvu::EMorphOperation op);
 	void setStructuringElement(const cv::Mat& se);
 	
 	void setJobDescription(bool negate, cvu::EBayerCode bc,
-		Morphology::EOperationType op, const cv::Mat& se);
+		cvu::EMorphOperation op, const cv::Mat& se);
 
 	int frameChannels() const
 	{ return channels; }

@@ -40,7 +40,7 @@ void ProcThread::run()
 		// Brak operacji, zwroc obraz zrodlowy
 		if(!item.negate && 
 			item.bc == cvu::BC_None &&
-			item.op == Morphology::OT_None)
+			item.op == cvu::MO_None)
 		{
 			ProcessedItem pitem = {
 				/*.iters = */ 0,
@@ -78,9 +78,9 @@ void ProcThread::run()
 		}
 
 		// Operacja morfologiczna
-		if(item.op != Morphology::OT_None)
+		if(item.op != cvu::MO_None)
 		{
-			pitem.iters = Morphology::process(item.src, pitem.dst, item.op, item.se);
+			pitem.iters = cvu::morphEx(item.src, pitem.dst, item.op, item.se);
 		}
 
 		pitem.delapsed = timer.elapsed();

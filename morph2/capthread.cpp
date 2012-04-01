@@ -11,7 +11,7 @@ CapThread::CapThread( BlockingQueue<ProcessingItem>& queue)
 	, height(0)
 	, stopped(false)
 {
-	item.op = Morphology::OT_None;
+	item.op = cvu::MO_None;
 	item.bc = cvu::BC_None;
 	item.negate = false;
 	item.se = cv::Mat();
@@ -94,7 +94,7 @@ void CapThread::setBayerCode(cvu::EBayerCode bc)
 	item.bc = bc;
 }
 
-void CapThread::setMorpgologyOperation(Morphology::EOperationType op)
+void CapThread::setMorpgologyOperation(cvu::EMorphOperation op)
 {
 	QMutexLocker locker(&jobDescMutex);
 	item.op = op;
@@ -107,7 +107,7 @@ void CapThread::setStructuringElement(const cv::Mat& se)
 }
 
 void CapThread::setJobDescription(bool negate, cvu::EBayerCode bc,
-	Morphology::EOperationType op, const cv::Mat& se)
+	cvu::EMorphOperation op, const cv::Mat& se)
 {
 	QMutexLocker locker(&jobDescMutex);
 	item.negate = negate;

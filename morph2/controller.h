@@ -1,44 +1,27 @@
 #pragma once
 
+#include "singleton.h"
 #include "mainwindow.h"
 #include "glwidget.h"
 
-#include "morphocl.h"
-#include "morphoclbuffer.h"
-#include "morphoclimage.h"
-#include "morphoperators.h"
+#include "cvutils.h"
+#include "morphop.h"
+
 #include "configuration.h"
 #include "blockingqueue.h"
 
 #define CV_NO_BACKWARD_COMPATIBILITY
+#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 class CapThread;
 class ProcThread;
 
-template <typename T>
-class Singleton
+enum EOpenCLMethod
 {
-private:
-	Singleton(const Singleton<T>&);
-	Singleton& operator=(const Singleton<T>&);
-
-protected:
-	static T* msSingleton;
-
-public:
-	Singleton()
-	{ Q_ASSERT(!msSingleton); msSingleton = static_cast<T*>(this); }
-
-	~Singleton()
-	{ Q_ASSERT(msSingleton); msSingleton = 0; }
-
-	static T& getSingleton()
-	{ Q_ASSERT(msSingleton); return *msSingleton; }
-
-	static T* getSingletonPtr()
-	{ return msSingleton; }
+	OM_Buffer1D,
+	OM_Buffer2D
 };
 
 class Controller : public QObject, public Singleton<Controller>
@@ -56,18 +39,18 @@ private:
 
 	QLabel* previewLabel;
 	GLWidget* previewWidget;
-	MorphOpenCL* ocl;
-
-	BlockingQueue<ProcessingItem> procQueue;
-	ProcThread* procThread;
-	CapThread* capThread;
+	//MorphOpenCL* ocl;
 
 	bool negateSource;
 	bool oclSupported;
 	bool useOpenCL;
 	bool autoTrigger;
 	bool resizeCustomSe;
-	bool cameraConnected;
+	bool cameraConnected;	
+
+	BlockingQueue<ProcessingItem> procQueue;
+	ProcThread* procThread;
+	CapThread* capThread;
 
 	cv::VideoCapture camera;
 	cv::Mat src;
@@ -105,7 +88,7 @@ private:
 
 	void initializeOpenCL(EOpenCLMethod method);
 	//void setOpenCLSourceImage();
-	//void processOpenCL(Morphology::EOperationType op, const cv::Mat& se);
+	//void processOpenCL(cvu::EOperationType op, const cv::Mat& se);
 	//void previewGpuImage();
 signals:
 	void structuringElementChanged(const cv::Mat& se);

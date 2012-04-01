@@ -1,6 +1,6 @@
-#include "morphoperators.h"
+#include "morphop.h"
 
-namespace Morphology {
+namespace cvu {
 
 const int OBJ = 255;
 const int BCK = 0;
@@ -10,7 +10,6 @@ const int BCK = 0;
 #elif defined(__GNUC__)
 	#define force_inline inline __attribute__((always_inline))
 #endif
-
 
 int skeletonZHLutTable[256]  = {
 	0,0,0,1,0,0,1,3,0,0,3,1,1,0,1,3,0,0,0,0,0,0,0,0,2,0,2,0,3,0,3,3,
@@ -155,7 +154,7 @@ cv::Mat rotateStructuringElement(int rotation, const cv::Mat& _element)
 	return element(cv::Rect(left, top, width, height));
 }
 
-void outline(const cv::Mat& src, cv::Mat& dst)
+void hitmissOutline(const cv::Mat& src, cv::Mat& dst)
 {
 	dst = src.clone();
 
@@ -463,7 +462,7 @@ force_inline int _skeleton_iter8(const cv::Mat& src, cv::Mat& dst)
 	return d;
 }
 
-int skeleton(const cv::Mat& _src, cv::Mat &dst)
+int hitmissSkeleton(const cv::Mat& _src, cv::Mat &dst)
 {
 	int niters = 0;
 
@@ -511,7 +510,7 @@ int skeleton(const cv::Mat& _src, cv::Mat &dst)
 	return niters;
 }
 
-int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
+int hitmissSkeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 {
 	// Based on ImageJ implementation of skeletonization which is
 	// based on an a thinning algorithm by by Zhang and Suen (CACM, March 1984, 236-239)
@@ -599,31 +598,31 @@ int skeletonZhangSuen(const cv::Mat& src, cv::Mat& dst)
 	return niters;
 }
 
-int process(const cv::Mat& src, cv::Mat& dst,
-	EOperationType op, const cv::Mat& se)
+int morphEx(const cv::Mat& src, cv::Mat& dst,
+	EMorphOperation op, const cv::Mat& se)
 {
 	int iters = 1;
 
 	// Operacje hit-miss
-	if (op == OT_Outline ||
-		op == OT_Skeleton ||
-		op == OT_Skeleton_ZhangSuen)
+	if (op == MO_Outline ||
+		op == MO_Skeleton ||
+		op == MO_Skeleton_ZhangSuen)
 	{
 		switch (op)
 		{
-		case OT_Outline:
+		case MO_Outline:
 			{
-				outline(src, dst);
+				hitmissOutline(src, dst);
 				break;
 			}
-		case OT_Skeleton:
+		case MO_Skeleton:
 			{
-				iters = skeleton(src, dst);
+				iters = hitmissSkeleton(src, dst);
 				break;
 			}
-		case Morphology::OT_Skeleton_ZhangSuen:
+		case MO_Skeleton_ZhangSuen:
 			{
-				iters = skeletonZhangSuen(src, dst);
+				iters = hitmissSkeletonZhangSuen(src, dst);
 				break;
 			}
 		default: break;
@@ -634,13 +633,13 @@ int process(const cv::Mat& src, cv::Mat& dst,
 		int op_type;
 		switch(op)
 		{
-		case OT_Erode: op_type = cv::MORPH_ERODE; break;
-		case OT_Dilate: op_type = cv::MORPH_DILATE; break;
-		case OT_Open: op_type = cv::MORPH_OPEN; break;
-		case OT_Close: op_type = cv::MORPH_CLOSE; break;
-		case OT_Gradient: op_type = cv::MORPH_GRADIENT; break;
-		case OT_TopHat: op_type = cv::MORPH_TOPHAT; break;
-		case OT_BlackHat: op_type = cv::MORPH_BLACKHAT; break;
+		case MO_Erode: op_type = cv::MORPH_ERODE; break;
+		case MO_Dilate: op_type = cv::MORPH_DILATE; break;
+		case MO_Open: op_type = cv::MORPH_OPEN; break;
+		case MO_Close: op_type = cv::MORPH_CLOSE; break;
+		case MO_Gradient: op_type = cv::MORPH_GRADIENT; break;
+		case MO_TopHat: op_type = cv::MORPH_TOPHAT; break;
+		case MO_BlackHat: op_type = cv::MORPH_BLACKHAT; break;
 		default: op_type = cv::MORPH_ERODE; break;
 		}
 

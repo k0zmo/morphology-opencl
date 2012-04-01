@@ -4,11 +4,8 @@
 #include <QMutex>
 #include <QWaitCondition>
 
-#define CV_NO_BACKWARD_COMPATIBILITY
-#include <opencv2/core/core.hpp>
-
-#include "morphoperators.h"
 #include "cvutils.h"
+#include "morphop.h"
 
 template<class T>
 class BlockingQueue
@@ -84,7 +81,7 @@ struct ProcessingItem
 {
 	bool negate;
 	cvu::EBayerCode bc;
-	Morphology::EOperationType op;
+	cvu::EMorphOperation op;
 	cv::Mat se;
 	cv::Mat src;
 };

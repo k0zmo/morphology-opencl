@@ -3,7 +3,7 @@
 #include <QtGui/QMainWindow>
 #include "ui_mainwindow.h"
 
-#include "morphoperators.h"
+#include "morphop.h"
 
 class MainWindow : public QMainWindow, Ui::MainWindow
 {
@@ -19,9 +19,9 @@ public:
 	{ return cmbBayer->currentIndex(); }
 
 	// Zwraca wybrana operacje morfologiczna
-	Morphology::EOperationType morphologyOperation() const;
+	cvu::EMorphOperation morphologyOperation() const;
 	// Ustawia wybrana operacje morfologiczna
-	void setMorphologyOperation(Morphology::EOperationType op)
+	void setMorphologyOperation(cvu::EMorphOperation op)
 	{ operationToRadioBox(op)->setChecked(true); }
 
 	// Czy wybrano brak operacji (morfologicznej)
@@ -29,9 +29,9 @@ public:
 	{ return rbNone->isChecked(); }
 
 	// Zwraca wybrany typ elementu strukturalnego
-	Morphology::EStructuringElementType structuringElementType() const;
+	cvu::EStructuringElementType structuringElementType() const;
 	// Ustawia typ elementu strukturalnego
-	void setStructuringElementType(Morphology::EStructuringElementType type);
+	void setStructuringElementType(cvu::EStructuringElementType type);
 
 	// Zwraca wybrany rozmiar elementu strukturalnego
 	QSize structuringElementSize() const;
@@ -78,7 +78,7 @@ public:
 
 private:
 	//Zwraca kontrolke reprezentujaca daneaoperacje morfologiczna
-	QRadioButton* operationToRadioBox(Morphology::EOperationType op);
+	QRadioButton* operationToRadioBox(cvu::EMorphOperation op);
 
 private:
 	bool disableRecomputing;

@@ -3,6 +3,7 @@
 #include "controller.h"
 
 #include <QImage>
+#include <QMouseEvent>
 
 PreviewLabel::PreviewLabel(QWidget* parent)
 	: QLabel(parent)
@@ -38,8 +39,6 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 
 void PreviewLabel::mousePressEvent(QMouseEvent* evt)
 {
-	Qt::MouseButton btn = evt->button();
-
 	double dx = evt->x() / pixSize.width();
 	double dy = evt->y() / pixSize.height();
 
@@ -80,5 +79,6 @@ void StructuringElementPreview::onStructuringElementChanged(const cv::Mat& se_)
 
 void StructuringElementPreview::closeEvent(QCloseEvent* evt)
 {
+	Q_UNUSED(evt);
 	emit closed();
 }

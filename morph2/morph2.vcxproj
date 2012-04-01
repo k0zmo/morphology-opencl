@@ -146,10 +146,12 @@
     <ClCompile Include="glwidget.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainwindow.cpp" />
-    <ClCompile Include="morphocl.cpp" />
-    <ClCompile Include="morphoclbuffer.cpp" />
-    <ClCompile Include="morphoclimage.cpp" />
-    <ClCompile Include="morphoperators.cpp" />
+    <ClCompile Include="morphop.cpp" />
+    <ClCompile Include="oclbayerfilter.cpp" />
+    <ClCompile Include="oclcontext.cpp" />
+    <ClCompile Include="oclfilter.cpp" />
+    <ClCompile Include="oclmorphfilter.cpp" />
+    <ClCompile Include="oclmorphhitmissfilter.cpp" />
     <ClCompile Include="precompiled.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -160,6 +162,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="blockingqueue.h" />
+    <ClInclude Include="oclbayerfilter.h" />
+    <ClInclude Include="oclcontext.h" />
+    <ClInclude Include="oclfilter.h" />
+    <ClInclude Include="oclmorphfilter.h" />
+    <ClInclude Include="oclmorphhitmissfilter.h" />
+    <ClInclude Include="singleton.h" />
     <CustomBuild Include="procthread.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Moc%27ing %(Identity)...</Message>
@@ -236,10 +244,7 @@
     <ClInclude Include="GeneratedFiles\ui_mainwindow.h" />
     <ClInclude Include="GeneratedFiles\ui_sepreview.h" />
     <ClInclude Include="GeneratedFiles\ui_settings.h" />
-    <ClInclude Include="morphocl.h" />
-    <ClInclude Include="morphoclbuffer.h" />
-    <ClInclude Include="morphoclimage.h" />
-    <ClInclude Include="morphoperators.h" />
+    <ClInclude Include="morphop.h" />
     <ClInclude Include="precompiled.h" />
   </ItemGroup>
   <ItemGroup>
@@ -264,7 +269,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Uic%27ing %(Identity)...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
   </ItemGroup>
@@ -277,7 +282,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Uic%27ing %(Identity)...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
   </ItemGroup>
