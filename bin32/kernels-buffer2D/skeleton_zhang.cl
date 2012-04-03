@@ -1,4 +1,4 @@
-#include "common.cl"
+#include "hitmiss_common.cl"
 
 __attribute__((always_inline))
 uint getCode(

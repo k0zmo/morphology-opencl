@@ -1,5 +1,8 @@
 #include "common.cl"
 
+__attribute__((always_inline)) bool opTrue(bool o) { return o; }
+__attribute__((always_inline)) bool opFalse(bool o) { return !o; }
+
 __constant float4 greyscale = { 0.2989f, 0.5870f, 0.1140f, 0 };
 __constant float4 mul1 = { 1, 0.25f, 0.25f, 1.0f };
 __constant float4 mul2 = { 0.5f, 0.2f, 0.5f, 1.f };

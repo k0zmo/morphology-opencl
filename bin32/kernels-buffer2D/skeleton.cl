@@ -1,4 +1,4 @@
-#include "common.cl"
+#include "hitmiss_common.cl"
 
 __kernel void skeleton_iter1(
 	__read_only image2d_t src,
