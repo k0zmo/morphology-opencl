@@ -5,13 +5,20 @@
 #endif
 
 oclMorphHitMissFilter::oclMorphHitMissFilter(
-	oclContext* ctx)
+	oclContext* ctx, bool atomicCounters)
 	: oclFilter(ctx)
 	, hmOp(cvu::MO_None)
 {
+	std::string opts = "-Ikernels-buffer2D/";
+	if(atomicCounters)
+	{
+		opts += " -DUSE_ATOMIC_COUNTERS";
+		printf("Using atomic counters instead of global atomic operations\n");
+	}
+
 	// Wczytaj program
 	cl::Program program = ctx->createProgram(
-		"kernels-buffer2D/hitmiss.cl", "-Ikernels-buffer2D/");
+		"kernels-buffer2D/hitmiss.cl", opts.c_str());
 
 	// I wyciagnij z niego kernele
 

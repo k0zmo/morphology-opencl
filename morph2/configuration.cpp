@@ -17,7 +17,6 @@ void Configuration::loadConfiguration(const QString& filename)
 	glInterop = s.value("opencl/glinterop").toBool();
 	workgroupSizeX = s.value("opencl/workgroupsizex").toInt();
 	workgroupSizeY = s.value("opencl/workgroupsizey").toInt();
-	dataType = s.value("opencl/datatype").toInt();
 
 	/// Sekcja [kernel-buffer2D]
 	erode_2d = s.value("kernel-buffer2D/erode").toString();
@@ -30,6 +29,7 @@ void Configuration::loadConfiguration(const QString& filename)
 	gradient_1d = s.value("kernel-buffer1D/gradient").toString();
 	subtract_1d = s.value("kernel-buffer1D/subtract").toString();
 	hitmiss_1d = s.value("kernel-buffer1D/hitmiss").toString();
+	dataType = s.value("kernel-buffer1D/datatype").toInt();
 }
 
 void Configuration::saveConfiguration(const QString& filename)
@@ -46,7 +46,6 @@ void Configuration::saveConfiguration(const QString& filename)
 	s.setValue("opencl/glinterop", glInterop);
 	s.setValue("opencl/workgroupsizex", workgroupSizeX);
 	s.setValue("opencl/workgroupsizey", workgroupSizeY);
-	s.setValue("opencl/datatype", dataType);
 
 	/// Sekcja [kernel-buffer2D]
 	s.setValue("kernel-buffer2D/erode", erode_2d);
@@ -59,4 +58,5 @@ void Configuration::saveConfiguration(const QString& filename)
 	s.setValue("kernel-buffer1D/gradient", gradient_1d);
 	s.setValue("kernel-buffer1D/subtract", subtract_1d);
 	s.setValue("kernel-buffer1D/hitmiss", hitmiss_1d);
+	s.setValue("kernel=buffer1D/datatype", dataType);
 }

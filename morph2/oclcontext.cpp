@@ -241,20 +241,20 @@ bool oclContext::createContext(size_t platformId)
 	return oclError("Error during creating context", err);
 }
 
-bool oclContext::retrieveDevices(std::vector<oclDeviceDesc>& out)
+void oclContext::retrieveDevices(size_t platformId,
+	std::vector<oclDeviceDesc>& out)
 {
-	cl_int err;
-	std::vector<cl::Device> devices = ctx.getInfo<CL_CONTEXT_DEVICES>(&err);
-	if(!oclError("Couldn't retrieve list of OpenCL Devices", err))
-		return false;
+	if(!retrievedPlatforms)
+		retrievePlatforms();
+
+	if(platformId >= pls.size())
+		return;
+
+	std::vector<cl::Device> devices;
+	pls[platformId].getDevices(CL_DEVICE_TYPE_ALL, &devices);
 
 	for(size_t i = 0; i < devices.size(); ++i)
 		out.emplace_back(populateDescription(devices[i]));
-
-	if(!err)
-		device = devices[0];
-
-	return err == CL_SUCCESS;
 }
 
 void oclContext::chooseDevice(size_t deviceId)

@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Strucuring element</string>
+   <string>Structuring element</string>
   </property>
   <property name="modal">
    <bool>false</bool>

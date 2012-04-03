@@ -18,10 +18,10 @@ public:
 
 	void enqueue(const T& item)
 	{
-		QMutexLocker locker(&enqueueMutex);
+		QMutexLocker locker(&mutex);
 
 		while(queue.size() >= maxSize)
-			fullQueueWait.wait(&enqueueMutex);
+			fullQueueWait.wait(&mutex);
 
 		queue.enqueue(item);
 		emptyQueueWait.wakeOne();
@@ -29,7 +29,7 @@ public:
 
 	bool tryEnqueue(const T& item)
 	{
-		QMutexLocker locker(&enqueueMutex);
+		QMutexLocker locker(&mutex);
 
 		if(queue.size() >= maxSize)
 			return false;
@@ -41,10 +41,10 @@ public:
 
 	T dequeue()
 	{
-		QMutexLocker locker(&dequeueMutex);
+		QMutexLocker locker(&mutex);
 
 		while(queue.isEmpty())
-			emptyQueueWait.wait(&dequeueMutex);
+			emptyQueueWait.wait(&mutex);
 
 		T ret = queue.dequeue();
 		fullQueueWait.wakeOne();
@@ -53,8 +53,7 @@ public:
 
 	void clear()
 	{
-		QMutexLocker locker(&dequeueMutex);
-		QMutexLocker locker2(&enqueueMutex);
+		QMutexLocker locker(&mutex);
 
 		queue.clear();
 		fullQueueWait.wakeOne();
@@ -62,17 +61,20 @@ public:
 
 	bool isEmpty()
 	{
-		QMutexLocker locker(&dequeueMutex);
-		QMutexLocker locker2(&enqueueMutex);
-
+		QMutexLocker locker(&mutex);
 		return queue.isEmpty();
+	}
+
+	size_t size()
+	{
+		QMutexLocker locker(&mutex);
+		return queue.size();
 	}
 
 private:
 	int maxSize;
 	QQueue<T> queue;
-	QMutex enqueueMutex;
-	QMutex dequeueMutex;
+	QMutex mutex;
 	QWaitCondition emptyQueueWait;
 	QWaitCondition fullQueueWait;
 };

@@ -2,19 +2,24 @@
 
 #include <QDebug>
 
-CapThread::CapThread( BlockingQueue<ProcessingItem>& queue)
+CapThread::CapThread(int usedQueue,
+	BlockingQueue<ProcessingItem>& procQueue,
+	BlockingQueue<ProcessingItem>& clQueue)
 	: QThread(nullptr)
-	, queue(queue)
+	, usedQueue(usedQueue)
 	, channels(0)
 	, depth(0)
 	, width(0) 
 	, height(0)
-	, stopped(false)
+	, stopped(false)    
 {
 	item.op = cvu::MO_None;
 	item.bc = cvu::BC_None;
 	item.negate = false;
 	item.se = cv::Mat();
+
+	queue[0] = &procQueue;
+	queue[1] = &clQueue;
 }
 
 bool CapThread::openCamera(int camId)
@@ -77,7 +82,7 @@ void CapThread::run()
 
 		{
 			QMutexLocker locker(&jobDescMutex);
-			queue.enqueue(item);
+			queue[usedQueue]->enqueue(item);
 		}		
 	}
 }
@@ -114,6 +119,18 @@ void CapThread::setJobDescription(bool negate, cvu::EBayerCode bc,
 	item.bc = bc;
 	item.op = op;
 	item.se = se;
+}
+
+void CapThread::setUsedQueue(int q)
+{
+	if(q != 0 && q != 1)
+		return;
+
+	QMutexLocker locker(&jobDescMutex);
+	if(!queue[usedQueue]->isEmpty())
+		queue[usedQueue]->clear();
+
+	usedQueue = q;
 }
 
 cv::Mat CapThread::currentFrame() const

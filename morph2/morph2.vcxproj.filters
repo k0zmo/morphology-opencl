@@ -153,6 +153,24 @@
     <ClCompile Include="oclmorphfilter.cpp">
       <Filter>Source Files\Model\ocl</Filter>
     </ClCompile>
+    <ClCompile Include="oclthread.cpp">
+      <Filter>Source Files\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_oclthread.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_oclthread.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_oclpicker.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_oclpicker.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="oclpicker.cpp">
+      <Filter>Source Files\View</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cvutils.h">
@@ -200,6 +218,9 @@
     <ClInclude Include="oclmorphhitmissfilter.h">
       <Filter>Header Files\Model\ocl</Filter>
     </ClInclude>
+    <ClInclude Include="ui_oclpicker.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="mainwindow.ui">
@@ -231,6 +252,15 @@
     </CustomBuild>
     <CustomBuild Include="procthread.h">
       <Filter>Header Files\Controller</Filter>
+    </CustomBuild>
+    <CustomBuild Include="oclpicker.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="oclthread.h">
+      <Filter>Header Files\Controller</Filter>
+    </CustomBuild>
+    <CustomBuild Include="oclpicker.h">
+      <Filter>Header Files\View</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

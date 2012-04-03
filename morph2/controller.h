@@ -18,6 +18,8 @@
 class CapThread;
 class ProcThread;
 
+#include "oclthread.h"
+
 enum EOpenCLMethod
 {
 	OM_Buffer1D,
@@ -39,7 +41,6 @@ private:
 
 	QLabel* previewLabel;
 	GLWidget* previewWidget;
-	//MorphOpenCL* ocl;
 
 	bool negateSource;
 	bool oclSupported;
@@ -49,8 +50,11 @@ private:
 	bool cameraConnected;	
 
 	BlockingQueue<ProcessingItem> procQueue;
+	BlockingQueue<ProcessingItem> clQueue;
+
 	ProcThread* procThread;
 	CapThread* capThread;
+	oclThread* clThread;
 
 	cv::VideoCapture camera;
 	cv::Mat src;
@@ -79,6 +83,8 @@ private slots:
 	void onRecompute();
 	void onProcessingDone(const ProcessedItem& item);
 
+	void onOpenCLInitialized(bool success);
+
 private:
 	void openFile(const QString& filename);
 	cv::Mat standardStructuringElement();
@@ -86,7 +92,9 @@ private:
 	void showStats(int iters, double elapsed);
 	void previewCpuImage(const cv::Mat& image);
 
-	void initializeOpenCL(EOpenCLMethod method);
+	void initializeOpenCL();
+
+	//void initializeOpenCL(EOpenCLMethod method);
 	//void setOpenCLSourceImage();
 	//void processOpenCL(cvu::EOperationType op, const cv::Mat& se);
 	//void previewGpuImage();

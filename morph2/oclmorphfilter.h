@@ -6,7 +6,9 @@
 class oclMorphFilter : public oclFilter
 {
 public:
-	oclMorphFilter(oclContext* ctx);
+	oclMorphFilter(oclContext* ctx,
+		const char *erode, const char *dilate,
+		const char *gradient);
 
 	void setMorphologyOperation(cvu::EMorphOperation op);
 	cvu::EMorphOperation morphologyOperation() const

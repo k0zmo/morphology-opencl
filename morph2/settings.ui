@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>450</width>
-    <height>329</height>
+    <width>526</width>
+    <height>385</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,6 +30,9 @@
           <property name="text">
            <string>Max image width</string>
           </property>
+          <property name="buddy">
+           <cstring>maxImageWidthLineEdit</cstring>
+          </property>
          </widget>
         </item>
         <item row="0" column="1">
@@ -40,6 +43,9 @@
           <property name="text">
            <string>Max image height</string>
           </property>
+          <property name="buddy">
+           <cstring>maxImageHeightLineEdit</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
@@ -49,6 +55,9 @@
          <widget class="QLabel" name="defaultImageLabel">
           <property name="text">
            <string>Default image</string>
+          </property>
+          <property name="buddy">
+           <cstring>defaultImageLineEdit</cstring>
           </property>
          </widget>
         </item>
@@ -71,6 +80,9 @@
          <widget class="QLabel" name="erodeKernelLabel">
           <property name="text">
            <string>Erode</string>
+          </property>
+          <property name="buddy">
+           <cstring>erodeKernelComboBox</cstring>
           </property>
          </widget>
         </item>
@@ -98,6 +110,9 @@
           <property name="text">
            <string>Dilate</string>
           </property>
+          <property name="buddy">
+           <cstring>dilateKernelComboBox</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
@@ -123,6 +138,9 @@
          <widget class="QLabel" name="gradientKernelLabel">
           <property name="text">
            <string>Gradient       </string>
+          </property>
+          <property name="buddy">
+           <cstring>gradientKernelComboBox</cstring>
           </property>
          </widget>
         </item>
@@ -154,6 +172,9 @@
         <string>OpenCL</string>
        </property>
        <layout class="QFormLayout" name="formLayout_2">
+        <property name="fieldGrowthPolicy">
+         <enum>QFormLayout::ExpandingFieldsGrow</enum>
+        </property>
         <property name="margin">
          <number>8</number>
         </property>
@@ -161,6 +182,9 @@
          <widget class="QLabel" name="useAtomicCountersLabel">
           <property name="text">
            <string>Use atomic counters</string>
+          </property>
+          <property name="buddy">
+           <cstring>useAtomicCountersCheckBox</cstring>
           </property>
          </widget>
         </item>
@@ -172,40 +196,25 @@
           <property name="text">
            <string>OpenGL Interop</string>
           </property>
+          <property name="buddy">
+           <cstring>openGInteropCheckBox</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
          <widget class="QCheckBox" name="openGInteropCheckBox"/>
         </item>
         <item row="2" column="0">
-         <widget class="QLabel" name="datatypeLabel">
-          <property name="text">
-           <string>Datatype</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QComboBox" name="datatypeComboBox">
-          <item>
-           <property name="text">
-            <string>uchar</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>uint</string>
-           </property>
-          </item>
-         </widget>
-        </item>
-        <item row="3" column="0">
          <widget class="QLabel" name="workgroupSizeXLabel">
           <property name="text">
            <string>Workgroup size X</string>
           </property>
+          <property name="buddy">
+           <cstring>workgroupSizeXComboBox</cstring>
+          </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="2" column="1">
          <widget class="QComboBox" name="workgroupSizeXComboBox">
           <item>
            <property name="text">
@@ -239,14 +248,17 @@
           </item>
          </widget>
         </item>
-        <item row="4" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="workgroupSizeYLabel">
           <property name="text">
            <string>Workgroup size Y</string>
           </property>
+          <property name="buddy">
+           <cstring>workgroupSizeYComboBox</cstring>
+          </property>
          </widget>
         </item>
-        <item row="4" column="1">
+        <item row="3" column="1">
          <widget class="QComboBox" name="workgroupSizeYComboBox">
           <item>
            <property name="text">
@@ -286,9 +298,12 @@
      <item row="1" column="1">
       <widget class="QGroupBox" name="buffer1dGroupBox">
        <property name="title">
-        <string>Buffer 1D</string>
+        <string>Buffer 1D kernels</string>
        </property>
        <layout class="QFormLayout" name="formLayout_4">
+        <property name="fieldGrowthPolicy">
+         <enum>QFormLayout::ExpandingFieldsGrow</enum>
+        </property>
         <property name="margin">
          <number>8</number>
         </property>
@@ -296,6 +311,9 @@
          <widget class="QLabel" name="erodeKernelLabel_2">
           <property name="text">
            <string>Erode</string>
+          </property>
+          <property name="buddy">
+           <cstring>erodeKernelComboBox_2</cstring>
           </property>
          </widget>
         </item>
@@ -353,6 +371,9 @@
           <property name="text">
            <string>Dilate</string>
           </property>
+          <property name="buddy">
+           <cstring>dilateKernelComboBox_2</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
@@ -408,6 +429,9 @@
          <widget class="QLabel" name="gradientKernelLabel_2">
           <property name="text">
            <string>Gradient</string>
+          </property>
+          <property name="buddy">
+           <cstring>gradientKernelComboBox_2</cstring>
           </property>
          </widget>
         </item>
@@ -465,6 +489,9 @@
           <property name="text">
            <string>Subtract</string>
           </property>
+          <property name="buddy">
+           <cstring>subtractKernelComboBox</cstring>
+          </property>
          </widget>
         </item>
         <item row="3" column="1">
@@ -486,6 +513,9 @@
           <property name="text">
            <string>HM memtype</string>
           </property>
+          <property name="buddy">
+           <cstring>hitmissMemTypeComboBox</cstring>
+          </property>
          </widget>
         </item>
         <item row="4" column="1">
@@ -500,6 +530,43 @@
             <string>global</string>
            </property>
           </item>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="datatypeLabel">
+          <property name="text">
+           <string>Datatype</string>
+          </property>
+          <property name="buddy">
+           <cstring>datatypeComboBox</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QComboBox" name="datatypeComboBox">
+          <item>
+           <property name="text">
+            <string>uchar</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>uint</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="5" column="0" colspan="2">
+         <widget class="Line" name="line">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
          </widget>
         </item>
        </layout>
@@ -575,9 +642,9 @@
  <tabstops>
   <tabstop>maxImageWidthLineEdit</tabstop>
   <tabstop>maxImageHeightLineEdit</tabstop>
+  <tabstop>defaultImageLineEdit</tabstop>
   <tabstop>useAtomicCountersCheckBox</tabstop>
   <tabstop>openGInteropCheckBox</tabstop>
-  <tabstop>datatypeComboBox</tabstop>
   <tabstop>workgroupSizeXComboBox</tabstop>
   <tabstop>workgroupSizeYComboBox</tabstop>
   <tabstop>erodeKernelComboBox</tabstop>
@@ -588,6 +655,7 @@
   <tabstop>gradientKernelComboBox_2</tabstop>
   <tabstop>subtractKernelComboBox</tabstop>
   <tabstop>hitmissMemTypeComboBox</tabstop>
+  <tabstop>datatypeComboBox</tabstop>
   <tabstop>pbOk</tabstop>
   <tabstop>pbCancel</tabstop>
  </tabstops>
@@ -600,8 +668,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>278</x>
-     <y>253</y>
+     <x>458</x>
+     <y>370</y>
     </hint>
     <hint type="destinationlabel">
      <x>96</x>
@@ -616,8 +684,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>369</x>
-     <y>253</y>
+     <x>514</x>
+     <y>370</y>
     </hint>
     <hint type="destinationlabel">
      <x>179</x>

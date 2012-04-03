@@ -7,8 +7,10 @@
 #include "elapsedtimer.h"
 #include "settings.h"
 #include "sepreview.h"
+#include "oclpicker.h"
 
 #include "procthread.h"
+#include "oclthread.h"
 #include "capthread.h"
 
 #define USE_GLWIDGET 0
@@ -19,7 +21,6 @@ Controller* Singleton<Controller>::msSingleton = nullptr;
 
 Controller::Controller()
 	: mw(nullptr)
-//	, ocl(nullptr)
 	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
@@ -27,8 +28,10 @@ Controller::Controller()
 	, resizeCustomSe(true)
 	, cameraConnected(false)
 	, procQueue(3)
+	, clQueue(3)
 	, procThread(nullptr)
 	, capThread(nullptr)
+	, clThread(nullptr)
 {
 }
 
@@ -59,8 +62,23 @@ Controller::~Controller()
 		delete procThread;
 	}
 
+	if(clThread && clThread->isRunning())
+	{
+		clThread->stop();
+
+		// W przypadku gdy kolejka zadan jest pusta watek by nie puscil
+		if(clQueue.isEmpty())
+		{
+			ProcessingItem item = { false, cvu::BC_None,
+				cvu::MO_None, cv::Mat(), cv::Mat() };
+			clQueue.enqueue(item);
+		}
+
+		clThread->wait();
+		delete clThread;
+	}
+
 	delete mw;
-//	delete ocl;
 }
 
 void Controller::start()
@@ -97,41 +115,17 @@ void Controller::start()
 	mw->setPreviewWidget(previewLabel);
 #endif
 
-	// Inicjalizuj (sprobuj) OpenCLa
-#if DISABLE_OPENCL == 0
-	int method = 0;
-	printf("There are 2 methods implemented:\n"
-		"\t1) 2D buffer (image object)\n"
-		"\t2) 1D buffer (buffer object)\n");
-	while (method != 1 && method != 2)
-	{
-		printf("Choose method: ");
-		int r = scanf("%d", &method);
-		// Jesli nie odczytano jednej liczby (np. wprowadzono znak A)
-		// trzeba oproznic stdin, inaczej wpadniemy w nieskonczona petle
-		if(r != 1)
-		{
-			char buf[128];
-			fgets(buf, 128, stdin);
-		}
-	}
-
-	EOpenCLMethod emethod = static_cast<EOpenCLMethod>(method);
-	initializeOpenCL(emethod);
-#else
-	mw->setOpenCLCheckableAndChecked(false);
-#endif
-
 	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
 	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
 
+	// Customowe typy nalezy zarejstrowac dla polaczen
+	// typu QueuedConnection (miedzywatkowe)
+	qRegisterMetaType<ProcessedItem>("ProcessedItem");
+
 	// Odpal watek przetwarzajacy obraz
 	procThread = new ProcThread(procQueue);
-
-	// Customowe typy nalezy zarejstrowac dla polaczen typu QueuedConnection (miedzywatkowe)
-	qRegisterMetaType<ProcessedItem>("ProcessedItem");
-	connect(procThread, SIGNAL(processingDone(ProcessedItem)), SLOT(onProcessingDone(ProcessedItem)));
-	
+	connect(procThread, SIGNAL(processingDone(ProcessedItem)),
+		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
 	openFile(defImage);
@@ -139,13 +133,15 @@ void Controller::start()
 
 	mw->setCameraStatusBarState(false);
 	mw->show();
+
+	initializeOpenCL();
 }
 
 void Controller::onFromCameraTriggered(bool state)
 {
 	if(state)
 	{
-		capThread = new CapThread(procQueue);
+		capThread = new CapThread(useOpenCL ? 1 : 0, procQueue, clQueue);
 		if(!(cameraConnected = capThread->openCamera(0)))
 		{
 			mw->setFromCamera(false);
@@ -164,6 +160,7 @@ void Controller::onFromCameraTriggered(bool state)
 			capThread->start(QThread::LowPriority);
 
 			mw->setEnabledSaveOpenFile(false);
+			mw->setEnabledAutoRecompute(false);
 		}
 	}
 	else
@@ -183,6 +180,7 @@ void Controller::onFromCameraTriggered(bool state)
 		cameraConnected = false;
 
 		mw->setEnabledSaveOpenFile(true);
+		mw->setEnabledAutoRecompute(true);
 	}
 
 	mw->setCameraStatusBarState(cameraConnected);
@@ -346,6 +344,9 @@ void Controller::onOpenCLTriggered(bool state)
 	if(!cameraConnected && autoTrigger && 
 		!mw->isNoneOperationChecked())
 		onRecompute();
+
+	if(capThread)
+		capThread->setUsedQueue(useOpenCL ? 1 : 0);
 }
 
 void Controller::onPickMethodTriggerd()
@@ -360,19 +361,19 @@ void Controller::onPickMethodTriggerd()
 	msgBox.setDefaultButton(cancel);
 	msgBox.exec();
 
-	EOpenCLMethod method;
+//	EOpenCLMethod method;
 
-	// Jaki "silnik" wybrano
-	if(msgBox.clickedButton() == buffer1D)
-		method = OM_Buffer1D;
-	else if(msgBox.clickedButton() == buffer2D)
-		method = OM_Buffer2D;
-	else
-		return;
+//	// Jaki "silnik" wybrano
+//	if(msgBox.clickedButton() == buffer1D)
+//		method = OM_Buffer1D;
+//	else if(msgBox.clickedButton() == buffer2D)
+//		method = OM_Buffer2D;
+//	else
+//		return;
 
 	// Reinicjalizuj modul OpenCLa z wybranym silnikiem
 //	delete ocl;
-	initializeOpenCL(method);
+//	initializeOpenCL(method);
 }
 
 void Controller::onSettingsTriggered()
@@ -516,13 +517,12 @@ void Controller::onRecompute()
 		return;
 	}
 
-	//if(!useOpenCL)
-	// procQueue.enqueue(item);
-	//else
-	// procOpenCLQueue.enqueue(item);
-
 	ProcessingItem item = { negateSource, bc, op, se, src };
-	procQueue.enqueue(item);
+
+	if(useOpenCL)
+		clQueue.enqueue(item);
+	else
+		procQueue.enqueue(item);
 }
 
 void Controller::onProcessingDone(const ProcessedItem& item)
@@ -547,6 +547,11 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 	//#endif
 	//			previewCpuImage(src);
 	//	}
+
+//	ProcThread* p = qobject_cast<ProcThread*>(sender());
+//	oclThread* o = qobject_cast<oclThread*>(sender());
+//	if(p) qDebug() << "ProcThread: ";
+//	else if(o) qDebug() << "oclThread: ";
 
 	dst = item.dst;
 	previewCpuImage(dst);
@@ -630,9 +635,58 @@ void Controller::previewCpuImage(const cv::Mat& image)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Controller::initializeOpenCL()
+{
+	// Odpal watek przetwarzajacy obraz z wykorzystaniem OpenCLa
+	clThread = new oclThread(clQueue, conf);
+	connect(clThread, SIGNAL(processingDone(ProcessedItem)),
+		SLOT(onProcessingDone(ProcessedItem)));
+	connect(clThread, SIGNAL(openCLInitialized(bool)),
+		SLOT(onOpenCLInitialized(bool)));
+
+	PlatformDevicesMap map = clThread->queryPlatforms();
+	oclPicker* picker = new oclPicker(map, mw);
+
+	// Wartosci domyslne
+	int platformId = 0;
+	int deviceId = 0;
+
+	if(picker->exec() == QDialog::Accepted)
+	{
+		platformId = picker->platform();
+		deviceId = picker->device();
+	}
+
+	clThread->choose(platformId, deviceId);
+	clThread->start(QThread::HighPriority);
+	mw->setStatusBarText("Initializing OpenCL context...");
+}
+
+void Controller::onOpenCLInitialized(bool success)
+{
+	if(success)
+	{
+		qDebug("OpenCL Context intialized successfully\n");
+		mw->setStatusBarText("OpenCL Context intialized successfully");
+		mw->setOpenCLCheckableAndChecked(true);
+		useOpenCL = true;
+	}
+	else
+	{
+		QMessageBox::critical(nullptr, "Morph OpenCL",
+			"Error occured during OpenCL Context initialization.\n"
+			"Check console for more detailed description.\n"
+			"OpenCL processing will be disabled now.");
+		mw->setStatusBarText("Error occured during OpenCL Context initialization.");
+		mw->setOpenCLCheckableAndChecked(false);
+		useOpenCL = false;
+		qDebug("\n");
+	}
+}
+
+#if 0
 void Controller::initializeOpenCL(EOpenCLMethod method)
 {
-#if 0
 	// Inicjalizuj odpowiedni silnik
 	switch(method)
 	{
@@ -683,61 +737,61 @@ void Controller::initializeOpenCL(EOpenCLMethod method)
 
 		mw->setOpenCLCheckableAndChecked(false);
 	}
-#endif
 }
 
-//void Controller::setOpenCLSourceImage()
-//{
-//	if(oclSupported)
-//	{
-//		if(ocl->usingShared())
-//		{
-//			GLuint glresource = previewWidget->createEmptySurface
-//				(src.cols, src.rows);
-//			ocl->setSourceImage(&src, glresource);
-//		}
-//		else
-//		{
-//			ocl->setSourceImage(&src);
-//		}
-//	}
-//}
-//
-//void Controller::processOpenCL(cvu::EOperationType op, const cv::Mat& se)
-//{
-//	ocl->error = false;
-//	int csize = ocl->setStructuringElement(se);
-//
-//	if(ocl->error) 
-//		return;
-//
-//	ocl->recompile(op, csize);
-//
-//	if(ocl->error) 
-//		return;
-//
-//	int iters;
-//	double delapsed = ocl->morphology(op, dst, iters);
-//
-//	// Wyswietl statystyki
-//	showStats(iters, delapsed);
-//}
+void Controller::setOpenCLSourceImage()
+{
+	if(oclSupported)
+	{
+		if(ocl->usingShared())
+		{
+			GLuint glresource = previewWidget->createEmptySurface
+				(src.cols, src.rows);
+			ocl->setSourceImage(&src, glresource);
+		}
+		else
+		{
+			ocl->setSourceImage(&src);
+		}
+	}
+}
+
+void Controller::processOpenCL(cvu::EOperationType op, const cv::Mat& se)
+{
+	ocl->error = false;
+	int csize = ocl->setStructuringElement(se);
+
+	if(ocl->error)
+		return;
+
+	ocl->recompile(op, csize);
+
+	if(ocl->error)
+		return;
+
+	int iters;
+	double delapsed = ocl->morphology(op, dst, iters);
+
+	// Wyswietl statystyki
+	showStats(iters, delapsed);
+}
 
 
-//void Controller::previewGpuImage()
-//{
-//#if USE_GLWIDGET == 1
-//	// Mozna by przy wczytywaniu ustawic te wielkosci
-//
-//	//QSize surfaceSize(src.cols, src.rows);
-//	//double fx = CvUtil::scaleCoeff(
-//	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
-//	//	image.size());
-//	//surfaceSize.setWidth(surfaceSize.width() * fx);
-//	//surfaceSize.setHeight(surfaceSize.height() * fx);
-//	//previewWidget->setMinimumSize(surfaceSize);
-//	//previewWidget->setMaximumSize(surfaceSize);
-//
-//	previewWidget->updateGL();
-//#endif
-//}
+void Controller::previewGpuImage()
+{
+#if USE_GLWIDGET == 1
+	// Mozna by przy wczytywaniu ustawic te wielkosci
+
+	//QSize surfaceSize(src.cols, src.rows);
+	//double fx = CvUtil::scaleCoeff(
+	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
+	//	image.size());
+	//surfaceSize.setWidth(surfaceSize.width() * fx);
+	//surfaceSize.setHeight(surfaceSize.height() * fx);
+	//previewWidget->setMinimumSize(surfaceSize);
+	//previewWidget->setMaximumSize(surfaceSize);
+
+	previewWidget->updateGL();
+#endif
+}
+#endif

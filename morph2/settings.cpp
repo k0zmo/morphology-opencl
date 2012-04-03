@@ -22,7 +22,6 @@ void Settings::setConfigurationModel(const Configuration& conf)
 	// Sekcja OpenCL
 	useAtomicCountersCheckBox->setChecked(conf.atomicCounters);
 	openGInteropCheckBox->setChecked(conf.glInterop);
-	datatypeComboBox->setCurrentIndex(conf.dataType);
 
 	setComboBoxIndex(workgroupSizeXComboBox, QString::number(conf.workgroupSizeX));
 	setComboBoxIndex(workgroupSizeYComboBox, QString::number(conf.workgroupSizeY));
@@ -38,6 +37,7 @@ void Settings::setConfigurationModel(const Configuration& conf)
 	setComboBoxIndex(gradientKernelComboBox_2, conf.gradient_1d);
 	setComboBoxIndex(subtractKernelComboBox, conf.subtract_1d);
 	setComboBoxIndex(hitmissMemTypeComboBox, conf.hitmiss_1d);
+	datatypeComboBox->setCurrentIndex(conf.dataType);
 
 	// Ustaw dodatkowo walidator
 	QIntValidator validator(0, 2048);
@@ -59,7 +59,6 @@ Configuration Settings::configurationModel() const
 	conf.glInterop = openGInteropCheckBox->isChecked();
 	conf.workgroupSizeX = workgroupSizeXComboBox->currentText().toInt();
 	conf.workgroupSizeY = workgroupSizeYComboBox->currentText().toInt();
-	conf.dataType = datatypeComboBox->currentText().toInt();
 
 	/// Sekcja [kernel-buffer2D]
 	conf.erode_2d = erodeKernelComboBox->currentText();
@@ -72,6 +71,7 @@ Configuration Settings::configurationModel() const
 	conf.gradient_1d = gradientKernelComboBox_2->currentText();
 	conf.subtract_1d = subtractKernelComboBox->currentText();
 	conf.hitmiss_1d = hitmissMemTypeComboBox->currentText();
+	conf.dataType = datatypeComboBox->currentIndex();
 
 	return conf;
 }

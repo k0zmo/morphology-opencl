@@ -8,7 +8,7 @@
     <x>0</x>
     <y>0</y>
     <width>474</width>
-    <height>487</height>
+    <height>512</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -504,7 +504,7 @@
      <x>0</x>
      <y>0</y>
      <width>474</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -564,6 +564,9 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Use OpenCL</string>
    </property>
@@ -577,6 +580,9 @@
    </property>
    <property name="toolTip">
     <string>Pick method again (buffer 1D or 2D)</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
   <action name="actionCameraInput">

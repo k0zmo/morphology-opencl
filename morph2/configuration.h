@@ -14,7 +14,6 @@ struct Configuration
 	bool glInterop;
 	int workgroupSizeX;
 	int workgroupSizeY;
-	int dataType;
 
 	// Sekcja [kernel-buffer2D]
 	QString erode_2d;
@@ -27,6 +26,7 @@ struct Configuration
 	QString gradient_1d;
 	QString subtract_1d;
 	QString hitmiss_1d;
+	int dataType;
 
 	void saveConfiguration(const QString& filename);
 	void loadConfiguration(const QString& filename);

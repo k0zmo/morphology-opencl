@@ -1,6 +1,8 @@
 #include "oclmorphfilter.h"
 
-oclMorphFilter::oclMorphFilter(oclContext* ctx)
+oclMorphFilter::oclMorphFilter(oclContext* ctx,
+	const char* erode, const char* dilate,
+	const char* gradient)
 	: oclFilter(ctx)
 	, morphOp(cvu::MO_None)
 {
@@ -9,9 +11,9 @@ oclMorphFilter::oclMorphFilter(oclContext* ctx)
 		"kernels-buffer2D/morph.cl", "-Ikernels-buffer2D/");
 
 	// I wyciagnij z niego kernele
-	kernelErode = ctx->retrieveKernel(program, "erode");
-	kernelDilate = ctx->retrieveKernel(program, "dilate");
-	kernelGradient = ctx->retrieveKernel(program, "gradient");
+	kernelErode = ctx->retrieveKernel(program, erode);
+	kernelDilate = ctx->retrieveKernel(program, dilate);
+	kernelGradient = ctx->retrieveKernel(program, gradient);
 	kernelSubtract = ctx->retrieveKernel(program, "subtract");
 
 	structuringElement.size = 0;
@@ -30,10 +32,11 @@ void oclMorphFilter::setMorphologyOperation(
 
 double oclMorphFilter::run()
 {
-	if(!src || structuringElement.size == 0)
+	if(!src)
 		return 0.0;
 
-	if(morphOp == cvu::MO_None)
+	if (morphOp == cvu::MO_None ||
+		structuringElement.size == 0)
 	{
 		// Passthrough
 		dst = *src;

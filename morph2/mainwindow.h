@@ -76,6 +76,9 @@ public:
 		actionSave->setEnabled(state);
 	}
 
+	void setEnabledAutoRecompute(bool state)
+	{ cbAutoTrigger->setEnabled(state); }
+
 private:
 	//Zwraca kontrolke reprezentujaca daneaoperacje morfologiczna
 	QRadioButton* operationToRadioBox(cvu::EMorphOperation op);

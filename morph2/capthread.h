@@ -12,7 +12,9 @@ class CapThread : public QThread
 {
 	Q_OBJECT
 public:
-	CapThread(BlockingQueue<ProcessingItem>& queue);
+	CapThread(int usedQueue,
+		BlockingQueue<ProcessingItem>& procQueue,
+		BlockingQueue<ProcessingItem> &clQueue);
 
 	bool openCamera(int camId);
 	void closeCamera();
@@ -28,6 +30,8 @@ public:
 	void setJobDescription(bool negate, cvu::EBayerCode bc,
 		cvu::EMorphOperation op, const cv::Mat& se);
 
+	void setUsedQueue(int q);
+
 	int frameChannels() const
 	{ return channels; }
 	int frameDepth() const 
@@ -42,10 +46,11 @@ public:
 private:
 	cv::VideoCapture camera;
 	cv::Mat frame;
-	BlockingQueue<ProcessingItem>& queue;
+	BlockingQueue<ProcessingItem>* queue[2];
 	QMutex jobDescMutex;
 	QMutex stopThreadMutex;
 	ProcessingItem item;
+	int usedQueue;
 
 	int channels; // np. 3
 	int depth; // np. CV_8U

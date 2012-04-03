@@ -6,7 +6,7 @@
 class oclMorphHitMissFilter : public oclFilter
 {
 public:
-	oclMorphHitMissFilter(oclContext* ctx);
+	oclMorphHitMissFilter(oclContext* ctx, bool atomicCounters);
 
 	void setHitMissOperation(cvu::EMorphOperation op);
 	cvu::EMorphOperation hitMissOperation() const

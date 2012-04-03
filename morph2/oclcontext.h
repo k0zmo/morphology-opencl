@@ -75,7 +75,7 @@ public:
 	bool retrievePlatforms(std::vector<oclPlatformDesc>& out);
 	bool createContext();
 	bool createContext(size_t platformId);
-	bool retrieveDevices(std::vector<oclDeviceDesc>& out);
+	void retrieveDevices(size_t platformId, std::vector<oclDeviceDesc>& out);
 
 	void chooseDevice(size_t deviceId);
 	bool createCommandQueue(bool profiling);
