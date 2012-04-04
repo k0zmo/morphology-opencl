@@ -16,7 +16,9 @@
 
 #include "morphoclimage.h"
 #include "morphoclbuffer.h"
-#include "morphop.h"
+#include "morphoperators.h"
+
+using namespace Morphology;
 
 // -------------------------------------------------------------------------
 EOperationType operationType(const QString& str)
@@ -118,13 +120,13 @@ int main(int argc, char *argv[])
 					switch (opType)
 					{
 					case OT_Outline:
-							morphologyOutline(src, dst);
+							outline(src, dst);
 							break;
 					case OT_Skeleton:
-							morphologySkeleton(src, dst);
+							skeleton(src, dst);
 							break;
 					case OT_Skeleton_ZhangSuen:
-							morphologySkeletonZhangSuen(src, dst);
+							skeletonZhangSuen(src, dst);
 							break;
 					default: break;
 					}
@@ -179,13 +181,13 @@ int main(int argc, char *argv[])
 		if(method == 1) ocl = new MorphOpenCLImage();
 		else ocl = new MorphOpenCLBuffer();
 
-		ocl->errorCallback = [&qout](const QString& message, cl_int err)
+		ocl->setErrorCallback([&qout](const QString& message, cl_int err)
 		{
 			Q_UNUSED(err);
 			qout << "OpenCL error: " <<  message << " Error code: " << 
 				MorphOpenCL::openCLErrorCodeStr(err) << endl;
 			exit(1);
-		};
+		});
 
 		if(!ocl->initOpenCL())
 		{

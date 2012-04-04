@@ -1,3 +1,4 @@
+#include "GL/glew.h"
 #include "morphoclbuffer.h"
 
 #include <QSettings>
