@@ -6,7 +6,7 @@
 
 TARGET = gauss
 TEMPLATE = app
-DESTDIR = ../bin32
+DESTDIR = ../bin32/old
 
 INCLUDEPATH += ../morph
 SOURCES += main.cpp

@@ -3,7 +3,7 @@ CONFIG += debug_and_release warn_on
 
 TARGET = morph2
 TEMPLATE = app
-DESTDIR = bin
+DESTDIR = ../bin32
 
 SOURCES += \
 	configuration.cpp \

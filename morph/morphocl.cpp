@@ -1,9 +1,16 @@
-#include "morphocl.h"
-#include "morphoclimage.h"
-
 #include <QFile>
 #include <QTextStream>
 #include <QSettings>
+
+#include "GL/glew.h"
+#ifdef Q_WS_WINDOWS
+#	include "GL/wglew.h"
+#else 
+#	include "GL/glxew.h"
+#endif
+
+#include "morphocl.h"
+#include "morphoclimage.h"
 
 int roundUp(int value, int multiple)
 {
@@ -83,14 +90,22 @@ bool MorphOpenCL::initOpenCL()
 		}
 		platform = platforms[choice-1];
 	}
-
+#ifdef Q_WS_WIN
 	cl_context_properties properties_interop[] = { 
 		CL_CONTEXT_PLATFORM, (cl_context_properties) (platform)(),
 		CL_GL_CONTEXT_KHR,   (cl_context_properties) wglGetCurrentContext(),
 		CL_WGL_HDC_KHR,      (cl_context_properties) wglGetCurrentDC(),
 		0, 0
 	};	
-
+#else
+	cl_context_properties properties_interop[] =
+	{
+		CL_CONTEXT_PLATFORM, (cl_context_properties) (platform)(),
+		CL_GL_CONTEXT_KHR,   (cl_context_properties) glXGetCurrentContext(),
+		CL_GLX_DISPLAY_KHR,  (cl_context_properties) glXGetCurrentDisplay(),
+		0
+	};
+#endif
 	cl_context_properties properties[] = { 
 		CL_CONTEXT_PLATFORM, (cl_context_properties) (platform)(),
 		0, 0

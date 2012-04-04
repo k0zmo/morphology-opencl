@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS = morph morph-cl gauss
+SUBDIRS = morph2 # morph morph-cl gauss
 CONFIG += ordered

@@ -2,27 +2,30 @@ QT       += core gui opengl
 
 TARGET = morph
 TEMPLATE = app
-DESTDIR = ../bin32
+DESTDIR = ../bin32/old
 
 SOURCES += main.cpp \
 	mainwindow.cpp \
-	morphop.cpp \
+	morphoperators.cpp \
 	morphocl.cpp \
 	morphoclimage.cpp \
 	morphoclbuffer.cpp \
 	glwidget.cpp \
+	cvutils.cpp \
 	glew.c
 
 HEADERS  += mainwindow.h \
 	morphocl.h \
-	morphop.h \
+	morphoperators.h \
 	morphoclimage.h \
 	morphoclbuffer.h \
 	glwidget.h \
+	cvutils.h \
 	precompiled.h
 
 FORMS    += mainwindow.ui \
-	sepreview.ui
+	sepreview.ui \
+	settings.ui
 
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
