@@ -3,7 +3,7 @@
 #include <QSettings>
 
 #include "GL/glew.h"
-#ifdef Q_WS_WINDOWS
+#if defined(Q_WS_WINDOWS) || defined(_WIN32)
 #	include "GL/wglew.h"
 #else 
 #	include "GL/glxew.h"
