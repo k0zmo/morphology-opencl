@@ -12,7 +12,6 @@ SOURCES += \
 	elapsedtimer.cpp \
 	glwidget.cpp \
 	main.cpp \
-	mainwindow.cpp \
 	morphop.cpp \
 	oclbayerfilter.cpp \
 	oclcontext.cpp \
@@ -23,10 +22,11 @@ SOURCES += \
 	procthread.cpp \
 	sepreview.cpp \
 	settings.cpp \
-    capthread.cpp \
-    glew.c \
-    oclthread.cpp \
-    oclpicker.cpp
+	capthread.cpp \
+	glew.c \
+	oclthread.cpp \
+	oclpicker.cpp \
+	mainwidget.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -36,7 +36,6 @@ HEADERS  += \
 	cvutils.h \
 	elapsedtimer.h \
 	glwidget.h \
-	mainwindow.h \
 	morphop.h \
 	oclbayerfilter.h \
 	oclcontext.h \
@@ -48,15 +47,16 @@ HEADERS  += \
 	sepreview.h \
 	settings.h \
 	singleton.h \
-    oclthread.h \
-    oclpicker.h
-
+	oclthread.h \
+	oclpicker.h \
+	mainwidget.h
 
 FORMS += \
-	mainwindow.ui \
 	sepreview.ui \
 	settings.ui \
-    oclpicker.ui
+	oclpicker.ui \
+	mainwindow.ui \
+	mainwidget.ui
 
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h

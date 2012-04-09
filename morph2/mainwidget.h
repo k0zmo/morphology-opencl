@@ -1,18 +1,16 @@
 #pragma once
 
-#include <QtGui/QMainWindow>
-#include "ui_mainwindow.h"
+#include <QWidget>
+#include "ui_mainwidget.h"
 
 #include "morphop.h"
 
-class MainWindow : public QMainWindow, Ui::MainWindow
+class MainWidget : public QWidget, Ui::MainWidget
 {
 	Q_OBJECT
 public:
-	MainWindow(QWidget *parent = 0, Qt::WFlags flags = 0);
-	virtual ~MainWindow();
-
-	void setPreviewWidget(QWidget* previewWidget);
+	MainWidget(QWidget* parent = 0);
+	virtual ~MainWidget();
 
 	// Zwraca wybrany indeks filtru bajera (0 dla zadnego)
 	int bayerIndex() const
@@ -43,19 +41,6 @@ public:
 	// Ustawia rotacje elementu strukturalnego
 	void setStructuringElementRotation(int rotation);
 
-	// Ustawia tekst na pasku stanu 
-	void setStatusBarText(const QString& message)
-	{ statusBarLabel->setText(message); }
-
-	void setCameraStatusBarState(bool connected)
-	{ 
-		cameraStatusLabel->setText(connected ? 
-			"Camera: Connected" : "Camera: Not connected");
-	}
-
-	// Ustawia mozliwosc zaznaczenia "silnika" OpenCL
-	void setOpenCLCheckableAndChecked(bool state);
-
 	// Ustawia tekst na przycisku `Show structuring element`
 	void setStructuringElementPreviewButtonText(const QString& text)
 	{ pbShowSE->setText(text); }
@@ -67,17 +52,11 @@ public:
 		pbResetRotation->setEnabled(state);
 	}
 
-	void setFromCamera(bool state)
-	{ actionCameraInput->setChecked(state); }
-
-	void setEnabledSaveOpenFile(bool state)
-	{
-		actionOpen->setEnabled(state);
-		actionSave->setEnabled(state);
-	}
-
 	void setEnabledAutoRecompute(bool state)
 	{ cbAutoTrigger->setEnabled(state); }
+
+	void setCameraStatus(bool state)
+	{ cameraOn = state; }
 
 private:
 	//Zwraca kontrolke reprezentujaca daneaoperacje morfologiczna
@@ -85,9 +64,8 @@ private:
 
 private:
 	bool disableRecomputing;
-	QLabel* statusBarLabel;
-	QLabel* cameraStatusLabel;
 	QSpacerItem* spacer;
+	bool cameraOn;
 
 private slots:
 	void onOperationToggled(bool checked);

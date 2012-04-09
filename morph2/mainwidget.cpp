@@ -1,28 +1,15 @@
-#include "mainwindow.h"
+#include "mainwidget.h"
 #include "controller.h"
 
-
-MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
-	: QMainWindow(parent, flags)
+MainWidget::MainWidget(QWidget* parent)
+	: QWidget(parent)
 	, disableRecomputing(false)
 	, spacer(new QSpacerItem(0, 0, 
 			QSizePolicy::Minimum, 
 			QSizePolicy::MinimumExpanding))
+	, cameraOn(false)
 {
 	setupUi(this);
-
-	// Menu (File)
-	connect(actionCameraInput, SIGNAL(triggered(bool)), gC, SLOT(onFromCameraTriggered(bool)));
-	connect(actionOpen, SIGNAL(triggered()), gC, SLOT(onOpenFileTriggered()));
-	connect(actionSave, SIGNAL(triggered()), gC, SLOT(onSaveFileTriggered()));
-	connect(actionOpenSE, SIGNAL(triggered()), gC, SLOT(onOpenStructuringElementTriggered()));
-	connect(actionSaveSE, SIGNAL(triggered()), gC, SLOT(onSaveStructuringElementTriggered()));
-	connect(actionExit, SIGNAL(triggered()), SLOT(close()));
-
-	// Menu Settings
-	connect(actionOpenCL, SIGNAL(triggered(bool)), gC, SLOT(onOpenCLTriggered(bool)));
-	connect(actionPickMethod, SIGNAL(triggered()), gC, SLOT(onPickMethodTriggerd()));
-	connect(actionSettings, SIGNAL(triggered()), gC, SLOT(onSettingsTriggered()));
 
 	// Operacje
 	connect(rbNone, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
@@ -63,31 +50,13 @@ MainWindow::MainWindow(QWidget* parent, Qt::WFlags flags)
 	lbXElementSize->setText(QString::fromLatin1("Horizontal: 3"));
 	lbYElementSize->setText(QString::fromLatin1("Vertical: 3"));
 	lbRotation->setText(QString::fromLatin1("0"));
-
-	// Pasek stanu
-	statusBarLabel = new QLabel(this);
-	statusBar()->addPermanentWidget(statusBarLabel);
-	cameraStatusLabel = new QLabel(this);
-	statusBar()->addPermanentWidget(cameraStatusLabel);
 }
 
-MainWindow::~MainWindow()
+MainWidget::~MainWidget()
 {
 }
 
-void MainWindow::setPreviewWidget(QWidget* previewWidget)
-{
-	if(!previewVerticalLayout->isEmpty())
-	{
-		previewVerticalLayout->removeWidget(previewWidget);
-		previewVerticalLayout->removeItem(spacer);
-	}
-
-	previewVerticalLayout->addWidget(previewWidget);
-	previewVerticalLayout->addItem(spacer);
-}
-
-cvu::EMorphOperation MainWindow::morphologyOperation() const
+cvu::EMorphOperation MainWidget::morphologyOperation() const
 {
 	using namespace cvu;
 
@@ -104,7 +73,7 @@ cvu::EMorphOperation MainWindow::morphologyOperation() const
 	else                                  { return MO_None; }
 }
 
-cvu::EStructuringElementType MainWindow::structuringElementType() const
+cvu::EStructuringElementType MainWidget::structuringElementType() const
 {
 	using namespace cvu;
 
@@ -114,7 +83,7 @@ cvu::EStructuringElementType MainWindow::structuringElementType() const
 	else                            return SET_Custom;
 }
 
-void MainWindow::setStructuringElementType(
+void MainWidget::setStructuringElementType(
 	cvu::EStructuringElementType type)
 {
 	switch(type)
@@ -130,7 +99,7 @@ void MainWindow::setStructuringElementType(
 	}
 }
 
-QSize MainWindow::structuringElementSize() const
+QSize MainWidget::structuringElementSize() const
 {
 	return QSize(
 		hsXElementSize->value(),
@@ -138,7 +107,7 @@ QSize MainWindow::structuringElementSize() const
 	);
 }
 
-void MainWindow::setStructuringElementSize(const QSize& size)
+void MainWidget::setStructuringElementSize(const QSize& size)
 {
 	if(size.width() != size.height())
 		cbSquare->setChecked(false);
@@ -149,7 +118,7 @@ void MainWindow::setStructuringElementSize(const QSize& size)
 	hsYElementSize->setValue(size.height());
 }
 
-int MainWindow::structuringElementRotation() const
+int MainWidget::structuringElementRotation() const
 {
 	int angle = dialRotation->value();
 
@@ -164,7 +133,7 @@ int MainWindow::structuringElementRotation() const
 	return angle;
 }
 
-void MainWindow::setStructuringElementRotation(int angle)
+void MainWidget::setStructuringElementRotation(int angle)
 {
 	if(angle >= 180)
 		angle += 180;
@@ -177,7 +146,7 @@ void MainWindow::setStructuringElementRotation(int angle)
 	dialRotation->setValue(angle);
 }
 
-QRadioButton* MainWindow::operationToRadioBox(cvu::EMorphOperation op)
+QRadioButton* MainWidget::operationToRadioBox(cvu::EMorphOperation op)
 {
 	using namespace cvu;
 
@@ -198,7 +167,7 @@ QRadioButton* MainWindow::operationToRadioBox(cvu::EMorphOperation op)
 	}
 }
 
-void MainWindow::onOperationToggled(bool checked)
+void MainWidget::onOperationToggled(bool checked)
 {
 	if(!checked)
 		return;
@@ -225,13 +194,13 @@ void MainWindow::onOperationToggled(bool checked)
 
 	if(cbAutoTrigger->isChecked() || 
 	   rbNone->isChecked() ||
-	   actionCameraInput->isChecked())
+	   cameraOn)
 	{
 		emit recomputeNeeded();
 	}
 }
 
-void MainWindow::onElementTypeToggled(bool checked)
+void MainWidget::onElementTypeToggled(bool checked)
 {
 	if(!checked)
 		return;
@@ -239,13 +208,13 @@ void MainWindow::onElementTypeToggled(bool checked)
 	emit structuringElementChanged();
 
 	if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
-	   actionCameraInput->isChecked())
+	   cameraOn)
 	{
 		emit recomputeNeeded();
 	}
 }
 
-void MainWindow::onElementSizeRatioChanged(int state)
+void MainWidget::onElementSizeRatioChanged(int state)
 {
 	if(state != Qt::Checked)
 		return;
@@ -260,7 +229,7 @@ void MainWindow::onElementSizeRatioChanged(int state)
 	emit structuringElementChanged();
 }
 
-void MainWindow::onElementSizeChanged(int value)
+void MainWidget::onElementSizeChanged(int value)
 {
 	QSlider* notifier = qobject_cast<QSlider*>(sender());
 	QSlider* fbslider;
@@ -296,7 +265,7 @@ void MainWindow::onElementSizeChanged(int value)
 	if (!disableRecomputing)
 	{
 		if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
-		   actionCameraInput->isChecked())
+		   cameraOn)
 		{
 			emit recomputeNeeded();
 		}
@@ -305,7 +274,7 @@ void MainWindow::onElementSizeChanged(int value)
 	disableRecomputing = false;
 }
 
-void MainWindow::onElementRotationChanged(int value)
+void MainWidget::onElementRotationChanged(int value)
 {
 	Q_UNUSED(value);
 
@@ -315,19 +284,13 @@ void MainWindow::onElementRotationChanged(int value)
 	emit structuringElementChanged();
 
 	if((cbAutoTrigger->isChecked() && !rbNone->isChecked()) ||
-	   actionCameraInput->isChecked())
+	   cameraOn)
 	{
 		emit recomputeNeeded();
 	}
 }
 
-void MainWindow::onElementRotationResetPressed()
+void MainWidget::onElementRotationResetPressed()
 {
 	setStructuringElementRotation(0);
-}
-
-void MainWindow::setOpenCLCheckableAndChecked(bool state)
-{
-	actionOpenCL->setEnabled(state);
-	actionOpenCL->setChecked(state);
 }

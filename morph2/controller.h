@@ -1,7 +1,7 @@
 #pragma once
 
 #include "singleton.h"
-#include "mainwindow.h"
+#include "mainwidget.h"
 #include "glwidget.h"
 
 #include "cvutils.h"
@@ -19,6 +19,7 @@ class CapThread;
 class ProcThread;
 
 #include "oclthread.h"
+#include "ui_mainwindow.h"
 
 enum EOpenCLMethod
 {
@@ -26,21 +27,26 @@ enum EOpenCLMethod
 	OM_Buffer2D
 };
 
-class Controller : public QObject, public Singleton<Controller>
+class Controller :
+		public QMainWindow,
+		public Singleton<Controller>,
+		Ui::MainWindow
 {
 	Q_OBJECT
 public:
-	Controller();
+	Controller(QWidget* parent = 0, Qt::WFlags flags = 0);
 	virtual ~Controller();
-
-	void start();
+	void show();
 
 private:
-	MainWindow* mw;
+	MainWidget* mw;
 	Configuration conf;
 
 	QLabel* previewLabel;
-	GLWidget* previewWidget;
+	//GLWidget* previewWidget;
+
+	QLabel* statusBarLabel;
+	QLabel* cameraStatusLabel;
 
 	bool negateSource;
 	bool oclSupported;
@@ -93,6 +99,25 @@ private:
 	void previewCpuImage(const cv::Mat& image);
 
 	void initializeOpenCL();
+
+	void setEnabledSaveOpenFile(bool state)
+	{
+		actionOpen->setEnabled(state);
+		actionSave->setEnabled(state);
+	}
+
+	// Ustawia mozliwosc zaznaczenia "silnika" OpenCL
+	void setOpenCLCheckableAndChecked(bool state)
+	{
+		actionOpenCL->setEnabled(state);
+		actionOpenCL->setChecked(state);
+	}
+
+	void setCameraStatusBarState(bool connected)
+	{
+		cameraStatusLabel->setText(connected ?
+			"Camera: Connected" : "Camera: Not connected");
+	}
 
 	//void initializeOpenCL(EOpenCLMethod method);
 	//void setOpenCLSourceImage();

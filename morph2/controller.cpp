@@ -19,8 +19,9 @@
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;
 
-Controller::Controller()
-	: mw(nullptr)
+Controller::Controller(QWidget *parent, Qt::WFlags flags)
+	: QMainWindow(parent, flags)
+	, mw(nullptr)
 	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
@@ -33,6 +34,26 @@ Controller::Controller()
 	, capThread(nullptr)
 	, clThread(nullptr)
 {
+	setupUi(this);
+
+	// Menu (File)
+	connect(actionCameraInput, SIGNAL(triggered(bool)), SLOT(onFromCameraTriggered(bool)));
+	connect(actionOpen, SIGNAL(triggered()), SLOT(onOpenFileTriggered()));
+	connect(actionSave, SIGNAL(triggered()), SLOT(onSaveFileTriggered()));
+	connect(actionOpenSE, SIGNAL(triggered()), SLOT(onOpenStructuringElementTriggered()));
+	connect(actionSaveSE, SIGNAL(triggered()), SLOT(onSaveStructuringElementTriggered()));
+	connect(actionExit, SIGNAL(triggered()), SLOT(close()));
+
+	// Menu Settings
+	connect(actionOpenCL, SIGNAL(triggered(bool)), SLOT(onOpenCLTriggered(bool)));
+	connect(actionPickMethod, SIGNAL(triggered()), SLOT(onPickMethodTriggerd()));
+	connect(actionSettings, SIGNAL(triggered()), SLOT(onSettingsTriggered()));
+
+	// Pasek stanu
+	statusBarLabel = new QLabel(this);
+	statusBar()->addPermanentWidget(statusBarLabel);
+	cameraStatusLabel = new QLabel(this);
+	statusBar()->addPermanentWidget(cameraStatusLabel);
 }
 
 Controller::~Controller()
@@ -81,7 +102,7 @@ Controller::~Controller()
 	delete mw;
 }
 
-void Controller::start()
+void Controller::show()
 {
 	conf.loadConfiguration("./settings.cfg");
 	QString defImage(conf.defaultImage);
@@ -89,34 +110,38 @@ void Controller::start()
 	// Wczytaj domyslny obraz (jesli wyspecyfikowano)
 	if(defImage.isEmpty())
 	{
-		defImage = QFileDialog::getOpenFileName(mw, QString(), ".",
+		defImage = QFileDialog::getOpenFileName(this, QString(), ".",
 			QLatin1String("Image files (*.png *.jpg *.bmp)"));
 
 		if(defImage.isEmpty())
 			exit(-1);
 	}
 
-	mw = new MainWindow;
+	mw = new MainWidget(this);
+	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
+	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
+
+	gridLayout->addWidget(mw, 0, 1, 1, 1);
 
 	// Utworz kontrolke podgladu obrazu
 #if USE_GLWIDGET == 1
 	previewWidget = new GLWidget(mw->centralWidget());
 	previewWidget->setMinimumSize(QSize(10, 10));
-	mw->setPreviewWidget(previewWidget);
+	gridLayout->addWidget(previewLabel, 0, 0, 1, 1);
 
 	previewWidget->updateGL();
 	previewWidget->makeCurrent();
 #else
 	// Widget wyswietlajacy dany obraz
-	previewLabel = new QLabel(mw->centralWidget());
+	previewLabel = new QLabel(this);
 	previewLabel->setText(QString());
 	previewLabel->setMinimumSize(QSize(10, 10));
-
-	mw->setPreviewWidget(previewLabel);
+	gridLayout->addWidget(previewLabel, 0, 0, 1, 1);
 #endif
 
-	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
-	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
+	QSpacerItem* spacer = new QSpacerItem(0, 0,
+		QSizePolicy::Minimum, QSizePolicy::MinimumExpanding);
+	gridLayout->addItem(spacer, 1, 0, 1, 2);
 
 	// Customowe typy nalezy zarejstrowac dla polaczen
 	// typu QueuedConnection (miedzywatkowe)
@@ -128,23 +153,26 @@ void Controller::start()
 		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
+	setCameraStatusBarState(false);
 	openFile(defImage);
 	onRecompute();
-
-	mw->setCameraStatusBarState(false);
-	mw->show();
-
 	initializeOpenCL();
+
+	QMainWindow::show();
 }
 
 void Controller::onFromCameraTriggered(bool state)
 {
+	mw->setCameraStatus(state);
+
 	if(state)
 	{
 		capThread = new CapThread(useOpenCL ? 1 : 0, procQueue, clQueue);
 		if(!(cameraConnected = capThread->openCamera(0)))
 		{
-			mw->setFromCamera(false);
+			// Wracamy do stanu sprzed wybrania kamery jako wejscia
+			actionCameraInput->setChecked(false);
+			mw->setCameraStatus(false);
 
 			QMessageBox::critical(mw, "Error", 
 				"Cannot establish connection to selected camera device.", 
@@ -159,7 +187,7 @@ void Controller::onFromCameraTriggered(bool state)
 			capThread->setJobDescription(negateSource, bc, op, se);
 			capThread->start(QThread::LowPriority);
 
-			mw->setEnabledSaveOpenFile(false);
+			setEnabledSaveOpenFile(false);
 			mw->setEnabledAutoRecompute(false);
 		}
 	}
@@ -179,16 +207,16 @@ void Controller::onFromCameraTriggered(bool state)
 		capThread = 0;
 		cameraConnected = false;
 
-		mw->setEnabledSaveOpenFile(true);
+		setEnabledSaveOpenFile(true);
 		mw->setEnabledAutoRecompute(true);
 	}
 
-	mw->setCameraStatusBarState(cameraConnected);
+	setCameraStatusBarState(cameraConnected);
 }
 
 void Controller::onOpenFileTriggered()
 {
-	QString filename = QFileDialog::getOpenFileName(mw, QString(), ".",
+	QString filename = QFileDialog::getOpenFileName(this, QString(), ".",
 		QLatin1String("Image files (*.png *.jpg *.bmp)"));
 
 	if(filename.isEmpty())
@@ -209,7 +237,7 @@ void Controller::onOpenFileTriggered()
 
 void Controller::onSaveFileTriggered()
 {
-	QString filename = QFileDialog::getSaveFileName(mw, QString(), ".",
+	QString filename = QFileDialog::getSaveFileName(this, QString(), ".",
 		QLatin1String("Image file (*.png)"));
 
 	if(filename.isEmpty())
@@ -221,7 +249,7 @@ void Controller::onSaveFileTriggered()
 
 void Controller::onOpenStructuringElementTriggered()
 {
-	QString filename = QFileDialog::getOpenFileName(mw, QString(), ".",
+	QString filename = QFileDialog::getOpenFileName(this, QString(), ".",
 		QLatin1String("Structuring element file (*.se)"));
 	
 	if(filename.isEmpty())
@@ -285,7 +313,7 @@ void Controller::onOpenStructuringElementTriggered()
 
 void Controller::onSaveStructuringElementTriggered()
 {
-	QString filename = QFileDialog::getSaveFileName(mw, QString(), ".",
+	QString filename = QFileDialog::getSaveFileName(this, QString(), ".",
 		QLatin1String("Structuring element file (*.se)"));
 
 	if(filename.isEmpty())
@@ -378,17 +406,17 @@ void Controller::onPickMethodTriggerd()
 
 void Controller::onSettingsTriggered()
 {
-	Settings* s = new Settings(mw);
-	s->setConfigurationModel(conf);
+	Settings s;
+	s.setConfigurationModel(conf);
 
-	int ret = s->exec();
+	int ret = s.exec();
 	if(ret != QDialog::Accepted)
 		return;
 
-	Configuration conf = s->configurationModel();
+	Configuration conf = s.configurationModel();
 	conf.saveConfiguration("./settings.cfg");		
 
-	QMessageBox::information(mw, "Settings", 
+	QMessageBox::information(this, "Settings",
 		"You need to restart the application to apply changes.", QMessageBox::Ok);
 }
 
@@ -454,7 +482,7 @@ void Controller::onStructuringElementPreviewPressed()
 {
 	static bool activated = false;
 	static StructuringElementPreview* d;
-	static QPoint pos(mw->pos() + QPoint(mw->geometry().width(), 0));
+	static QPoint position(pos() + QPoint(geometry().width(), 0));
 
 	if(!activated)
 	{
@@ -463,9 +491,9 @@ void Controller::onStructuringElementPreviewPressed()
 			standardStructuringElement() : customSe;
 		mw->setStructuringElementPreviewButtonText("Hide structuring element");
 
-		d = new StructuringElementPreview(mw);
+		d = new StructuringElementPreview(this);
 		d->setAttribute(Qt::WA_DeleteOnClose);
-		d->move(pos);
+		d->move(position);
 		d->setModal(false);
 		d->onStructuringElementChanged(se);
 		d->show();
@@ -487,9 +515,10 @@ void Controller::onStructuringElementPreviewPressed()
 		disconnect(d, SIGNAL(closed()), 
 			this, SLOT(onStructuringElementPreviewPressed()));
 
-		pos = d->pos();
+		position = d->pos();
 		activated = false;
 		d->close();	
+		d->deleteLater();
 	}
 }
 
@@ -602,7 +631,7 @@ void Controller::showStats(int iters, double elapsed)
 	QTextStream strm(&txt);
 	strm << "Time elapsed: " << elapsed << " ms, iterations: " << iters;
 	printf("Time elapsed: %lf ms, iterations: %d\n", elapsed, iters);
-	mw->setStatusBarText(txt);
+	statusBarLabel->setText(txt);
 }
 
 void Controller::previewCpuImage(const cv::Mat& image)
@@ -645,21 +674,22 @@ void Controller::initializeOpenCL()
 		SLOT(onOpenCLInitialized(bool)));
 
 	PlatformDevicesMap map = clThread->queryPlatforms();
-	oclPicker* picker = new oclPicker(map, mw);
+	oclPicker picker(map);
 
 	// Wartosci domyslne
 	int platformId = 0;
 	int deviceId = 0;
 
-	if(picker->exec() == QDialog::Accepted)
+	if(picker.exec() == QDialog::Accepted)
 	{
-		platformId = picker->platform();
-		deviceId = picker->device();
+		platformId = picker.platform();
+		deviceId = picker.device();
 	}
 
 	clThread->choose(platformId, deviceId);
 	clThread->start(QThread::HighPriority);
-	mw->setStatusBarText("Initializing OpenCL context...");
+
+	statusBarLabel->setText("Initializing OpenCL context...");
 }
 
 void Controller::onOpenCLInitialized(bool success)
@@ -667,8 +697,9 @@ void Controller::onOpenCLInitialized(bool success)
 	if(success)
 	{
 		qDebug("OpenCL Context intialized successfully\n");
-		mw->setStatusBarText("OpenCL Context intialized successfully");
-		mw->setOpenCLCheckableAndChecked(true);
+
+		statusBarLabel->setText("OpenCL Context intialized successfully");
+		setOpenCLCheckableAndChecked(true);
 		useOpenCL = true;
 	}
 	else
@@ -677,8 +708,9 @@ void Controller::onOpenCLInitialized(bool success)
 			"Error occured during OpenCL Context initialization.\n"
 			"Check console for more detailed description.\n"
 			"OpenCL processing will be disabled now.");
-		mw->setStatusBarText("Error occured during OpenCL Context initialization.");
-		mw->setOpenCLCheckableAndChecked(false);
+
+		statusBarLabel->setText("Error occured during OpenCL Context initialization.");
+		setOpenCLCheckableAndChecked(false);
 		useOpenCL = false;
 		qDebug("\n");
 	}
