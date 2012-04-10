@@ -45,6 +45,7 @@ private:
 	QLabel* previewLabel;
 	//GLWidget* previewWidget;
 
+	QLabel* procQueueLabel;
 	QLabel* statusBarLabel;
 	QLabel* cameraStatusLabel;
 
@@ -117,6 +118,14 @@ private:
 	{
 		cameraStatusLabel->setText(connected ?
 			"Camera: Connected" : "Camera: Not connected");
+	}
+
+	void setEnqueueJobsStatus()
+	{
+		if(useOpenCL)
+			procQueueLabel->setText(QString("Enqueued jobs: %1").arg(clQueue.size()));
+		else
+			procQueueLabel->setText(QString("Enqueued jobs: %1").arg(procQueue.size()));
 	}
 
 	//void initializeOpenCL(EOpenCLMethod method);

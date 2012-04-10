@@ -65,7 +65,7 @@ public:
 		return queue.isEmpty();
 	}
 
-	size_t size()
+	int size()
 	{
 		QMutexLocker locker(&mutex);
 		return queue.size();

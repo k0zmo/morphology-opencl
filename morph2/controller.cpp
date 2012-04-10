@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QProgressBar>
 
 #include "cvutils.h"
 #include "elapsedtimer.h"
@@ -50,6 +51,8 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	connect(actionSettings, SIGNAL(triggered()), SLOT(onSettingsTriggered()));
 
 	// Pasek stanu
+	procQueueLabel = new QLabel(this);
+	statusBar()->addPermanentWidget(procQueueLabel);
 	statusBarLabel = new QLabel(this);
 	statusBar()->addPermanentWidget(statusBarLabel);
 	cameraStatusLabel = new QLabel(this);
@@ -552,6 +555,8 @@ void Controller::onRecompute()
 		clQueue.enqueue(item);
 	else
 		procQueue.enqueue(item);
+
+	setEnqueueJobsStatus();
 }
 
 void Controller::onProcessingDone(const ProcessedItem& item)
@@ -577,10 +582,7 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 	//			previewCpuImage(src);
 	//	}
 
-//	ProcThread* p = qobject_cast<ProcThread*>(sender());
-//	oclThread* o = qobject_cast<oclThread*>(sender());
-//	if(p) qDebug() << "ProcThread: ";
-//	else if(o) qDebug() << "oclThread: ";
+	setEnqueueJobsStatus();
 
 	dst = item.dst;
 	previewCpuImage(dst);
@@ -690,10 +692,21 @@ void Controller::initializeOpenCL()
 	clThread->start(QThread::HighPriority);
 
 	statusBarLabel->setText("Initializing OpenCL context...");
+
+	QProgressBar* pb = new QProgressBar(qstatusBar);
+	pb->setObjectName("ProgressBar");
+	pb->setRange(0, 0);
+	qstatusBar->insertWidget(2, pb);
 }
 
 void Controller::onOpenCLInitialized(bool success)
 {
+	// Progress bar najpierw
+	QProgressBar* pb = qstatusBar->findChild<QProgressBar*>("ProgressBar");
+	if(!pb) return;
+	qstatusBar->removeWidget(pb);
+	pb->deleteLater();
+
 	if(success)
 	{
 		qDebug("OpenCL Context intialized successfully\n");
