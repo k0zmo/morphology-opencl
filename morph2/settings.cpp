@@ -4,6 +4,10 @@ Settings::Settings(QWidget* parent)
 	: QDialog(parent)
 {
 	setupUi(this);
+
+	QIntValidator* intv = new QIntValidator(0, 8192, this);
+	maxImageWidthLineEdit->setValidator(intv);
+	maxImageHeightLineEdit->setValidator(intv);
 }
 
 void Settings::setConfigurationModel(const Configuration& conf)
@@ -38,11 +42,6 @@ void Settings::setConfigurationModel(const Configuration& conf)
 	setComboBoxIndex(subtractKernelComboBox, conf.subtract_1d);
 	setComboBoxIndex(hitmissMemTypeComboBox, conf.hitmiss_1d);
 	datatypeComboBox->setCurrentIndex(conf.dataType);
-
-	// Ustaw dodatkowo walidator
-	QIntValidator validator(0, 2048);
-	maxImageWidthLineEdit->setValidator(&validator);
-	maxImageHeightLineEdit->setValidator(&validator);
 }
 
 Configuration Settings::configurationModel() const

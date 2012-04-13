@@ -23,6 +23,7 @@ Controller* Singleton<Controller>::msSingleton = nullptr;
 Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags)
 	, mw(nullptr)
+	, preview(nullptr)
 	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
@@ -126,23 +127,19 @@ void Controller::show()
 
 	gridLayout->addWidget(mw, 0, 1, 1, 1);
 
-	// Utworz kontrolke podgladu obrazu
-#if USE_GLWIDGET == 1
-	previewWidget = new GLWidget(this);
-	previewWidget->setMinimumSize(QSize(10, 10));
-	previewWidget->resize(1, 1);
-	gridLayout->addWidget(previewWidget, 0, 0, 1, 1);
-#else
-	// Widget wyswietlajacy dany obraz
-	previewLabel = new QLabel(this);
-	previewLabel->setText(QString());
-	previewLabel->setMinimumSize(QSize(10, 10));
-	gridLayout->addWidget(previewLabel, 0, 0, 1, 1);
-#endif
+	// Utworz konrtrolke do podgladu obrazu
+	preview = new PreviewProxy(true, this);
+	gridLayout->addWidget(preview, 0, 0, 1, 1);
 
 	QSpacerItem* spacer = new QSpacerItem(0, 0,
 		QSizePolicy::Minimum, QSizePolicy::MinimumExpanding);
 	gridLayout->addItem(spacer, 1, 0, 1, 2);
+
+	setCameraStatusBarState(false);
+
+#if DISABLE_OPENCL == 0
+	initializeOpenCL();
+#endif
 
 	// Customowe typy nalezy zarejstrowac dla polaczen
 	// typu QueuedConnection (miedzywatkowe)
@@ -154,13 +151,8 @@ void Controller::show()
 		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
-	setCameraStatusBarState(false);
 	openFile(defImage);
 	onRecompute();
-
-#if DISABLE_OPENCL == 1
-	initializeOpenCL();
-#endif
 
 	QMainWindow::show();
 }
@@ -565,9 +557,12 @@ void Controller::onRecompute()
 void Controller::onProcessingDone(const ProcessedItem& item)
 {
 	setEnqueueJobsStatus();
-
 	dst = item.dst;
-	previewCpuImage(dst);
+
+	const cv::Size maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
+	printf("QWE");
+	preview->setPreviewImage(dst, maxImgSize);
+
 	showStats(item.iters, item.delapsed);
 }
 
@@ -616,34 +611,6 @@ void Controller::showStats(int iters, double elapsed)
 	strm << "Time elapsed: " << elapsed << " ms, iterations: " << iters;
 	printf("Time elapsed: %lf ms, iterations: %d\n", elapsed, iters);
 	statusBarLabel->setText(txt);
-}
-
-void Controller::previewCpuImage(const cv::Mat& image)
-{
-#if USE_GLWIDGET == 1
-	QSize surfaceSize(image.cols, image.rows);
-	double fx = cvu::scaleCoeff(
-		cv::Size(conf.maxImageWidth, conf.maxImageHeight),
-		image.size());
-
-	surfaceSize.setWidth(surfaceSize.width() * fx);
-	surfaceSize.setHeight(surfaceSize.height() * fx);
-
-	previewWidget->setMinimumSize(surfaceSize);
-	previewWidget->setMaximumSize(surfaceSize);
-	previewWidget->setSurface(image);
-#else
-	static const cv::Size imgSize(conf.maxImageWidth, conf.maxImageHeight);
-
-	cv::Mat img(image);
-	double fx = cvu::scaleCoeff(imgSize, image.size());
-	cv::resize(img, img, cv::Size(), fx, fx, cv::INTER_LINEAR);
-	//cvu::resizeWithAspect(img, imgSize);
-
-	// Konwersja cv::Mat -> QImage -> QPixmap
-	QImage qimg(cvu::toQImage(img));
-	previewLabel->setPixmap(QPixmap::fromImage(qimg));
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -784,3 +751,4 @@ void Controller::setOpenCLSourceImage()
 }
 
 #endif
+

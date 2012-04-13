@@ -59,7 +59,7 @@ double oclBayerFilter::run()
 	err = ctx->commandQueue().enqueueNDRangeKernel(
 		*kernel, offset, gridDim, ctx->workgroupSize(),
 		nullptr, &evt);
-#	endif
+#endif
 	evt.wait();
 
 	oclContext::oclError("Error while executing kernel over ND range!", err);

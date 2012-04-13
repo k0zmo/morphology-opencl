@@ -26,7 +26,8 @@ SOURCES += \
 	glew.c \
 	oclthread.cpp \
 	oclpicker.cpp \
-	mainwidget.cpp
+	mainwidget.cpp \
+    previewproxy.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -49,7 +50,8 @@ HEADERS  += \
 	singleton.h \
 	oclthread.h \
 	oclpicker.h \
-	mainwidget.h
+	mainwidget.h \
+    previewproxy.h
 
 FORMS += \
 	sepreview.ui \

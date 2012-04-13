@@ -30,8 +30,8 @@ void negate(const cv::Mat& src, cv::Mat& dst);
 // Konwertuje obraz w postaci 0,1 na 0,255 (w miejscu)
 void convert01To0255(cv::Mat& src);
 
-double scaleCoeff(const cv::Size& maxDstSize, const cv::Size& curSize);
-void resizeWithAspect(cv::Mat& image, const cv::Size& dstSize);
+std::pair<double, double> scaleCoeffs(const cv::Size& curSize, const cv::Size& dstSize);
+void fitImageToSize(cv::Mat& image, const cv::Size& dstSize);
 
 static const cv::Rect WholeImage(0, 0, -1, -1);
 }

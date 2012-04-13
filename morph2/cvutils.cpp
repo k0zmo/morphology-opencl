@@ -62,38 +62,44 @@ void convert01To0255(cv::Mat& src)
 	cv::LUT(src, lut, src);
 }
 
-double scaleCoeff(const cv::Size& maxDstSize, const cv::Size& curSize)
+std::pair<double, double> scaleCoeffs(const cv::Size& curSize, const cv::Size& dstSize)
 {
-	double fx = 1.0;
+	// Pierwszy przypadek: 512x512 -> 256x256
+	int xs = qMin(dstSize.width, curSize.width);
+	int ys = qMin(dstSize.height, curSize.height);
 
-	if(curSize.width > maxDstSize.width || 
-	   curSize.height > maxDstSize.height)
+	if(xs == curSize.width && ys == curSize.height)
+		return std::make_pair(1.0, 1.0);
+
+	// Drugi przypadek: 512x256 -> 256x256 (256x128)
+	if(curSize.width != curSize.height)
 	{
-		if(curSize.height > curSize.width)
-			fx = static_cast<double>(maxDstSize.height) / curSize.height;
+		if(curSize.width > curSize.height)
+			ys = dstSize.width  / (static_cast<double>(curSize.width) /
+								   static_cast<double>(curSize.height));
 		else
-			fx = static_cast<double>(maxDstSize.width) / curSize.width;
+			xs = dstSize.height / (static_cast<double>(curSize.height) /
+								   static_cast<double>(curSize.width));
+	}
+	// Trzeci przypadek: 512x512 -> 256x128 (128x128)
+	else if(dstSize.width != dstSize.height)
+	{
+		ys = xs = qMin(xs, ys);
 	}
 
-	return fx;
+	double fx = static_cast<double>(xs) / static_cast<double>(curSize.width);
+	double fy = static_cast<double>(ys) / static_cast<double>(curSize.height);
+
+	return std::make_pair(fx, fy);
 }
 
-void resizeWithAspect(cv::Mat& image, const cv::Size& dstSize)
+void fitImageToSize(cv::Mat& image, const cv::Size& dstSize)
 {
-	int xs = dstSize.width;
-	int ys = dstSize.height;
+	auto coeffs = scaleCoeffs(image.size(), dstSize);
+	double fx = coeffs.first;
+	double fy = coeffs.second;
 
-	if(image.cols != image.rows)
-	{
-		auto round = [](double v) { return static_cast<int>(v + 0.5); };
-
-		if(image.cols > image.rows)
-			ys = image.rows * round((double)xs/image.cols);
-		else 
-			xs = image.cols * round((double)ys/image.rows);
-	}
-
-	cv::resize(image, image, cv::Size(xs, ys), 0.0, 0.0, cv::INTER_NEAREST);
+	cv::resize(image, image, cv::Size(), fx, fy, cv::INTER_LINEAR);
 }
 
 } // end of namespace

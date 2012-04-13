@@ -45,7 +45,7 @@ void GLWidget::initializeGL()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-	printf(" * Creating empty texture object ()\n");
+	printf(" * Creating empty texture object\n");
 
 	// -------------------------------
 	// Tekstura
@@ -108,6 +108,8 @@ void GLWidget::initializeGL()
 	prog->setUniformValue("surface", 0);
 	prog->bindAttributeLocation("in_pos", 0);
 	prog->bindAttributeLocation("in_texCoord", 1);
+
+	printf(" * Done initializing OpenGL\n");
 }
 // -------------------------------------------------------------------------
 void GLWidget::paintGL()

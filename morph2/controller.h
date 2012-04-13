@@ -2,7 +2,7 @@
 
 #include "singleton.h"
 #include "mainwidget.h"
-#include "glwidget.h"
+#include "previewproxy.h"
 
 #include "cvutils.h"
 #include "morphop.h"
@@ -41,9 +41,7 @@ public:
 private:
 	MainWidget* mw;
 	Configuration conf;
-
-	QLabel* previewLabel;
-	GLWidget* previewWidget;
+	PreviewProxy* preview;
 
 	QLabel* procQueueLabel;
 	QLabel* statusBarLabel;
@@ -97,8 +95,6 @@ private:
 	cv::Mat standardStructuringElement();
 	cv::Mat structuringElement();
 	void showStats(int iters, double elapsed);
-	void previewCpuImage(const cv::Mat& image);
-
 	void initializeOpenCL();
 
 	void setEnabledSaveOpenFile(bool state)
