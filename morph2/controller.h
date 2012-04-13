@@ -43,7 +43,7 @@ private:
 	Configuration conf;
 
 	QLabel* previewLabel;
-	//GLWidget* previewWidget;
+	GLWidget* previewWidget;
 
 	QLabel* procQueueLabel;
 	QLabel* statusBarLabel;

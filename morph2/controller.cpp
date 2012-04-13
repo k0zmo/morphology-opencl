@@ -14,8 +14,8 @@
 #include "oclthread.h"
 #include "capthread.h"
 
-#define USE_GLWIDGET 0
-#define DISABLE_OPENCL 1
+#define USE_GLWIDGET 1
+#define DISABLE_OPENCL 0
 
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;
@@ -128,12 +128,10 @@ void Controller::show()
 
 	// Utworz kontrolke podgladu obrazu
 #if USE_GLWIDGET == 1
-	previewWidget = new GLWidget(mw->centralWidget());
+	previewWidget = new GLWidget(this);
 	previewWidget->setMinimumSize(QSize(10, 10));
-	gridLayout->addWidget(previewLabel, 0, 0, 1, 1);
-
-	previewWidget->updateGL();
-	previewWidget->makeCurrent();
+	previewWidget->resize(1, 1);
+	gridLayout->addWidget(previewWidget, 0, 0, 1, 1);
 #else
 	// Widget wyswietlajacy dany obraz
 	previewLabel = new QLabel(this);
@@ -159,7 +157,10 @@ void Controller::show()
 	setCameraStatusBarState(false);
 	openFile(defImage);
 	onRecompute();
+
+#if DISABLE_OPENCL == 1
 	initializeOpenCL();
+#endif
 
 	QMainWindow::show();
 }
@@ -196,6 +197,7 @@ void Controller::onFromCameraTriggered(bool state)
 	}
 	else
 	{
+		// Zakoncz dzialanie watku kamerki
 		if(capThread->isRunning())
 		{
 			capThread->stop();
@@ -372,6 +374,10 @@ void Controller::onOpenCLTriggered(bool state)
 {
 	useOpenCL = state;
 
+	// Wyczysc kolejki poprzednie
+	clQueue.clear();
+	procQueue.clear();
+
 	if(!cameraConnected && autoTrigger && 
 		!mw->isNoneOperationChecked())
 		onRecompute();
@@ -440,9 +446,6 @@ void Controller::onAutoTriggerChanged(int state)
 void Controller::onBayerIndexChanged(int bcode)
 {
 	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(bcode);
-
-//	if(oclSupported)
-//		ocl->setBayerFilter(bc);
 
 	// Dla no-op rowniez chcemy to wykonac
 	if(!cameraConnected && (autoTrigger || cameraConnected))
@@ -561,27 +564,6 @@ void Controller::onRecompute()
 
 void Controller::onProcessingDone(const ProcessedItem& item)
 {
-	//#if USE_GLWIDGET == 1
-	//	// Pokaz obraz wynikowy
-	//	if(useOpenCL && ocl->usingShared())
-	//		previewGpuImage();
-	//	else
-	//#endif
-	//		previewCpuImage(dst);
-
-	//	void Controller::onShowSourceImage()
-	//	{
-	//		Q_ASSERT(mw->isNoneOperationChecked());
-	//
-	//#if USE_GLWIDGET == 1
-	//		// Pokaz obraz wynikowy
-	//		if(useOpenCL && ocl->usingShared())
-	//			previewGpuImage();
-	//		else
-	//#endif
-	//			previewCpuImage(src);
-	//	}
-
 	setEnqueueJobsStatus();
 
 	dst = item.dst;
@@ -801,42 +783,4 @@ void Controller::setOpenCLSourceImage()
 	}
 }
 
-void Controller::processOpenCL(cvu::EOperationType op, const cv::Mat& se)
-{
-	ocl->error = false;
-	int csize = ocl->setStructuringElement(se);
-
-	if(ocl->error)
-		return;
-
-	ocl->recompile(op, csize);
-
-	if(ocl->error)
-		return;
-
-	int iters;
-	double delapsed = ocl->morphology(op, dst, iters);
-
-	// Wyswietl statystyki
-	showStats(iters, delapsed);
-}
-
-
-void Controller::previewGpuImage()
-{
-#if USE_GLWIDGET == 1
-	// Mozna by przy wczytywaniu ustawic te wielkosci
-
-	//QSize surfaceSize(src.cols, src.rows);
-	//double fx = CvUtil::scaleCoeff(
-	//	cv::Size(conf.maxImageWidth, conf.maxImageHeight),
-	//	image.size());
-	//surfaceSize.setWidth(surfaceSize.width() * fx);
-	//surfaceSize.setHeight(surfaceSize.height() * fx);
-	//previewWidget->setMinimumSize(surfaceSize);
-	//previewWidget->setMaximumSize(surfaceSize);
-
-	previewWidget->updateGL();
-#endif
-}
 #endif

@@ -2,9 +2,10 @@
 #include <QMessageBox>
 
 GLWidget::GLWidget(QWidget* parent)
-	: QGLWidget(parent), 
-	prog(new QGLShaderProgram),
-	swidth(-1), sheight(-1)
+	: QGLWidget(parent)
+	, prog(new QGLShaderProgram)
+	, swidth(-1)
+	, sheight(-1)
 {
 
 }
@@ -24,6 +25,8 @@ void GLWidget::initializeGL()
 		msg += QLatin1String(reinterpret_cast<const char*>
 			(glewGetErrorString(err)));
 		QMessageBox::critical(nullptr, "GLWidget error", msg, QMessageBox::Ok);
+
+		// TODO fallback to QLabel
 		exit(-1);
 	}
 	printf("Using OpenGL %s version\n", glGetString(GL_VERSION));
@@ -32,15 +35,17 @@ void GLWidget::initializeGL()
 	{
 		QMessageBox::critical(nullptr, "GLWidget error",
 			"GL 2.0 version is required", QMessageBox::Ok);
+		// TODO fallback to QLabel
 		exit(-1);
 	}
 
+	// Pare podstawowych ustawie
 	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-	printf("Creating empty texture object ()\n");
+	printf(" * Creating empty texture object ()\n");
 
 	// -------------------------------
 	// Tekstura
@@ -60,7 +65,7 @@ void GLWidget::initializeGL()
 		{ -1,  3,   0, 0 }
 	};
 
-	printf("Creating vertex buffer object\n");
+	printf(" * Creating vertex buffer object\n");
 
 	glGenBuffers(1, &vboQuad);
 	glBindBuffer(GL_ARRAY_BUFFER, vboQuad);
@@ -76,7 +81,7 @@ void GLWidget::initializeGL()
 		sizeof(Vertex), (GLubyte*)nullptr + sizeof(float)*2);
 	glEnableVertexAttribArray(1);
 
-	printf("Creating shaders\n");
+	printf(" * Creating shaders\n");
 
 	// -------------------------------
 	// Shader
@@ -84,6 +89,7 @@ void GLWidget::initializeGL()
 	{
 		QMessageBox::critical(nullptr,
 			"Critical error", prog->log(), QMessageBox::Ok);
+		// TODO fallback to QLabel
 		exit(-1);
 	};
 
@@ -115,6 +121,7 @@ void GLWidget::paintGL()
 // -------------------------------------------------------------------------
 void GLWidget::resizeGL(int width, int height)
 {
+	// no need for calling makeCurrent as it is already done by Qt
 	if(height == 0)
 		height = 1;
 	glViewport(0, 0, width, height);
@@ -136,6 +143,7 @@ void GLWidget::createSurface_impl(int w, int h, const void* data)
 {
 	makeCurrent();
 
+	// Nastapila zmiana rozmiaru - alokujemy pamiec od nowa
 	if(swidth != w || sheight != h)
 	{
 		swidth = w;
@@ -146,6 +154,7 @@ void GLWidget::createSurface_impl(int w, int h, const void* data)
 	}
 	else
 	{
+		// Nadpisujemy poprzednie dane
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, swidth,
 			sheight, GL_RED, GL_UNSIGNED_BYTE, data);
 	}

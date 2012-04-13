@@ -22,7 +22,7 @@ protected:
 	virtual void resizeGL(int width, int height);
 
 private:
-	Q_DISABLE_COPY(GLWidget);
+	Q_DISABLE_COPY(GLWidget)
 
 private:
 	GLuint surface;
