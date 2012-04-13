@@ -61,6 +61,7 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	treeWidget->insertTopLevelItems(0, items);
 	treeWidget->header()->setStretchLastSection(false);
 	treeWidget->header()->setResizeMode(QHeaderView::ResizeToContents);
+	treeWidget->expandAll();
 
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
