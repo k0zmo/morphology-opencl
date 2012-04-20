@@ -10,6 +10,9 @@ class PreviewLabel : public QLabel
 public:
 	PreviewLabel(QWidget* parent = nullptr);
 	void setPreviewImage(const cv::Mat& se);
+
+protected:
+	virtual void resizeEvent(QResizeEvent* evt);
 	virtual void mousePressEvent(QMouseEvent* evt);
 
 private:

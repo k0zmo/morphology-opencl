@@ -37,6 +37,12 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 	setPixmap(QPixmap::fromImage(img));
 }
 
+void PreviewLabel::resizeEvent(QResizeEvent* evt)
+{
+	setPreviewImage(se);
+	QLabel::resizeEvent(evt);
+}
+
 void PreviewLabel::mousePressEvent(QMouseEvent* evt)
 {
 	double dx = evt->x() / pixSize.width();

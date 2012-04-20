@@ -124,10 +124,6 @@ private:
 			procQueueLabel->setText(QString("Enqueued jobs: %1").arg(procQueue.size()));
 	}
 
-	//void initializeOpenCL(EOpenCLMethod method);
-	//void setOpenCLSourceImage();
-	//void processOpenCL(cvu::EOperationType op, const cv::Mat& se);
-	//void previewGpuImage();
 signals:
 	void structuringElementChanged(const cv::Mat& se);
 };
