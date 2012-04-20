@@ -19,7 +19,7 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 
 	// Dostosuj go do wyswietlenia
 	cv::Size previewSize(width(), height());
-	cvu::fitImageToSize(se, previewSize);
+	cvu::fitImageToWholeSpace(se, previewSize);
 
 	pixSize = QSizeF((double)se.cols / se_.cols,
 		(double)se.rows / se_.rows);

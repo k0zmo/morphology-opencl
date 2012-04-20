@@ -22,6 +22,10 @@ int skeletonZHLutTable[256]  = {
 	2,3,0,1,0,0,0,1,0,0,0,0,0,0,0,0,3,3,0,1,0,0,0,0,2,2,0,0,2,0,0,0
 };
 
+static const float PI = 3.1415926535897932384626433832795f;
+static const float RAD_PER_DEG = PI / 180.0f;
+#define DEG2RAD(x) (x * RAD_PER_DEG)
+
 cv::Mat standardStructuringElement(int xradius, int yradius,
 	EStructuringElementType type, int rotation)
 {
@@ -31,11 +35,47 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		2 * anchor.x + 1,
 		2 * anchor.y + 1);
 
+	if(type == SET_Ellipse)
+	{
+		// http://www.maa.org/joma/Volume8/Kalman/General.html
+		//
+		// (x*cos(t)+y*sin(t))^2   (x*sin(t)-y*cos(t))^2
+		// --------------------- + --------------------- = 1
+		//          a^2                     b^2
+
+		double rot = DEG2RAD(rotation);
+		double beta = -rot;
+
+		double sinbeta = sin(beta);
+		double cosbeta = cos(beta);
+
+		double a2 = static_cast<double>(xradius*xradius);
+		double b2 = static_cast<double>(yradius*yradius);
+
+		int axis = std::max(xradius, yradius);
+
+		cv::Size ksize(2*axis + 1, 2*axis + 1);
+		cv::Mat element(ksize, CV_8U);
+
+		for(int y = -axis; y <= axis; ++y)
+		{
+			for(int x = -axis; x <= axis; ++x)
+			{
+				double n1 = x*cosbeta+y*sinbeta;
+				double n2 = x*sinbeta-y*cosbeta;
+				double lhs = (n1*n1)/a2 + (n2*n2)/b2;
+				double rhs = 1;
+				element.at<uchar>(y+axis, x+axis) = (lhs <= rhs ? 1 : 0);
+			}
+		}
+		return element;
+	}
+
 	int shape;
 	switch(type)
 	{
 	case SET_Rect: shape = cv::MORPH_RECT; break;
-	case SET_Ellipse: shape = cv::MORPH_ELLIPSE; break;
+	//case SET_Ellipse: shape = cv::MORPH_ELLIPSE; break;
 	case SET_Cross: shape = cv::MORPH_CROSS; break;
 	default: return cv::Mat();
 	}
@@ -128,7 +168,7 @@ cv::Mat rotateStructuringElement(int rotation, const cv::Mat& _element)
 	int width = right-left;
 	int height = bottom-top;
 
-	// Zalozenie jest ze element strukturalny ma rozmair 2n+1,
+	// Zalozenie jest ze element strukturalny ma rozmiar 2n+1,
 	// ponizsze dwa bloki strzega tego warunku
 
 	if(!(width % 2))

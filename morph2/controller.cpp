@@ -15,7 +15,7 @@
 #include "capthread.h"
 
 #define USE_GLWIDGET 1
-#define DISABLE_OPENCL 0
+#define DISABLE_OPENCL 1
 
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;
@@ -366,7 +366,7 @@ void Controller::onOpenCLTriggered(bool state)
 {
 	useOpenCL = state;
 
-	// Wyczysc kolejki poprzednie
+	// Wyczysc poprzednie kolejki
 	clQueue.clear();
 	procQueue.clear();
 
@@ -533,6 +533,7 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 
 void Controller::onRecompute()
 {
+	// Pobierz parametry operacji
 	cvu::EMorphOperation op = mw->morphologyOperation();
 	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
 	cv::Mat se = structuringElement();
@@ -544,6 +545,7 @@ void Controller::onRecompute()
 		return;
 	}
 
+	// Utworz 'obiekt przetwarzany'
 	ProcessingItem item = { negateSource, bc, op, se, src };
 
 	if(useOpenCL)
@@ -560,7 +562,6 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 	dst = item.dst;
 
 	const cv::Size maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
-	printf("QWE");
 	preview->setPreviewImage(dst, maxImgSize);
 
 	showStats(item.iters, item.delapsed);
