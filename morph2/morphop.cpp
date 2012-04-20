@@ -35,6 +35,20 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		2 * anchor.x + 1,
 		2 * anchor.y + 1);
 
+	// OpenCV ma cos do rysowania elips ale nie spelnia oczekiwan
+	// Patrz: przypadek elipsy o rozmiarze 17x31 i obrocie o 327 (wklesla)
+	if(0 && type == SET_Ellipse)
+	{
+		int axis = std::max(xradius, yradius);
+		cv::Size ksize(2*axis + 1, 2*axis + 1);
+		cv::Mat element(ksize, CV_8U, cv::Scalar(0));
+
+		cv::ellipse(element, cv::Point(axis, axis),
+					cv::Size(xradius, yradius), -rotation,
+					0, 360, cv::Scalar(255), -1, 8);
+		return element;
+	}
+
 	if(type == SET_Ellipse)
 	{
 		// http://www.maa.org/joma/Volume8/Kalman/General.html
@@ -43,9 +57,7 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		// --------------------- + --------------------- = 1
 		//          a^2                     b^2
 
-		double rot = DEG2RAD(rotation);
-		double beta = -rot;
-
+		double beta = -DEG2RAD(rotation);
 		double sinbeta = sin(beta);
 		double cosbeta = cos(beta);
 
@@ -53,7 +65,6 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		double b2 = static_cast<double>(yradius*yradius);
 
 		int axis = std::max(xradius, yradius);
-
 		cv::Size ksize(2*axis + 1, 2*axis + 1);
 		cv::Mat element(ksize, CV_8U);
 

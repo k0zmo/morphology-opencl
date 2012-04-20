@@ -21,8 +21,24 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 	cv::Size previewSize(width(), height());
 	cvu::fitImageToWholeSpace(se, previewSize);
 
-	pixSize = QSizeF((double)se.cols / se_.cols,
-		(double)se.rows / se_.rows);
+	if(0)
+	{
+		std::vector<std::vector<cv::Point> > contours;
+		std::vector<cv::Vec4i> hierarchy;
+
+		// Znajdz kontury
+		cv::findContours(se, contours, hierarchy,
+			CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
+
+		// Znajdz otoczke wypukla dla kazdego konturu
+		std::vector<std::vector<cv::Point> > hull(contours.size());
+		for(size_t i = 0; i < contours.size(); ++i)
+			cv::convexHull(cv::Mat(contours[i]), hull[i]);
+
+		// Narysuj otoczke wypukla
+		for(size_t i = 0; i < contours.size(); ++i)
+			cv::drawContours(se, hull, i, cv::Scalar(2), 3, CV_AA);
+	}
 
 	// Konwersja cv::Mat -> QImage (QPixmap)
 	QImage img(reinterpret_cast<const quint8*>(se.data),
@@ -31,7 +47,9 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 
 	// Utworz palete 
 	QVector<QRgb> colorTable;
-	colorTable << qRgb(0, 0, 0) << qRgb(255, 255, 255);
+	colorTable << qRgb(0, 0, 0) <<
+				  qRgb(255, 255, 255) <<
+				  qRgb(255, 255, 128); // <- dla konturow
 	img.setColorTable(colorTable);
 
 	setPixmap(QPixmap::fromImage(img));
