@@ -31,21 +31,16 @@ cv::Mat standardStructuringElement(int xradius, int yradius,
 		2 * anchor.x + 1,
 		2 * anchor.y + 1);
 
-	cv::Mat element;
-
-	if(type == SET_Rect)
+	int shape;
+	switch(type)
 	{
-		element = cv::getStructuringElement(cv::MORPH_RECT, elem_size, anchor);
-	}
-	else if(type == SET_Ellipse)
-	{
-		element = cv::getStructuringElement(cv::MORPH_ELLIPSE, elem_size, anchor);
-	}
-	else /*if(type == SET_Cross)*/
-	{
-		element = cv::getStructuringElement(cv::MORPH_CROSS, elem_size, anchor);
+	case SET_Rect: shape = cv::MORPH_RECT; break;
+	case SET_Ellipse: shape = cv::MORPH_ELLIPSE; break;
+	case SET_Cross: shape = cv::MORPH_CROSS; break;
+	default: return cv::Mat();
 	}
 
+	cv::Mat element = cv::getStructuringElement(shape, elem_size, anchor);
 	return rotateStructuringElement(rotation, element);
 }
 

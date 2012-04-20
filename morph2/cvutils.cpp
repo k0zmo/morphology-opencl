@@ -102,4 +102,22 @@ void fitImageToSize(cv::Mat& image, const cv::Size& dstSize)
 	cv::resize(image, image, cv::Size(), fx, fy, cv::INTER_LINEAR);
 }
 
+void fitImageToWholeSpace(cv::Mat& image, const cv::Size& sizeHint)
+{
+	int xs = sizeHint.width;
+	int ys = sizeHint.height;
+
+	if(image.cols != image.rows)
+	{
+		auto round = [](double v) { return static_cast<int>(v + 0.5); };
+
+		if(image.cols > image.rows)
+			ys = image.rows * round((double)xs/image.cols);
+		else
+			xs = image.cols * round((double)ys/image.rows);
+	}
+
+	cv::resize(image, image, cv::Size(xs, ys), 0.0, 0.0, cv::INTER_NEAREST);
+}
+
 } // end of namespace

@@ -32,6 +32,7 @@ void convert01To0255(cv::Mat& src);
 
 std::pair<double, double> scaleCoeffs(const cv::Size& curSize, const cv::Size& dstSize);
 void fitImageToSize(cv::Mat& image, const cv::Size& dstSize);
+void fitImageToWholeSpace(cv::Mat& image, const cv::Size& sizeHint);
 
 static const cv::Rect WholeImage(0, 0, -1, -1);
 }
