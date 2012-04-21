@@ -36,7 +36,7 @@ class Controller :
 public:
 	Controller(QWidget* parent = 0, Qt::WFlags flags = 0);
 	virtual ~Controller();
-	void show();
+	void start();
 
 private:
 	MainWidget* mw;
@@ -67,12 +67,18 @@ private:
 	cv::Mat customSe;
 
 private slots:
+	void onPreviewInitialized(bool success);
+	void onRecompute();
+	void onProcessingDone(const ProcessedItem& item);
+
+	// Menu (File)
 	void onFromCameraTriggered(bool state);
 	void onOpenFileTriggered();
 	void onSaveFileTriggered();
 	void onOpenStructuringElementTriggered();
 	void onSaveStructuringElementTriggered();
 
+	// Menu (Settings)
 	void onOpenCLTriggered(bool state);
 	void onPickMethodTriggerd();
 	void onSettingsTriggered();
@@ -85,18 +91,14 @@ private slots:
 	void onStructuringElementPreviewPressed();
 	void onStructuringElementModified(const cv::Mat& customSe);
 
-	void onRecompute();
-	void onProcessingDone(const ProcessedItem& item);
-
-	void onOpenCLInitialized(bool success);
-
 private:
 	void openFile(const QString& filename);
 	cv::Mat standardStructuringElement();
 	cv::Mat structuringElement();
 	void showStats(int iters, double elapsed);
-	void initializeOpenCL();
 
+	// Ustawia mozliwosc zapisu/odczytu obrazu do/z dysku
+	// Uzywane przy aktywacji/deaktywacji wyjscia z kamery
 	void setEnabledSaveOpenFile(bool state)
 	{
 		actionOpen->setEnabled(state);
@@ -104,6 +106,7 @@ private:
 	}
 
 	// Ustawia mozliwosc zaznaczenia "silnika" OpenCL
+	// Uzywane w przypadku bledu inicjalizacji
 	void setOpenCLCheckableAndChecked(bool state)
 	{
 		actionOpenCL->setEnabled(state);
@@ -123,6 +126,14 @@ private:
 		else
 			procQueueLabel->setText(QString("Enqueued jobs: %1").arg(procQueue.size()));
 	}
+
+	//
+	// OpenCL
+	//
+private:
+	void initializeOpenCL();
+private slots:
+	void onOpenCLInitialized(bool success);
 
 signals:
 	void structuringElementChanged(const cv::Mat& se);

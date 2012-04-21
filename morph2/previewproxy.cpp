@@ -1,18 +1,15 @@
 #include "previewproxy.h"
-
 #include "cvutils.h"
 
-PreviewProxy::PreviewProxy(bool tryOpenGL, QWidget* parent)
+#include <QMessageBox>
+
+PreviewProxy::PreviewProxy(QWidget *parent)
 	: QWidget(parent)
 	, layout(new QVBoxLayout(this))
 	, hardware(nullptr)
 	, software(nullptr)
-	, useOpenGL(tryOpenGL)
+	, useOpenGL(false)
 {
-	if(tryOpenGL)
-		initHardware();
-	else
-		initSoftware();
 }
 
 PreviewProxy::~PreviewProxy()
@@ -24,6 +21,9 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 {
 	if(useOpenGL)
 	{
+		if(!hardware)
+			return;
+
 		auto coeffs = cvu::scaleCoeffs(image.size(), maxImgSize);
 		double fx = coeffs.first;
 		double fy = coeffs.second;
@@ -36,6 +36,9 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 	}
 	else
 	{
+		if(!software)
+			return;
+
 		cv::Mat img(image);
 		cvu::fitImageToSize(img, maxImgSize);
 
@@ -48,14 +51,36 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 void PreviewProxy::initSoftware()
 {
 	// Widget wyswietlajacy dany obraz
+	useOpenGL = false;
 	software = new QLabel(this);
 	software->setText(QString());
 	layout->addWidget(software);
+
+	emit initialized(true);
 }
 
 void PreviewProxy::initHardware()
 {
+	useOpenGL = true;
 	hardware = new GLWidget(this);
-	hardware->resize(1, 1);
+	connect(hardware, SIGNAL(error(QString)), SLOT(onGLWidgetError(QString)));
+	connect(hardware, SIGNAL(initialized()), SLOT(onGLWidgetInitialized()));
 	layout->addWidget(hardware);
+	hardware->updateGL();
+}
+
+void PreviewProxy::onGLWidgetInitialized()
+{
+	emit initialized(true);
+}
+
+void PreviewProxy::onGLWidgetError(const QString& msg)
+{
+	QMessageBox::critical(nullptr, "GLWidget critical error",
+		msg + "\nSwitching back to software mode.");
+
+	hardware->hide();
+	hardware->deleteLater();
+
+	initSoftware();
 }

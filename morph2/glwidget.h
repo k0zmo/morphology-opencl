@@ -18,6 +18,10 @@ public:
 	void setSurface(const cv::Mat& surface);
 	GLuint createEmptySurface(int w, int h);
 
+signals:
+	void initialized();
+	void error(const QString& message);
+
 protected:
 	virtual void initializeGL();
 	virtual void paintGL();
@@ -26,13 +30,13 @@ protected:
 private:
 	Q_DISABLE_COPY(GLWidget)
 
-private:
 	GLuint surface;
 	GLuint vboQuad;
 	QGLShaderProgram* prog;
 
 	int swidth; 
 	int sheight;
+	bool init;
 
 private:
 	void createSurface_impl(int w, int h, const void* data);

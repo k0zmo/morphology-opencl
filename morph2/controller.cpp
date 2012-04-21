@@ -46,7 +46,7 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	connect(actionSaveSE, SIGNAL(triggered()), SLOT(onSaveStructuringElementTriggered()));
 	connect(actionExit, SIGNAL(triggered()), SLOT(close()));
 
-	// Menu Settings
+	// Menu (Settings)
 	connect(actionOpenCL, SIGNAL(triggered(bool)), SLOT(onOpenCLTriggered(bool)));
 	connect(actionPickMethod, SIGNAL(triggered()), SLOT(onPickMethodTriggerd()));
 	connect(actionSettings, SIGNAL(triggered()), SLOT(onSettingsTriggered()));
@@ -54,10 +54,13 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	// Pasek stanu
 	procQueueLabel = new QLabel(this);
 	statusBar()->addPermanentWidget(procQueueLabel);
+
 	statusBarLabel = new QLabel(this);
 	statusBar()->addPermanentWidget(statusBarLabel);
+
 	cameraStatusLabel = new QLabel(this);
 	statusBar()->addPermanentWidget(cameraStatusLabel);
+	setCameraStatusBarState(false);
 }
 
 Controller::~Controller()
@@ -106,7 +109,7 @@ Controller::~Controller()
 	delete mw;
 }
 
-void Controller::show()
+void Controller::start()
 {
 	conf.loadConfiguration("./settings.cfg");
 	QString defImage(conf.defaultImage);
@@ -118,8 +121,13 @@ void Controller::show()
 			QLatin1String("Image files (*.png *.jpg *.bmp)"));
 
 		if(defImage.isEmpty())
+			// TODO mozna by start dac jako SLOT i wtedy wywolac close()
+			// Konstruktor wywolalby zdarzenie ktore juz byloby przetworzone
+			// w petli komunikatow
 			exit(-1);
 	}
+
+	openFile(defImage);
 
 	mw = new MainWidget(this);
 	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
@@ -127,19 +135,27 @@ void Controller::show()
 
 	gridLayout->addWidget(mw, 0, 1, 1, 1);
 
-	// Utworz konrtrolke do podgladu obrazu
-	preview = new PreviewProxy(true, this);
+	// Utworz kontrolke do podgladu obrazu
+	preview = new PreviewProxy(this);
 	gridLayout->addWidget(preview, 0, 0, 1, 1);
 
 	QSpacerItem* spacer = new QSpacerItem(0, 0,
 		QSizePolicy::Minimum, QSizePolicy::MinimumExpanding);
 	gridLayout->addItem(spacer, 1, 0, 1, 2);
 
-	setCameraStatusBarState(false);
-
-#if DISABLE_OPENCL == 0
-	initializeOpenCL();
+	// Uruchom procedure inicjalizacyjna okno podgladu
+	// gdy bedzie gotowe - uruchomi cala reszte
+	connect(preview, SIGNAL(initialized(bool)), SLOT(onPreviewInitialized(bool)));
+#if USE_GLWIDGET == 0
+	preview->initSoftware();
+#else
+	preview->initHardware();
 #endif
+}
+
+void Controller::onPreviewInitialized(bool success)
+{
+	Q_UNUSED(success)
 
 	// Customowe typy nalezy zarejstrowac dla polaczen
 	// typu QueuedConnection (miedzywatkowe)
@@ -151,10 +167,48 @@ void Controller::show()
 		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
-	openFile(defImage);
-	onRecompute();
+#if DISABLE_OPENCL == 0
+	initializeOpenCL();
+#endif
 
-	QMainWindow::show();
+	onRecompute();
+	show();
+}
+
+void Controller::onRecompute()
+{
+	// Pobierz parametry operacji
+	cvu::EMorphOperation op = mw->morphologyOperation();
+	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
+	cv::Mat se = structuringElement();
+
+	if(cameraConnected)
+	{
+		if(capThread)
+			capThread->setJobDescription(negateSource, bc, op, se);
+		return;
+	}
+
+	// Utworz 'obiekt przetwarzany'
+	ProcessingItem item = { negateSource, bc, op, se, src };
+
+	if(useOpenCL)
+		clQueue.enqueue(item);
+	else
+		procQueue.enqueue(item);
+
+	setEnqueueJobsStatus();
+}
+
+void Controller::onProcessingDone(const ProcessedItem& item)
+{
+	setEnqueueJobsStatus();
+	dst = item.dst;
+
+	const cv::Size maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
+	preview->setPreviewImage(dst, maxImgSize);
+
+	showStats(item.iters, item.delapsed);
 }
 
 void Controller::onFromCameraTriggered(bool state)
@@ -531,41 +585,7 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 	resizeCustomSe = true;
 }
 
-void Controller::onRecompute()
-{
-	// Pobierz parametry operacji
-	cvu::EMorphOperation op = mw->morphologyOperation();
-	cvu::EBayerCode bc = static_cast<cvu::EBayerCode>(mw->bayerIndex());
-	cv::Mat se = structuringElement();
-
-	if(cameraConnected)
-	{
-		if(capThread)
-			capThread->setJobDescription(negateSource, bc, op, se);
-		return;
-	}
-
-	// Utworz 'obiekt przetwarzany'
-	ProcessingItem item = { negateSource, bc, op, se, src };
-
-	if(useOpenCL)
-		clQueue.enqueue(item);
-	else
-		procQueue.enqueue(item);
-
-	setEnqueueJobsStatus();
-}
-
-void Controller::onProcessingDone(const ProcessedItem& item)
-{
-	setEnqueueJobsStatus();
-	dst = item.dst;
-
-	const cv::Size maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
-	preview->setPreviewImage(dst, maxImgSize);
-
-	showStats(item.iters, item.delapsed);
-}
+////////////////////////////////////////////////////////////////////////////////
 
 void Controller::openFile(const QString& filename)
 {
@@ -678,78 +698,4 @@ void Controller::onOpenCLInitialized(bool success)
 		qDebug("\n");
 	}
 }
-
-#if 0
-void Controller::initializeOpenCL(EOpenCLMethod method)
-{
-	// Inicjalizuj odpowiedni silnik
-	switch(method)
-	{
-	case OM_Buffer1D: ocl = new MorphOpenCLBuffer(conf); break;
-	case OM_Buffer2D: ocl = new MorphOpenCLImage(conf); break;
-	default: return;
-	}
-
-	ocl->setErrorCallback(
-		[this](const QString& message, cl_int err)
-	{
-		Q_UNUSED(err);
-		QMessageBox::critical(mw, "OpenCL critical error",
-			QString("%1\nError code: %2").
-				arg(message).
-				arg(ocl->openCLErrorCodeStr(err)),
-			QMessageBox::Ok);
-		oclSupported = false;
-	});
-
-	oclSupported = true;
-	oclSupported &= ocl->initialize();
-
-	// Troche paskudne rozwiazanie :)
-	ocl->setErrorCallback(
-		[this](const QString& message, cl_int err)
-	{
-		Q_UNUSED(err);
-		QMessageBox::critical(mw, "OpenCL critical error",
-			QString("%1\nError code: %2").
-			arg(message).
-			arg(ocl->openCLErrorCodeStr(err)),
-			QMessageBox::Ok);
-	});
-	useOpenCL = oclSupported;
-
-	if(oclSupported)
-	{
-		mw->setOpenCLCheckableAndChecked(true);
-	}
-	else
-	{
-		QMessageBox::critical(nullptr,
-			QLatin1String("OpenCL critical error"),
-			QLatin1String("No OpenCL Platform available or something terrible happened "
-				"during OpenCL initialization therefore OpenCL processing will be disabled."),
-			QMessageBox::Ok);
-
-		mw->setOpenCLCheckableAndChecked(false);
-	}
-}
-
-void Controller::setOpenCLSourceImage()
-{
-	if(oclSupported)
-	{
-		if(ocl->usingShared())
-		{
-			GLuint glresource = previewWidget->createEmptySurface
-				(src.cols, src.rows);
-			ocl->setSourceImage(&src, glresource);
-		}
-		else
-		{
-			ocl->setSourceImage(&src);
-		}
-	}
-}
-
-#endif
 

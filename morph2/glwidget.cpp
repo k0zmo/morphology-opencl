@@ -1,54 +1,61 @@
 #include "glwidget.h"
-#include <QMessageBox>
 
 GLWidget::GLWidget(QWidget* parent)
 	: QGLWidget(parent)
-	, prog(new QGLShaderProgram)
+	, surface(0)
+	, vboQuad(0)
+	, prog(nullptr)
 	, swidth(-1)
 	, sheight(-1)
+	, init(false)
 {
-
 }
 // -------------------------------------------------------------------------
 GLWidget::~GLWidget()
 {
-	glDeleteTextures(1, &surface);
-	glDeleteBuffers(1, &vboQuad);
+	if(surface)
+		glDeleteTextures(1, &surface);
+	if(vboQuad)
+		glDeleteBuffers(1, &vboQuad);
 }
 // -------------------------------------------------------------------------
 void GLWidget::initializeGL()
 {
+	if(init)
+		return;
+	init = true;
+
 	GLenum err = glewInit();
 	if(err != GLEW_OK)
 	{
 		QString msg = "GLEW error: ";
-		msg += QLatin1String(reinterpret_cast<const char*>
-			(glewGetErrorString(err)));
-		QMessageBox::critical(nullptr, "GLWidget error", msg, QMessageBox::Ok);
+		msg += QLatin1String(
+			reinterpret_cast<const char*>(glewGetErrorString(err)));
 
-		// TODO fallback to QLabel
-		exit(-1);
+		emit error(msg);
+		return;
 	}
 	printf("Using OpenGL %s version\n", glGetString(GL_VERSION));
 
 	if(!GLEW_VERSION_2_0)
 	{
-		QMessageBox::critical(nullptr, "GLWidget error",
-			"GL 2.0 version is required", QMessageBox::Ok);
-		// TODO fallback to QLabel
-		exit(-1);
+		emit error("OpenGL 2.0 version or more is required");
+		return;
 	}
 
-	// Pare podstawowych ustawie
+	// -------------------------------
+	// Pare podstawowych ustawien
+
 	glDisable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 1.0f, 0.0f);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-	printf(" * Creating empty texture object\n");
-
 	// -------------------------------
 	// Tekstura
+
+	printf(" * Creating empty texture object\n");
+
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &surface);
 	glBindTexture(GL_TEXTURE_2D, surface);
@@ -58,6 +65,7 @@ void GLWidget::initializeGL()
 
 	// -------------------------------
 	// Dane wierzcholkow
+
 	struct Vertex { float x, y, s, t; };
 	Vertex vertices[3] = { 
 		{ -1, -1,   0, 2 },
@@ -81,35 +89,44 @@ void GLWidget::initializeGL()
 		sizeof(Vertex), (GLubyte*)nullptr + sizeof(float)*2);
 	glEnableVertexAttribArray(1);
 
-	printf(" * Creating shaders\n");
-
 	// -------------------------------
-	// Shader
-	auto raportError = [this]()
-	{
-		QMessageBox::critical(nullptr,
-			"Critical error", prog->log(), QMessageBox::Ok);
-		// TODO fallback to QLabel
-		exit(-1);
-	};
+	// Tworzenie shaderow
+
+	printf(" * Creating shaders\n");
+	prog = new QGLShaderProgram(this);
 
 	if(!prog->addShaderFromSourceFile
 		(QGLShader::Vertex, QLatin1String("gl/vertex.glsl")))
-		raportError();
+	{
+		emit error(prog->log());
+		return;
+	}
 
 	if(!prog->addShaderFromSourceFile
 		(QGLShader::Fragment, QLatin1String("gl/fragment.glsl")))
-		raportError();
+	{
+		emit error(prog->log());
+		return;
+	}
 
 	if(!prog->link())
-		raportError();
+	{
+		emit error(prog->log());
+		return;
+	}
 
-	prog->bind();
+	if(!prog->bind())
+	{
+		emit error("Couldn't bound shader program");
+		return;
+	}
+
 	prog->setUniformValue("surface", 0);
 	prog->bindAttributeLocation("in_pos", 0);
 	prog->bindAttributeLocation("in_texCoord", 1);
 
 	printf(" * Done initializing OpenGL\n");
+	emit initialized();
 }
 // -------------------------------------------------------------------------
 void GLWidget::paintGL()
