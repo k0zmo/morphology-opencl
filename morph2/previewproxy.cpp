@@ -17,14 +17,16 @@ PreviewProxy::~PreviewProxy()
 }
 
 void PreviewProxy::setPreviewImage(const cv::Mat& image,
-								   const cv::Size& maxImgSize)
+								   const QSize& maxImgSize)
 {
 	if(useOpenGL)
 	{
 		if(!hardware)
 			return;
 
-		auto coeffs = cvu::scaleCoeffs(image.size(), maxImgSize);
+		cv::Size ms(maxImgSize.width(), maxImgSize.height());
+		auto coeffs = cvu::scaleCoeffs(image.size(), ms);
+
 		double fx = coeffs.first;
 		double fy = coeffs.second;
 
@@ -40,12 +42,49 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 			return;
 
 		cv::Mat img(image);
-		cvu::fitImageToSize(img, maxImgSize);
+		cv::Size ms(maxImgSize.width(), maxImgSize.height());
+
+		cvu::fitImageToSize(img, ms);
 
 		// Konwersja cv::Mat -> QImage -> QPixmap
 		QImage qimg(cvu::toQImage(img));
+
+		//QSize surfaceSize(maxImgSize.width, maxImgSize.height);
+		//software->setMinimumSize(surfaceSize);
+		//software->setMaximumSize(surfaceSize);
 		software->setPixmap(QPixmap::fromImage(qimg));
 	}
+}
+
+void PreviewProxy::setPreviewImageGL(int w, int h, const QSize& maxImgSize)
+{
+	if(!useOpenGL || !hardware)
+		return;
+
+	QSize surfaceSize(w, h);
+
+	if(h > maxImgSize.height() || w > maxImgSize.width())
+	{
+		double fx;
+		if(h > w)
+			fx = static_cast<double>(maxImgSize.height()) / h;
+		else
+			fx = static_cast<double>(maxImgSize.width()) / w;
+
+		surfaceSize.setWidth(w * fx);
+		surfaceSize.setHeight(h * fx);
+	}
+
+	hardware->setMinimumSize(surfaceSize);
+	hardware->setMaximumSize(surfaceSize);
+	hardware->updateGL();
+}
+
+GLuint PreviewProxy::getPreviewImageGL(int w, int h)
+{
+	if(!useOpenGL || !hardware)
+		return 0;
+	return hardware->createEmptySurface(w, h);
 }
 
 void PreviewProxy::initSoftware()
@@ -66,7 +105,9 @@ void PreviewProxy::initHardware()
 	connect(hardware, SIGNAL(error(QString)), SLOT(onGLWidgetError(QString)));
 	connect(hardware, SIGNAL(initialized()), SLOT(onGLWidgetInitialized()));
 	layout->addWidget(hardware);
+
 	hardware->updateGL();
+	hardware->makeCurrent();
 }
 
 void PreviewProxy::onGLWidgetInitialized()

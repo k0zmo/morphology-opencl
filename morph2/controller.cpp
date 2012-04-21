@@ -205,7 +205,7 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 	setEnqueueJobsStatus();
 	dst = item.dst;
 
-	const cv::Size maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
+	QSize maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
 	preview->setPreviewImage(dst, maxImgSize);
 
 	showStats(item.iters, item.delapsed);
