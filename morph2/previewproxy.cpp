@@ -5,10 +5,11 @@
 
 PreviewProxy::PreviewProxy(QWidget *parent)
 	: QWidget(parent)
-	, layout(new QVBoxLayout(this))
-	, hardware(nullptr)
-	, software(nullptr)
-	, useOpenGL(false)
+	, d_layout(new QVBoxLayout(this))
+	, d_hardware(nullptr)
+	, d_shareWidget(nullptr)
+	, d_software(nullptr)
+	, d_useOpenGL(false)
 {
 }
 
@@ -19,9 +20,9 @@ PreviewProxy::~PreviewProxy()
 void PreviewProxy::setPreviewImage(const cv::Mat& image,
 								   const QSize& maxImgSize)
 {
-	if(useOpenGL)
+	if(d_useOpenGL)
 	{
-		if(!hardware)
+		if(!d_hardware || !d_shareWidget)
 			return;
 
 		cv::Size ms(maxImgSize.width(), maxImgSize.height());
@@ -32,13 +33,15 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 
 		QSize surfaceSize(image.cols * fx, image.rows * fy);
 
-		hardware->setMinimumSize(surfaceSize);
-		hardware->setMaximumSize(surfaceSize);
-		hardware->setSurface(image);
+		d_hardware->setMinimumSize(surfaceSize);
+		d_hardware->setMaximumSize(surfaceSize);
+
+		d_shareWidget->setSurfaceData(image);
+		d_hardware->updateGL();
 	}
 	else
 	{
-		if(!software)
+		if(!d_software)
 			return;
 
 		cv::Mat img(image);
@@ -49,16 +52,18 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 		// Konwersja cv::Mat -> QImage -> QPixmap
 		QImage qimg(cvu::toQImage(img));
 
+		// QLabel sie sam rozszerzy (chyba)
 		//QSize surfaceSize(maxImgSize.width, maxImgSize.height);
 		//software->setMinimumSize(surfaceSize);
 		//software->setMaximumSize(surfaceSize);
-		software->setPixmap(QPixmap::fromImage(qimg));
+
+		d_software->setPixmap(QPixmap::fromImage(qimg));
 	}
 }
 
 void PreviewProxy::setPreviewImageGL(int w, int h, const QSize& maxImgSize)
 {
-	if(!useOpenGL || !hardware)
+	if(!d_useOpenGL || !d_hardware)
 		return;
 
 	QSize surfaceSize(w, h);
@@ -75,39 +80,35 @@ void PreviewProxy::setPreviewImageGL(int w, int h, const QSize& maxImgSize)
 		surfaceSize.setHeight(h * fx);
 	}
 
-	hardware->setMinimumSize(surfaceSize);
-	hardware->setMaximumSize(surfaceSize);
-	hardware->updateGL();
-}
-
-GLuint PreviewProxy::getPreviewImageGL(int w, int h)
-{
-	if(!useOpenGL || !hardware)
-		return 0;
-	return hardware->createEmptySurface(w, h);
+	d_hardware->setMinimumSize(surfaceSize);
+	d_hardware->setMaximumSize(surfaceSize);
+	d_hardware->updateGL();
 }
 
 void PreviewProxy::initSoftware()
 {
 	// Widget wyswietlajacy dany obraz
-	useOpenGL = false;
-	software = new QLabel(this);
-	software->setText(QString());
-	layout->addWidget(software);
+	d_useOpenGL = false;
+	d_software = new QLabel(this);
+	d_software->setText(QString());
+	d_layout->addWidget(d_software);
 
 	emit initialized(true);
 }
 
-void PreviewProxy::initHardware()
+void PreviewProxy::initHardware(GLDummyWidget* shareWidget)
 {
-	useOpenGL = true;
-	hardware = new GLWidget(this);
-	connect(hardware, SIGNAL(error(QString)), SLOT(onGLWidgetError(QString)));
-	connect(hardware, SIGNAL(initialized()), SLOT(onGLWidgetInitialized()));
-	layout->addWidget(hardware);
+	d_useOpenGL = true;
+	d_hardware = new GLWidget(this, shareWidget);
+	d_hardware->setSurface(shareWidget->surface());
+	d_shareWidget = shareWidget;
 
-	hardware->updateGL();
-	hardware->makeCurrent();
+	//connect(shareWidget, SIGNAL(surfaceChanged()), hardware, SLOT(updateGL()));
+	connect(d_hardware, SIGNAL(error(QString)), SLOT(onGLWidgetError(QString)));
+	connect(d_hardware, SIGNAL(initialized()), SLOT(onGLWidgetInitialized()));
+
+	d_layout->addWidget(d_hardware);
+	d_hardware->updateGL();
 }
 
 void PreviewProxy::onGLWidgetInitialized()
@@ -120,8 +121,8 @@ void PreviewProxy::onGLWidgetError(const QString& msg)
 	QMessageBox::critical(nullptr, "GLWidget critical error",
 		msg + "\nSwitching back to software mode.");
 
-	hardware->hide();
-	hardware->deleteLater();
+	d_hardware->hide();
+	d_hardware->deleteLater();
 
 	initSoftware();
 }

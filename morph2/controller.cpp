@@ -15,7 +15,7 @@
 #include "capthread.h"
 
 #define USE_GLWIDGET 1
-#define DISABLE_OPENCL 1
+#define DISABLE_OPENCL 0
 
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;
@@ -24,6 +24,7 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags)
 	, mw(nullptr)
 	, preview(nullptr)
+	, shareWidget(nullptr)
 	, negateSource(false)
 	, oclSupported(false)
 	, useOpenCL(false)
@@ -105,8 +106,6 @@ Controller::~Controller()
 		clThread->wait();
 		delete clThread;
 	}
-
-	delete mw;
 }
 
 void Controller::start()
@@ -132,8 +131,14 @@ void Controller::start()
 	mw = new MainWidget(this);
 	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
 	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
-
 	gridLayout->addWidget(mw, 0, 1, 1, 1);
+
+	// Utworz dzielony kontekst/widget 
+	shareWidget = new GLDummyWidget(this);
+	shareWidget->resize(0, 0);
+	shareWidget->updateGL();
+	shareWidget->initializeWithNewSurface();
+	//shareWidget->hide();
 
 	// Utworz kontrolke do podgladu obrazu
 	preview = new PreviewProxy(this);
@@ -149,7 +154,7 @@ void Controller::start()
 #if USE_GLWIDGET == 0
 	preview->initSoftware();
 #else
-	preview->initHardware();
+	preview->initHardware(shareWidget);
 #endif
 }
 
@@ -206,7 +211,13 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 	dst = item.dst;
 
 	QSize maxImgSize(conf.maxImageWidth, conf.maxImageHeight);
-	preview->setPreviewImage(dst, maxImgSize);
+	//qDebug() << item.glsize.width << item.glsize.height;
+
+	if(item.glsize.width > 0 && item.glsize.height > 0)
+		preview->setPreviewImageGL(item.glsize.width,
+			item.glsize.height, maxImgSize);
+	else
+		preview->setPreviewImage(dst, maxImgSize);
 
 	showStats(item.iters, item.delapsed);
 }
@@ -638,8 +649,20 @@ void Controller::showStats(int iters, double elapsed)
 
 void Controller::initializeOpenCL()
 {
+	// Czy oclThread bedzie dzielic zasoby OpenGL'a
+	// z kontrolka do wyswietlania gotowych tekstur (gl/cl interop)
+	bool useHardware = preview->useHardware();
+	GLDummyWidget* glw = nullptr;
+	if (useHardware)
+	{
+		glw = new GLDummyWidget(this, shareWidget);
+		glw->resize(0, 0);
+		glw->initializeWithSharedSurface(shareWidget->surface());
+	}
+
 	// Odpal watek przetwarzajacy obraz z wykorzystaniem OpenCLa
-	clThread = new oclThread(clQueue, conf);
+	clThread = new oclThread(clQueue, conf, glw);
+
 	connect(clThread, SIGNAL(processingDone(ProcessedItem)),
 		SLOT(onProcessingDone(ProcessedItem)));
 	connect(clThread, SIGNAL(openCLInitialized(bool)),

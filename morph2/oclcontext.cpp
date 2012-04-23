@@ -1,3 +1,9 @@
+#if defined(Q_WS_WINDOWS) || defined(_WIN32)
+#	include <WinGDI.h>
+#else
+#	include <GL/glx.h>
+#endif
+
 #include "oclcontext.h"
 
 #include <fstream>
@@ -15,6 +21,217 @@ oclContext::oclContext()
 	, retrievedPlatforms(false)
 {
 
+}
+
+bool oclContext::retrievePlatforms(std::vector<oclPlatformDesc>& out)
+{
+	cl_int err = CL_SUCCESS;
+
+	out.clear();
+	if(!retrievedPlatforms)
+	{
+		if(!retrievePlatforms())
+			return false;
+	}
+
+	for(size_t i = 0; i < pls.size(); ++i)
+	{
+		oclPlatformDesc newPl = {
+			static_cast<int>(i),
+			pls[i].getInfo<CL_PLATFORM_NAME>(&err),
+			pls[i].getInfo<CL_PLATFORM_VERSION>(&err)
+		};
+		out.push_back(newPl);
+
+		oclError("Error during retrieving platform info", err);
+	}
+
+	retrievedPlatforms = true;
+	return true;
+}
+
+void oclContext::retrieveDevices(size_t platformId,
+	std::vector<oclDeviceDesc>& out)
+{
+	if(!retrievedPlatforms)
+		retrievePlatforms();
+
+	if(platformId >= pls.size())
+		return;
+
+	std::vector<cl::Device> devices;
+	pls[platformId].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+
+	for(size_t i = 0; i < devices.size(); ++i)
+		out.emplace_back(populateDescription(devices[i]));
+}
+
+bool oclContext::createContext()
+{
+	cl_int err;
+	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
+		nullptr, nullptr, nullptr, &err);
+
+	return oclError("Error during creating default context", err);
+}
+
+bool oclContext::createContext(size_t platformId)
+{
+	if(!retrievedPlatforms)
+		retrievePlatforms();
+
+	if(platformId >= pls.size())
+		return false;
+
+	cl_context_properties properties[] = {
+		CL_CONTEXT_PLATFORM, (cl_context_properties) (pls[platformId])(),
+		0, 0
+	};
+
+	cl_int err;
+	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
+		properties, nullptr, nullptr, &err);
+
+	return oclError("Error during creating context", err);
+}
+
+bool oclContext::createContextGL(size_t platformId)
+{
+	if(!retrievedPlatforms)
+		retrievePlatforms();
+
+	if(platformId >= pls.size())
+		return false;
+
+#ifdef _WIN32
+	HGLRC c = wglGetCurrentContext();
+	HDC d = wglGetCurrentDC();
+	cl_platform_id p = (pls[platformId])();
+
+	cl_context_properties properties[] = {
+		CL_CONTEXT_PLATFORM, (cl_context_properties) p,
+		CL_GL_CONTEXT_KHR,   (cl_context_properties) c,
+		CL_WGL_HDC_KHR,      (cl_context_properties) d,
+		0, 0
+	};
+#else
+	GLXContext c = glXGetCurrentContext();
+	Display* d = glXGetCurrentDisplay();
+	cl_platform_id p = (pls[platformId])();
+
+	cl_context_properties properties[] =
+	{
+		CL_CONTEXT_PLATFORM, (cl_context_properties) p,
+		CL_GL_CONTEXT_KHR,   (cl_context_properties) c,
+		CL_GLX_DISPLAY_KHR,  (cl_context_properties) d,
+		0
+	};
+#endif
+
+	cl_int err;
+	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
+		properties, nullptr, nullptr, &err);
+
+	return oclError("Error during creating context", err);
+}
+
+void oclContext::chooseDevice(size_t deviceId)
+{
+	cl_int err;
+	std::vector<cl::Device> devices = ctx.getInfo<CL_CONTEXT_DEVICES>(&err);
+
+	if(deviceId < devices.size())
+	{
+		device = devices[deviceId];
+		devDesc = populateDescription(device);
+	}
+}
+
+bool oclContext::createCommandQueue(bool profiling)
+{
+	cl_int err;
+	cq = cl::CommandQueue(ctx, device,
+		profiling ? CL_QUEUE_PROFILING_ENABLE : 0, &err);
+	return oclError("Error during creating command queue", err);
+}
+
+cl::Program oclContext::createProgram(const char* progFile,
+	const char* options, bool forceBuild)
+{
+	const char* opts = options ? options : "";
+
+	// Sprawdz czy program nie zostal juz zbudowany
+	if(!forceBuild)
+	{
+		auto pr = programs.find(progFile);
+		if(pr != programs.end())
+		{
+			auto propts = pr->second.find(opts);
+			if(propts != pr->second.end())
+			{
+				printf("Using cached ocl program (opts: %s).\n", opts);
+				return propts->second;
+			}
+		}
+	}
+	std::string src;
+	if(!fileContents(progFile, src))
+		return cl::Program();
+
+	// Zbuduj program na podstawie podanego pliku zrodlowego oraz argumentow kompilacji
+	cl_int err;
+	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.size()));
+	cl::Program program = cl::Program(ctx, sources, &err);
+	if(!oclError("Can't create a program", err))
+		return cl::Program();
+
+	std::vector<cl::Device> devs(1);
+	devs[0] = (device);
+
+	printf("Building %s program (opts: %s)...", progFile, opts);
+
+	err = program.build(devs, opts);
+	std::string log(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
+	if(!oclError("Error during building a program", err))
+	{
+		if(log.size() > 0)
+			printf("log: %s\n", log.c_str());
+		return cl::Program();
+	}
+
+	// Kompilacja przebiegla pomyslnie
+	printf("[OK]\n");
+	if(log.size() > 0)
+		printf("log: %s\n", log.c_str());
+
+	// Dodaj zbudowany program do naszej 'biblioteki'
+	auto pr = programs.find(progFile);
+	if(pr != programs.end())
+	{
+		pr->second[opts] = program;
+	}
+	else
+	{
+		std::map<std::string, cl::Program> map;
+		map[opts] = program;
+		programs[progFile] = map;
+	}
+
+	return program;
+}
+
+cl::Kernel oclContext::retrieveKernel(
+	const cl::Program& program,
+	const char* kernelName)
+{
+	cl_int err;
+	printf("Creating %s kernel...", kernelName);
+	cl::Kernel kernel(program, kernelName, &err);
+	if(!oclError("Failed to create kernel", err))
+		return cl::Kernel();
+
+	printf("[OK]\n");
+	return kernel;
 }
 
 oclBufferHolder oclContext::copyDataToDevice(
@@ -144,6 +361,28 @@ oclImage2DHolder oclContext::createDeviceImage(
 	return holder;
 }
 
+oclImage2DHolder oclContext::createDeviceImageGL(GLuint resource,
+	oclMemoryAccess access)
+{
+	cl_int err;
+	oclImage2DHolder holder;
+	holder.img = cl::Image2DGL(ctx, access,
+		GL_TEXTURE_2D, 0, resource, &err);
+	oclError("Error while creating OpenCL image2D.", err);
+
+	holder.width = holder.img.getImageInfo<CL_IMAGE_WIDTH>(&err);
+	oclError("Error while creating OpenCL image2D.", err);
+	holder.height = holder.img.getImageInfo<CL_IMAGE_HEIGHT>(&err);
+	oclError("Error while creating OpenCL image2D.", err);
+
+	cl_image_format format = holder.img.getImageInfo<CL_IMAGE_FORMAT>(&err);
+	oclError("Error while creating OpenCL image2D.", err);
+	holder.format = cl::ImageFormat(format.image_channel_order,
+									format.image_channel_data_type);
+
+	return holder;
+}
+
 oclBufferHolder oclContext::createDeviceBuffer(
 	int size, oclMemoryAccess access)
 {
@@ -180,180 +419,6 @@ void oclContext::copyDeviceImage(
 
 	oclError("Error while copying one image to another", err);
 	//return elapsedEvent(evt);
-}
-
-bool oclContext::retrievePlatforms(std::vector<oclPlatformDesc>& out)
-{
-	cl_int err = CL_SUCCESS;
-
-	out.clear();
-	if(!retrievedPlatforms)
-		err = cl::Platform::get(&pls);
-
-	if(pls.empty())
-	{
-		printf("No OpenCL platfrom has been detected!");
-		return false;
-	}
-
-	for(size_t i = 0; i < pls.size(); ++i)
-	{
-		oclPlatformDesc newPl = {
-			static_cast<int>(i),
-			pls[i].getInfo<CL_PLATFORM_NAME>(&err),
-			pls[i].getInfo<CL_PLATFORM_VERSION>(&err)
-		};
-		out.push_back(newPl);
-
-		oclError("Error during retrieving platform info", err);
-	}
-
-	retrievedPlatforms = true;
-	return true;
-}
-
-bool oclContext::createContext()
-{
-	cl_int err;
-	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
-		nullptr, nullptr, nullptr, &err);
-
-	return oclError("Error during creating default context", err);
-}
-
-bool oclContext::createContext(size_t platformId)
-{
-	if(!retrievedPlatforms)
-		retrievePlatforms();
-
-	if(platformId >= pls.size())
-		return false;
-
-	cl_context_properties properties[] = {
-		CL_CONTEXT_PLATFORM, (cl_context_properties) (pls[platformId])(),
-		0, 0
-	};
-
-	cl_int err;
-	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
-		properties, nullptr, nullptr, &err);
-
-	return oclError("Error during creating context", err);
-}
-
-void oclContext::retrieveDevices(size_t platformId,
-	std::vector<oclDeviceDesc>& out)
-{
-	if(!retrievedPlatforms)
-		retrievePlatforms();
-
-	if(platformId >= pls.size())
-		return;
-
-	std::vector<cl::Device> devices;
-	pls[platformId].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-
-	for(size_t i = 0; i < devices.size(); ++i)
-		out.emplace_back(populateDescription(devices[i]));
-}
-
-void oclContext::chooseDevice(size_t deviceId)
-{
-	cl_int err;
-	std::vector<cl::Device> devices = ctx.getInfo<CL_CONTEXT_DEVICES>(&err);
-
-	if(deviceId < devices.size())
-	{
-		device = devices[deviceId];
-		devDesc = populateDescription(device);
-	}
-}
-
-bool oclContext::createCommandQueue(bool profiling)
-{
-	cl_int err;
-	cq = cl::CommandQueue(ctx, device,
-		profiling ? CL_QUEUE_PROFILING_ENABLE : 0, &err);
-	return oclError("Error during creating command queue", err);
-}
-
-cl::Program oclContext::createProgram(const char* progFile,
-	const char* options, bool forceBuild)
-{
-	const char* opts = options ? options : "";
-
-	// Sprawdz czy program nie zostal juz zbudowany
-	if(!forceBuild)
-	{
-		auto pr = programs.find(progFile);
-		if(pr != programs.end())
-		{
-			auto propts = pr->second.find(opts);
-			if(propts != pr->second.end())
-			{
-				printf("Using cached ocl program (opts: %s).\n", opts);
-				return propts->second;
-			}
-		}
-	}
-	std::string src;
-	if(!fileContents(progFile, src))
-		return cl::Program();
-
-	// Zbuduj program na podstawie podanego pliku zrodlowego oraz argumentow kompilacji
-	cl_int err;
-	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.size()));
-	cl::Program program = cl::Program(ctx, sources, &err);
-	if(!oclError("Can't create a program", err))
-		return cl::Program();
-
-	std::vector<cl::Device> devs(1);
-	devs[0] = (device);
-
-	printf("Building %s program (opts: %s)...", progFile, opts);
-
-	err = program.build(devs, opts);
-	std::string log(program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
-	if(!oclError("Error during building a program", err))
-	{
-		if(log.size() > 0)
-			printf("log: %s\n", log.c_str());
-		return cl::Program();
-	}
-
-	// Kompilacja przebiegla pomyslnie
-	printf("[OK]\n");
-	if(log.size() > 0)
-		printf("log: %s\n", log.c_str());
-
-	// Dodaj zbudowany program do naszej 'biblioteki'
-	auto pr = programs.find(progFile);
-	if(pr != programs.end())
-	{
-		pr->second[opts] = program;
-	}
-	else
-	{
-		std::map<std::string, cl::Program> map;
-		map[opts] = program;
-		programs[progFile] = map;
-	}
-
-	return program;
-}
-
-cl::Kernel oclContext::retrieveKernel(
-	const cl::Program& program,
-	const char* kernelName)
-{
-	cl_int err;
-	printf("Creating %s kernel...", kernelName);
-	cl::Kernel kernel(program, kernelName, &err);
-	if(!oclError("Failed to create kernel", err))
-		return cl::Kernel();
-
-	printf("[OK]\n");
-	return kernel;
 }
 
 std::string oclContext::oclErrorString(cl_int code)
@@ -449,6 +514,48 @@ bool oclContext::retrievePlatforms()
 		printf("No OpenCL platfrom has been detected!");
 		return false;
 	}
+
+//	// Checks for cl_khr_gl_sharing extension
+//	char* exts = new char[ext_ssize];
+//	clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, ext_ssize, exts, nullptr);
+//	if(!(strstr(exts, "cl_khr_gl_sharing")))
+//	{
+//		gLogger->log(MC_Error, "OpenCL Error: "
+//			"Device does not support cl_khr_gl_sharing extension.");
+//		return false;
+//	}
+//	delete [] exts;
+
+//	clGetGLContextInfoKHR_fn clGetGLContextInfoKHR =
+//			(clGetGLContextInfoKHR_fn)
+//			clGetExtensionFunctionAddress("clGetGLContextInfoKHR");
+//	if(clGetGLContextInfoKHR)
+//	{
+//		for(size_t i = 0; i < pls.size(); ++i)
+//		{
+//			GLXContext c = glXGetCurrentContext();
+//			Display* d = glXGetCurrentDisplay();
+//			cl_platform_id p = (pls[i])();
+
+//			cl_context_properties properties[] =
+//			{
+//				CL_CONTEXT_PLATFORM, (cl_context_properties) p,
+//				CL_GL_CONTEXT_KHR,   (cl_context_properties) c,
+//				CL_GLX_DISPLAY_KHR,  (cl_context_properties) d,
+//				0
+//			};
+
+//			size_t n;
+//			cl_int err = clGetGLContextInfoKHR(properties,
+//				CL_DEVICES_FOR_GL_CONTEXT_KHR, 0, 0, &n);
+//			cl_device_id* devices = new cl_device_id[n / sizeof(cl_device_id)];
+//			err = clGetGLContextInfoKHR(properties,
+//				CL_DEVICES_FOR_GL_CONTEXT_KHR, n, devices, 0);
+//			printf("(%d) %d\n", err, n / sizeof(cl_device_id));
+
+//			delete [] devices;
+//		}
+//	}
 
 	retrievedPlatforms = true;
 	return true;

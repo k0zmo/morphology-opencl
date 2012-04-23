@@ -5,8 +5,10 @@
 
 int main(int argc, char *argv[])
 {
-	QApplication a(argc, argv);
+	QApplication::setAttribute(Qt::AA_X11InitThreads);
 	QApplication::setStyle(new QCleanlooksStyle);
+
+	QApplication a(argc, argv);
 	Controller c;
 	c.start();
 

@@ -3,6 +3,7 @@
 #include "singleton.h"
 #include "mainwidget.h"
 #include "previewproxy.h"
+#include "glwidget.h"
 
 #include "cvutils.h"
 #include "morphop.h"
@@ -42,6 +43,7 @@ private:
 	MainWidget* mw;
 	Configuration conf;
 	PreviewProxy* preview;
+	GLDummyWidget* shareWidget;
 
 	QLabel* procQueueLabel;
 	QLabel* statusBarLabel;

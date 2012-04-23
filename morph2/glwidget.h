@@ -8,15 +8,46 @@
 
 #include <opencv2/core/core.hpp>
 
+// Widget, ktory nigdy nie bedzie wyswietlany, trzyma on tylko teksture
+// ktora jest dzielona miedzy kontrolka wlasciwa (a wiec i glownym watkiem) 
+// a innymi kontrolkami/watkami (chociazby oclThread)
+class GLDummyWidget : public QGLWidget
+{
+	Q_OBJECT
+public:
+	GLDummyWidget(QWidget* parent,
+		const QGLWidget* shareWidget = nullptr);
+	virtual ~GLDummyWidget();
+
+	void initializeWithNewSurface(int initWidth = 1, int initHeight = 1);
+	void initializeWithSharedSurface(GLuint surface);
+
+	void setSurfaceData(const cv::Mat& surface);
+	GLuint resizeSurface(int w, int h);
+
+	GLuint surface() const { return d_surface; }
+
+signals:
+	void surfaceChanged();
+
+private:
+	GLuint d_surface;
+	int d_width;
+	int d_height;
+
+private:
+	void createSurface_impl(int w, int h, const void* data);
+};
+
 class GLWidget : public QGLWidget
 {
 	Q_OBJECT
 public:
-	GLWidget(QWidget* parent);
+	GLWidget(QWidget* parent = nullptr,
+		const QGLWidget* shareWidget = nullptr);
 	virtual ~GLWidget();
 
-	void setSurface(const cv::Mat& surface);
-	GLuint createEmptySurface(int w, int h);
+	void setSurface(GLuint surface) { d_surface = surface; }
 
 signals:
 	void initialized();
@@ -28,16 +59,8 @@ protected:
 	virtual void resizeGL(int width, int height);
 
 private:
-	Q_DISABLE_COPY(GLWidget)
-
-	GLuint surface;
-	GLuint vboQuad;
-	QGLShaderProgram* prog;
-
-	int swidth; 
-	int sheight;
-	bool init;
-
-private:
-	void createSurface_impl(int w, int h, const void* data);
+	GLuint d_vboQuad;
+	GLuint d_surface;
+	QGLShaderProgram* d_prog;
+	bool d_init;
 };

@@ -13,11 +13,12 @@ public:
 	virtual ~PreviewProxy();
 
 	void initSoftware();
-	void initHardware();
+	void initHardware(GLDummyWidget* shareWidget);
 
 	void setPreviewImage(const cv::Mat& image, const QSize& maxImgSize);
 	void setPreviewImageGL(int w, int h, const QSize& maxImgSize);
-	GLuint getPreviewImageGL(int w, int h);
+
+	bool useHardware() const { return d_hardware && d_useOpenGL; }
 
 signals:
 	void initialized(bool success);
@@ -27,9 +28,10 @@ private slots:
 	void onGLWidgetError(const QString& msg);
 
 private:
-	QVBoxLayout* layout;
-	GLWidget* hardware;
-	QLabel* software;
-	bool useOpenGL;
+	QVBoxLayout* d_layout;
+	GLWidget* d_hardware;
+	GLDummyWidget* d_shareWidget;
+	QLabel* d_software;
+	bool d_useOpenGL;
 };
 

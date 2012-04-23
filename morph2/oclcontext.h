@@ -70,18 +70,33 @@ struct oclImage2DHolder
 class oclContext
 {
 public:
+	// Konstruktor domyslny - brak jakichkolwiek alokacji
 	oclContext();
 
+	// Zwraca liste dostepnych platform
 	bool retrievePlatforms(std::vector<oclPlatformDesc>& out);
-	bool createContext();
-	bool createContext(size_t platformId);
+
+	// Zwraca liste dostepnych urzadzen dla danej platformy
 	void retrieveDevices(size_t platformId, std::vector<oclDeviceDesc>& out);
 
+	// Tworzy kontekst w domyslnej platformie
+	bool createContext();
+	// Tworzy kontekst w podanej platformie
+	bool createContext(size_t platformId);
+	// Tworzy kontekst w podanej platformie, ktory dzieli zasoby wraz z aktualnie
+	// aktywnym kontekstem OpenGL'a
+	bool createContextGL(size_t platformId);
+
+	// Wybiera urzadzenie obliczeniowe
 	void chooseDevice(size_t deviceId);
+	// Tworzy kolejke - wymagane jest wczesniejsze wybranie urzadzenia obliczeniowego
 	bool createCommandQueue(bool profiling);
 
+	// Tworzy program (lub zwraca uprzednio zcache'owny) o podanej nazwie i opcjach budowania
+	// Mozna wymusic jego ponowna rekompilacje
 	cl::Program createProgram(const char* progFile,
 		const char* options, bool forceBuild = false);
+	// Zwraca obiekt kernela z podanego programu
 	cl::Kernel retrieveKernel(const cl::Program& program,
 		const char* kernelName);	
 
@@ -103,14 +118,18 @@ public:
 	// device image -> cpu image
 	cv::Mat readImageFromDevice(const oclImage2DHolder& holder, bool async = false);
 
-	// Create empty device image
+	// Tworzy pusty obraz na urzadzeniu obliczeniowym
 	oclImage2DHolder createDeviceImage(int width, int height,
 		oclMemoryAccess access);
 
-	// Create empty device buffer
+	// Tworzy obraz z podanej tesktury OpenGL'a
+	oclImage2DHolder createDeviceImageGL(GLuint resource,
+		oclMemoryAccess access);
+
+	// Tworzy pusty obiekt bufora na urzadzeniu obliczeniowym
 	oclBufferHolder createDeviceBuffer(int size, oclMemoryAccess access);
 
-	// Copies one device image to another without host involved
+	// Kopiuje zawartosc jednego obrazu do drugiego bez udzialu hosta
 	void copyDeviceImage(const oclImage2DHolder& src,
 		oclImage2DHolder& dst, bool async = false);
 
@@ -140,12 +159,19 @@ public:
 	oclDeviceDesc deviceDescription() { return devDesc; }
 
 private:
+	// Lista pobranych platform
 	std::vector<cl::Platform> pls;
+	// Lista zcache'owanych programow
 	std::map<std::string, std::map<std::string, cl::Program>> programs;
+	// Utworzony kontekst
 	cl::Context ctx;
+	// Wybrane urzadzenie
 	cl::Device device;
+	// Opis wybranego urzadzenia
 	oclDeviceDesc devDesc;
+	// Jego kolejka
 	cl::CommandQueue cq;
+	// Czy pobrano liste dostepnych platform
 	bool retrievedPlatforms;
 
 private:

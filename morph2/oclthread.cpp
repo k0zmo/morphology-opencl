@@ -1,3 +1,5 @@
+#include "glwidget.h"
+
 #include "oclthread.h"
 #include "cvutils.h"
 #include "elapsedtimer.h"
@@ -5,9 +7,10 @@
 #include <QDebug>
 
 oclThread::oclThread(BlockingQueue<ProcessingItem>& queue,
-	const Configuration& conf)
+	const Configuration& conf, GLDummyWidget* shareWidget)
 	: QThread(nullptr)
 	, queue(queue)
+	, shareWidget(shareWidget)
 	, platformId(0)
 	, deviceId(0)
 	, stopped(false)
@@ -21,9 +24,6 @@ oclThread::oclThread(BlockingQueue<ProcessingItem>& queue,
 
 oclThread::~oclThread()
 {
-	delete bayerFilter;
-	delete morphFilter;
-	delete hitmissFilter;
 }
 
 void oclThread::stop()
@@ -43,6 +43,9 @@ PlatformDevicesMap oclThread::queryPlatforms()
 				 << ": " << QString::fromStdString(msg) << endl;
 		success = false;
 	};
+
+	//if(shareWidget)
+	//	shareWidget->makeCurrent();
 
 	c.retrievePlatforms(pl);
 
@@ -69,8 +72,23 @@ PlatformDevicesMap oclThread::queryPlatforms()
 
 void oclThread::initContext()
 {
-	// wybor platformy i urzadzenia
-	c.createContext(platformId);
+	if(shareWidget)
+	{
+		// createContextGL oczekuje aktywnego kontekstu
+		// Moze pozniej to zmienie (bedzie oczekiwac tych wartosci w argumentach funkcji)
+		shareWidget->makeCurrent();
+
+		//qDebug() << "initContext" << wglGetCurrentDC() << wglGetCurrentContext();
+
+		c.createContextGL(platformId);
+		shareWidget->doneCurrent();
+	}
+	else
+	{
+		c.createContext(platformId);
+	}
+
+	// wybor urzadzenia
 	c.chooseDevice(deviceId);
 
 	c.createCommandQueue(true);
@@ -127,7 +145,8 @@ void oclThread::run()
 			ProcessedItem pitem = {
 				/*.iters = */ 0,
 				/*.delapsed = */ 0.0,
-				/*.dst = */ item.src
+				/*.dst = */ item.src,
+				/*.glsize = */ cv::Size(0, 0)
 			};
 			emit processingDone(pitem);
 			continue;
@@ -137,19 +156,38 @@ void oclThread::run()
 			/*.iters = */ 1,
 			/*.delapsed = */ 0.0,
 			// Tworzymy obraz wynikowy (alokacja miejsca)
-			/*.dst = */ cv::Mat(item.src.size(), 
-				CV_MAKETYPE(item.src.depth(), item.src.channels()))
+			/*.dst = */ cv::Mat(item.src.size(),
+				CV_MAKETYPE(item.src.depth(), item.src.channels())),
+			/*glsize = */ cv::Size(0, 0)
 		};
 
+		//ProcessedItem pitem = {
+		//	/*.iters = */ 1,
+		//	/*.delapsed = */ 0.0,
+		//	/*.dst = */ cv::Mat(),
+		//	/*glsize = */ item.src.size()
+		//};
+
+		//shareWidget->makeCurrent();
+		//glBindTexture(GL_TEXTURE_2D, 1);
+		//GLint p;
+		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &p);
+		//qDebug() << p;
+		//shareWidget->doneCurrent();
+
+		//glWidget->makeCurrent();
+		//((DummyGLWidget*)glWidget)->resizeSurface(
+		//	pitem.glsize.width, pitem.glsize.height);
+
 		// Zaneguj obraz
-		// TODO: Co gdy tylko negujemy a wyswietlamy za pomoca OpenGLa?
 		if(item.negate)
 		{
 			ElapsedTimer t;
 			t.start();
 
-			cvu::negate(item.src, pitem.dst);
-			item.src = pitem.dst;
+			cv::Mat tmp(item.src.size(), item.src.depth(), item.src.channels());
+			cvu::negate(item.src, tmp);
+			item.src = tmp;
 
 			pitem.delapsed += t.elapsed();
 		}
@@ -159,7 +197,7 @@ void oclThread::run()
 		// Tego tez mozemy liczyc czas
 		qDebug("Transfering source image to the device took %.05lf ms\n", 
 			c.oclElapsedEvent(holder.evt));
-		//pitem.delapsed += c.oclElapsedEvent(holder.evt);
+		pitem.delapsed += c.oclElapsedEvent(holder.evt);
 			
 		// Filtr Bayer'a
 		if(item.bc != cvu::BC_None)
@@ -188,16 +226,28 @@ void oclThread::run()
 				morphFilter->setMorphologyOperation(item.op);
 				morphFilter->setStructuringElement(item.se);
 				morphFilter->setSourceImage(holder);
+
+				//oclImage2DHolder output = c.createDeviceImageGL(surface, WriteOnly);
+				//morphFilter->setOutputDeviceImage(output);
+
 				pitem.delapsed += morphFilter->run();
 				holder = oclImage2DHolder(morphFilter->outputDeviceImage());
 			}
 		}
 		
 		pitem.dst = c.readImageFromDevice(holder);
-		qDebug("Transfering output image from the device took %.05lf ms\n", 
+		qDebug("Transfering output image from the device took %.05lf ms\n",
 			c.oclElapsedEvent(holder.evt));
+
 		//pitem.delapsed += c.oclElapsedEvent(holder.evt);
 
 		emit processingDone(pitem);
 	}
+
+	// cleanup
+	delete bayerFilter;
+	delete morphFilter;
+	delete hitmissFilter;
+
+	//if(glWidget) glWidget->deleteLater();
 }

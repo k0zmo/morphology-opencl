@@ -4,6 +4,7 @@ oclFilter::oclFilter(oclContext* ctx)
 	: ctx(ctx)
 	, src(nullptr)
 	, roi(cvu::WholeImage)
+	, recreateOutput(true)
 {
 }
 
@@ -29,6 +30,12 @@ void oclFilter::setSourceImage(
 		//	roi.y = std::min(roi.y, src.height);
 		//	roi.width = [something]
 	}
+}
+
+void oclFilter::setOutputDeviceImage(const oclImage2DHolder& img)
+{
+	dst = img;
+	recreateOutput = false;
 }
 
 cl::NDRange oclFilter::computeOffset(

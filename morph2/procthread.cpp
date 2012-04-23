@@ -45,7 +45,8 @@ void ProcThread::run()
 			ProcessedItem pitem = {
 				/*.iters = */ 0,
 				/*.delapsed = */ 0.0,
-				/*.dst = */ item.src
+				/*.dst = */ item.src,
+				/*.glsize = */ cv::Size(0, 0)
 			};
 			emit processingDone(pitem);
 			continue;
@@ -60,7 +61,8 @@ void ProcThread::run()
 			/*.delapsed = */ 0.0,
 			// Tworzymy obraz wynikowy (alokacja miejsca)
 			/*.dst = */ cv::Mat(item.src.size(), 
-				CV_MAKETYPE(item.src.depth(), item.src.channels()))
+				CV_MAKETYPE(item.src.depth(), item.src.channels())),
+			/*.glsize = */ cv::Size(0, 0)
 		};
 
 		// Zaneguj obraz

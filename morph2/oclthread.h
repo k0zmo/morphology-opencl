@@ -13,19 +13,19 @@
 #include "oclmorphfilter.h"
 #include "oclmorphhitmissfilter.h"
 
-typedef QMap<oclPlatformDesc, QList<oclDeviceDesc> > PlatformDevicesMap;
+class GLDummyWidget;
 
+// Mapa pobranych danych o platformach i ich urzadzeniach
+typedef QMap<oclPlatformDesc, QList<oclDeviceDesc> > PlatformDevicesMap;
 inline bool operator<(const oclPlatformDesc& p1, const oclPlatformDesc& p2)
-{
-	return p1.id < p2.id;
-}
+{ return p1.id < p2.id; }
 
 class oclThread : public QThread
 {
 	Q_OBJECT
 public:
 	oclThread(BlockingQueue<ProcessingItem>& queue,
-		const Configuration& conf);
+		const Configuration& conf, GLDummyWidget* shareWidget = nullptr);
 	virtual ~oclThread();
 
 	PlatformDevicesMap queryPlatforms();
@@ -36,6 +36,8 @@ public:
 private:
 	BlockingQueue<ProcessingItem>& queue;
 	QMutex stopMutex;
+
+	GLDummyWidget* shareWidget;
 
 	int platformId, deviceId;
 	bool stopped;

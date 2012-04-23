@@ -14,6 +14,9 @@ public:
 	virtual void setSourceImage(const oclImage2DHolder& src,
 		const cv::Rect& roi = cvu::WholeImage);
 
+	void setOutputDeviceImage(const oclImage2DHolder& img);
+	void unsetOutputDeviceImage() { recreateOutput = true; }
+
 	oclImage2DHolder outputDeviceImage() const { return dst; }
 
 protected:
@@ -25,5 +28,6 @@ protected:
 
 	const oclImage2DHolder* src;
 	oclImage2DHolder dst;
+	bool recreateOutput;
 	cv::Rect roi;
 };

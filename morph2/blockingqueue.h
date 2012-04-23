@@ -93,4 +93,5 @@ struct ProcessedItem
 	int iters;
 	double delapsed;
 	cv::Mat dst;
+	cv::Size glsize;
 };

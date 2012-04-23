@@ -39,12 +39,26 @@ double oclMorphFilter::run()
 		structuringElement.size == 0)
 	{
 		// Passthrough
-		dst = *src;
+		if(!recreateOutput)
+		{
+			// copy contents of src to dst
+		}
+		else
+		{
+			dst = *src;
+		}
 		return 0.0;
 	}
 
-	dst = ctx->createDeviceImage(
-		src->width, src->height, ReadWrite);
+	//if(recreateOutput)
+		dst = ctx->createDeviceImage(
+			src->width, src->height, ReadWrite);
+	//else
+	//{
+	//	printf("%dx%d\n", dst.img.getImageInfo<CL_IMAGE_WIDTH>(),
+	//		dst.img.getImageInfo<CL_IMAGE_HEIGHT>());
+	//}
+
 	double elapsed = 0.0;
 
 	switch(morphOp)
