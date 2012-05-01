@@ -1,5 +1,5 @@
 QT += core gui opengl
-CONFIG += debug_and_release warn_on
+CONFIG += debug_and_release warn_on precompile_header
 
 TARGET = morph2
 TEMPLATE = app
@@ -18,16 +18,15 @@ SOURCES += \
 	oclfilter.cpp \
 	oclmorphfilter.cpp \
 	oclmorphhitmissfilter.cpp \
-	precompiled.cpp \
 	procthread.cpp \
 	sepreview.cpp \
 	settings.cpp \
 	capthread.cpp \
-	glew.c \
 	oclthread.cpp \
 	oclpicker.cpp \
 	mainwidget.cpp \
-    previewproxy.cpp
+	previewproxy.cpp \
+	glew.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -43,7 +42,6 @@ HEADERS  += \
 	oclfilter.h \
 	oclmorphfilter.h \
 	oclmorphhitmissfilter.h \
-	precompiled.h \
 	procthread.h \
 	sepreview.h \
 	settings.h \
@@ -51,7 +49,7 @@ HEADERS  += \
 	oclthread.h \
 	oclpicker.h \
 	mainwidget.h \
-    previewproxy.h
+	previewproxy.h
 
 FORMS += \
 	sepreview.ui \
