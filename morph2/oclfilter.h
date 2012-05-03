@@ -11,11 +11,14 @@ public:
 	
 	virtual double run() = 0;
 
+	void prepareDestinationHolder();
+	void finishUpDestinationHolder();
+
 	virtual void setSourceImage(const oclImage2DHolder& src,
 		const cv::Rect& roi = cvu::WholeImage);
 
 	void setOutputDeviceImage(const oclImage2DHolder& img);
-	void unsetOutputDeviceImage() { recreateOutput = true; }
+	void unsetOutputDeviceImage() { ownsOutput = true; }
 
 	oclImage2DHolder outputDeviceImage() const { return dst; }
 
@@ -28,6 +31,6 @@ protected:
 
 	const oclImage2DHolder* src;
 	oclImage2DHolder dst;
-	bool recreateOutput;
+	bool ownsOutput;
 	cv::Rect roi;
 };

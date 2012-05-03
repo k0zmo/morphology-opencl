@@ -28,12 +28,18 @@ double oclBayerFilter::run()
 	if(!kernel)
 	{
 		// Passthrough
-		dst = *src;
+		if(!ownsOutput)
+		{
+			// TODO
+		}
+		else
+		{
+			dst = *src;
+		}		
 		return 0.0;
 	}
 
-	dst = ctx->createDeviceImage(
-		src->width, src->height, ReadWrite);
+	prepareDestinationHolder();
 
 	cl::NDRange offset(computeOffset(1, 1));
 	cl::NDRange gridDim(computeGlobal(1, 1));
@@ -63,7 +69,8 @@ double oclBayerFilter::run()
 	evt.wait();
 
 	oclContext::oclError("Error while executing kernel over ND range!", err);
-
+		
+	finishUpDestinationHolder();
 	return oclContext::oclElapsedEvent(evt);
 }
 

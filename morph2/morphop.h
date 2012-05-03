@@ -21,6 +21,13 @@ enum EMorphOperation
 	MO_None
 };
 
+inline bool isHitMiss(EMorphOperation mo)
+{
+	return mo == MO_Outline ||
+		mo == MO_Skeleton ||
+		mo == MO_Skeleton_ZhangSuen;
+}
+
 enum EStructuringElementType
 {
 	SET_Rect,

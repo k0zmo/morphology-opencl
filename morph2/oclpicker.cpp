@@ -70,9 +70,10 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
-
-	connect(buttonBox, SIGNAL(accepted()), SLOT(accept()));
-	connect(buttonBox, SIGNAL(rejected()), SLOT(reject()));
+	connect(buttonBox, SIGNAL(accepted()), 
+		SLOT(accept()));
+	connect(buttonBox, SIGNAL(rejected()),
+		SLOT(reject()));
 }
 
 oclPicker::~oclPicker()

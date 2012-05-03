@@ -21,7 +21,6 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 		"kernels-buffer2D/hitmiss.cl", opts.c_str());
 
 	// I wyciagnij z niego kernele
-
 	kernelOutline = ctx->retrieveKernel(program, "outline");
 	kernelSkeleton_pass[0]  = ctx->retrieveKernel(program, "skeletonZhang_pass1");
 	kernelSkeleton_pass[1]  = ctx->retrieveKernel(program, "skeletonZhang_pass2");
@@ -53,14 +52,21 @@ double oclMorphHitMissFilter::run()
 	if(hmOp == cvu::MO_None)
 	{
 		// Passthrough
-		dst = *src;
+		if(!ownsOutput)
+		{
+
+		}
+		else
+		{
+			dst = *src;
+		}		
 		return 0.0;
 	}
 
-	dst = ctx->createDeviceImage(
-		src->width, src->height, ReadWrite);
 	double elapsed = 0.0;
 	int iters = 1;
+
+	prepareDestinationHolder();
 
 	// Kazda z operacji hit-miss wymaga by wyjscie bylo rowne zrodlu na poczatku
 	// - jest tak poniewaz HM zapisuje tylko te piksele ktore modyfikuje
@@ -181,6 +187,7 @@ double oclMorphHitMissFilter::run()
 	default: break;
 	}
 
+	finishUpDestinationHolder();
 	return elapsed;
 }
 

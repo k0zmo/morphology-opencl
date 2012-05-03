@@ -1,18 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;cxx;c;def</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h</Extensions>
-    </Filter>
-    <Filter Include="Form Files">
-      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
-      <Extensions>ui</Extensions>
-    </Filter>
     <Filter Include="Generated Files">
       <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
       <Extensions>moc;h;cpp</Extensions>
@@ -28,46 +16,29 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="Header Files\View">
-      <UniqueIdentifier>{00f7f889-732b-41f3-9c80-1f1e73351ba3}</UniqueIdentifier>
+    <Filter Include="UI">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
     </Filter>
-    <Filter Include="Header Files\Controller">
-      <UniqueIdentifier>{9392e72a-edd2-46b8-bb90-def190c73f6b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Model">
-      <UniqueIdentifier>{2c1b7156-e7a4-4dcd-b456-0819901f3c3a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\View">
-      <UniqueIdentifier>{2d6f5563-bcb6-44f5-b368-6b1afa690d0e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Controller">
-      <UniqueIdentifier>{513ded86-aa34-4ce2-ac3c-eabdd5007c68}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Model">
+    <Filter Include="_Model">
       <UniqueIdentifier>{0a949bf1-4af6-491d-8793-0c6b6a833de1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Model\ocl">
-      <UniqueIdentifier>{22408f97-e154-42dc-a5a6-58d3102e58ee}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Model\ocl">
+    <Filter Include="_Model\ocl">
       <UniqueIdentifier>{08926281-74e7-4dda-9c12-91f860864380}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_View">
+      <UniqueIdentifier>{00f7f889-732b-41f3-9c80-1f1e73351ba3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_Controller">
+      <UniqueIdentifier>{9392e72a-edd2-46b8-bb90-def190c73f6b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cvutils.cpp">
-      <Filter>Source Files\Model</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_glwidget.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_glwidget.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="controller.cpp">
-      <Filter>Source Files\Controller</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_controller.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -75,35 +46,17 @@
     <ClCompile Include="GeneratedFiles\Release\moc_controller.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="elapsedtimer.cpp">
-      <Filter>Source Files\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="precompiled.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="settings.cpp">
-      <Filter>Source Files\View</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_settings.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_settings.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="configuration.cpp">
-      <Filter>Source Files\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="sepreview.cpp">
-      <Filter>Source Files\View</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_sepreview.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_sepreview.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="glwidget.cpp">
-      <Filter>Source Files\View</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_capthread.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -117,33 +70,6 @@
     <ClCompile Include="GeneratedFiles\Release\moc_procthread.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="procthread.cpp">
-      <Filter>Source Files\Controller</Filter>
-    </ClCompile>
-    <ClCompile Include="capthread.cpp">
-      <Filter>Source Files\Controller</Filter>
-    </ClCompile>
-    <ClCompile Include="morphop.cpp">
-      <Filter>Source Files\Model</Filter>
-    </ClCompile>
-    <ClCompile Include="oclbayerfilter.cpp">
-      <Filter>Source Files\Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclmorphhitmissfilter.cpp">
-      <Filter>Source Files\Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclcontext.cpp">
-      <Filter>Source Files\Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclfilter.cpp">
-      <Filter>Source Files\Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclmorphfilter.cpp">
-      <Filter>Source Files\Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclthread.cpp">
-      <Filter>Source Files\Controller</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_oclthread.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -156,17 +82,11 @@
     <ClCompile Include="GeneratedFiles\Release\moc_oclpicker.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="oclpicker.cpp">
-      <Filter>Source Files\View</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_mainwidget.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_mainwidget.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="mainwidget.cpp">
-      <Filter>Source Files\View</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_previewproxy.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -174,22 +94,73 @@
     <ClCompile Include="GeneratedFiles\Release\moc_previewproxy.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="capthread.cpp">
+      <Filter>_Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="procthread.cpp">
+      <Filter>_Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="controller.cpp">
+      <Filter>_Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="oclthread.cpp">
+      <Filter>_Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="configuration.cpp">
+      <Filter>_Model</Filter>
+    </ClCompile>
+    <ClCompile Include="morphop.cpp">
+      <Filter>_Model</Filter>
+    </ClCompile>
+    <ClCompile Include="cvutils.cpp">
+      <Filter>_Model</Filter>
+    </ClCompile>
+    <ClCompile Include="elapsedtimer.cpp">
+      <Filter>_Model</Filter>
+    </ClCompile>
+    <ClCompile Include="oclbayerfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclmorphhitmissfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclcontext.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclmorphfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="glwidget.cpp">
+      <Filter>_View</Filter>
+    </ClCompile>
+    <ClCompile Include="settings.cpp">
+      <Filter>_View</Filter>
+    </ClCompile>
+    <ClCompile Include="mainwidget.cpp">
+      <Filter>_View</Filter>
+    </ClCompile>
+    <ClCompile Include="oclpicker.cpp">
+      <Filter>_View</Filter>
+    </ClCompile>
     <ClCompile Include="previewproxy.cpp">
-      <Filter>Source Files\View</Filter>
+      <Filter>_View</Filter>
     </ClCompile>
-    <ClCompile Include="glew.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="sepreview.cpp">
+      <Filter>_View</Filter>
     </ClCompile>
+    <ClCompile Include="glew.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="precompiled.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cvutils.h">
-      <Filter>Header Files\Model</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="elapsedtimer.h">
-      <Filter>Header Files\Model</Filter>
-    </ClInclude>
-    <ClInclude Include="precompiled.h">
-      <Filter>Header Files</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_sepreview.h">
       <Filter>Generated Files</Filter>
@@ -198,31 +169,31 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="configuration.h">
-      <Filter>Header Files\Model</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="blockingqueue.h">
-      <Filter>Header Files\Model</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="singleton.h">
-      <Filter>Header Files\Model</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="morphop.h">
-      <Filter>Header Files\Model</Filter>
+      <Filter>_Model</Filter>
     </ClInclude>
     <ClInclude Include="oclbayerfilter.h">
-      <Filter>Header Files\Model\ocl</Filter>
+      <Filter>_Model\ocl</Filter>
     </ClInclude>
     <ClInclude Include="oclcontext.h">
-      <Filter>Header Files\Model\ocl</Filter>
+      <Filter>_Model\ocl</Filter>
     </ClInclude>
     <ClInclude Include="oclfilter.h">
-      <Filter>Header Files\Model\ocl</Filter>
+      <Filter>_Model\ocl</Filter>
     </ClInclude>
     <ClInclude Include="oclmorphfilter.h">
-      <Filter>Header Files\Model\ocl</Filter>
+      <Filter>_Model\ocl</Filter>
     </ClInclude>
     <ClInclude Include="oclmorphhitmissfilter.h">
-      <Filter>Header Files\Model\ocl</Filter>
+      <Filter>_Model\ocl</Filter>
     </ClInclude>
     <ClInclude Include="ui_oclpicker.h">
       <Filter>Generated Files</Filter>
@@ -233,52 +204,53 @@
     <ClInclude Include="ui_mainwindow.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="precompiled.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sepreview.ui">
-      <Filter>Form Files</Filter>
+      <Filter>UI</Filter>
     </CustomBuild>
     <CustomBuild Include="settings.ui">
-      <Filter>Form Files</Filter>
+      <Filter>UI</Filter>
     </CustomBuild>
     <CustomBuild Include="controller.h">
-      <Filter>Header Files\Controller</Filter>
+      <Filter>_Controller</Filter>
     </CustomBuild>
     <CustomBuild Include="settings.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
     <CustomBuild Include="sepreview.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
     <CustomBuild Include="glwidget.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
     <CustomBuild Include="capthread.h">
-      <Filter>Header Files\Controller</Filter>
+      <Filter>_Controller</Filter>
     </CustomBuild>
     <CustomBuild Include="procthread.h">
-      <Filter>Header Files\Controller</Filter>
+      <Filter>_Controller</Filter>
     </CustomBuild>
     <CustomBuild Include="oclpicker.ui">
-      <Filter>Form Files</Filter>
+      <Filter>UI</Filter>
     </CustomBuild>
     <CustomBuild Include="oclthread.h">
-      <Filter>Header Files\Controller</Filter>
+      <Filter>_Controller</Filter>
     </CustomBuild>
     <CustomBuild Include="oclpicker.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
     <CustomBuild Include="mainwidget.ui">
-      <Filter>Form Files</Filter>
+      <Filter>UI</Filter>
     </CustomBuild>
     <CustomBuild Include="mainwindow.ui">
-      <Filter>Form Files</Filter>
+      <Filter>UI</Filter>
     </CustomBuild>
     <CustomBuild Include="mainwidget.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
     <CustomBuild Include="previewproxy.h">
-      <Filter>Header Files\View</Filter>
+      <Filter>_View</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

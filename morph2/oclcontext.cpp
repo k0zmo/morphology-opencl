@@ -380,6 +380,8 @@ oclImage2DHolder oclContext::createDeviceImageGL(GLuint resource,
 	holder.format = cl::ImageFormat(format.image_channel_order,
 									format.image_channel_data_type);
 
+	printf("Created shared texture %dx%d\n", holder.width, holder.height);
+
 	return holder;
 }
 
@@ -393,7 +395,7 @@ oclBufferHolder oclContext::createDeviceBuffer(
 	holder.buf = cl::Buffer(ctx,
 		access, size, nullptr, &err);
 
-	oclError("Error while creating buffer for structuring element!", err);
+	oclError("Error while creating buffer!", err);
 	return holder;
 }
 
@@ -600,4 +602,25 @@ oclDeviceDesc oclContext::populateDescription(cl::Device dev)
 
 	oclError("Error during retrieving device info", err);
 	return desc;
+}
+
+void oclContext::acquireGLTexture(oclImage2DHolder& holder)
+{
+	// Czemu nie ma wersji dla jednego obiektu (tworzyc wektor 1-elem. za kazdym razem?)
+	cl_command_queue cq = this->cq();
+	cl_mem img = holder.img();
+	cl_event evt;
+
+	clEnqueueAcquireGLObjects(cq, 1, &img, 0, nullptr, &evt);
+	clWaitForEvents(1, &evt);
+}
+
+void oclContext::releaseGLTexture(oclImage2DHolder& holder)
+{
+	cl_command_queue cq = this->cq();;
+	cl_mem img = holder.img();
+	cl_event evt;
+
+	clEnqueueReleaseGLObjects(cq, 1, &img, 0, 0, &evt);
+	clWaitForEvents(1, &evt);
 }

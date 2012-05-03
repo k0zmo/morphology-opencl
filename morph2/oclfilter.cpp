@@ -4,7 +4,7 @@ oclFilter::oclFilter(oclContext* ctx)
 	: ctx(ctx)
 	, src(nullptr)
 	, roi(cvu::WholeImage)
-	, recreateOutput(true)
+	, ownsOutput(true)
 {
 }
 
@@ -35,7 +35,7 @@ void oclFilter::setSourceImage(
 void oclFilter::setOutputDeviceImage(const oclImage2DHolder& img)
 {
 	dst = img;
-	recreateOutput = false;
+	ownsOutput = false;
 }
 
 cl::NDRange oclFilter::computeOffset(
@@ -63,3 +63,22 @@ cl::NDRange oclFilter::computeGlobal(
 	return cl::NDRange(gx, gy);
 }
 
+void oclFilter::prepareDestinationHolder() 
+{
+	if(ownsOutput)
+	{
+		dst = ctx->createDeviceImage(
+			src->width, src->height, ReadWrite);
+	}
+	else
+	{
+		ctx->acquireGLTexture(dst);
+	}
+}
+
+void oclFilter::finishUpDestinationHolder()
+{
+	// Musimy zwolnic zasob dla OpenGLa
+	if(!ownsOutput)
+		ctx->releaseGLTexture(dst);
+}

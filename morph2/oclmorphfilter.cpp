@@ -39,9 +39,9 @@ double oclMorphFilter::run()
 		structuringElement.size == 0)
 	{
 		// Passthrough
-		if(!recreateOutput)
+		if(!ownsOutput)
 		{
-			// copy contents of src to dst
+			// TODO: copy contents of src to dst
 		}
 		else
 		{
@@ -50,16 +50,8 @@ double oclMorphFilter::run()
 		return 0.0;
 	}
 
-	//if(recreateOutput)
-		dst = ctx->createDeviceImage(
-			src->width, src->height, ReadWrite);
-	//else
-	//{
-	//	printf("%dx%d\n", dst.img.getImageInfo<CL_IMAGE_WIDTH>(),
-	//		dst.img.getImageInfo<CL_IMAGE_HEIGHT>());
-	//}
-
 	double elapsed = 0.0;
+	prepareDestinationHolder();
 
 	switch(morphOp)
 	{
@@ -114,6 +106,8 @@ double oclMorphFilter::run()
 		break;
 	default: break;
 	}
+
+	finishUpDestinationHolder();
 
 	return elapsed;
 }

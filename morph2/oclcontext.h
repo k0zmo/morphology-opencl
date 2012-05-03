@@ -144,6 +144,9 @@ public:
 	template<typename AtomType>
 	void readAtomicCounter(const oclBufferHolder& counter,
 		AtomType* value, bool async = false);
+
+	void acquireGLTexture(oclImage2DHolder& holder);
+	void releaseGLTexture(oclImage2DHolder& holder);
 	
 	// Pomocznicze funkcje
 	static std::string oclErrorString(cl_int code);

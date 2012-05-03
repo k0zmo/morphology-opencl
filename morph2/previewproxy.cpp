@@ -18,7 +18,7 @@ PreviewProxy::~PreviewProxy()
 }
 
 void PreviewProxy::setPreviewImage(const cv::Mat& image,
-								   const QSize& maxImgSize)
+	const QSize& maxImgSize)
 {
 	if(d_useOpenGL)
 	{
@@ -104,8 +104,10 @@ void PreviewProxy::initHardware(GLDummyWidget* shareWidget)
 	d_shareWidget = shareWidget;
 
 	//connect(shareWidget, SIGNAL(surfaceChanged()), hardware, SLOT(updateGL()));
-	connect(d_hardware, SIGNAL(error(QString)), SLOT(onGLWidgetError(QString)));
-	connect(d_hardware, SIGNAL(initialized()), SLOT(onGLWidgetInitialized()));
+	connect(d_hardware, SIGNAL(error(QString)),
+		SLOT(onGLWidgetError(QString)));
+	connect(d_hardware, SIGNAL(initialized()),
+		SLOT(onGLWidgetInitialized()));
 
 	d_layout->addWidget(d_hardware);
 	d_hardware->updateGL();

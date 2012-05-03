@@ -12,36 +12,61 @@ MainWidget::MainWidget(QWidget* parent)
 	setupUi(this);
 
 	// Operacje
-	connect(rbNone, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbErode, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbDilate, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbOpen, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbClose, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbGradient, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbTopHat, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbBlackHat, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbOutline, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbSkeleton, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
-	connect(rbSkeletonZhang, SIGNAL(toggled(bool)), SLOT(onOperationToggled(bool)));
+	connect(rbNone, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbErode, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbDilate, SIGNAL(toggled(bool)), 
+		SLOT(onOperationToggled(bool)));
+	connect(rbOpen, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbClose, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbGradient, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbTopHat, SIGNAL(toggled(bool)), 
+		SLOT(onOperationToggled(bool)));
+	connect(rbBlackHat, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbOutline, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
+	connect(rbSkeleton, SIGNAL(toggled(bool)), 
+		SLOT(onOperationToggled(bool)));
+	connect(rbSkeletonZhang, SIGNAL(toggled(bool)),
+		SLOT(onOperationToggled(bool)));
 
 	// Element strukturalny
-	connect(rbRect, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
-	connect(rbEllipse, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
-	connect(rbCross, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
-	connect(rbCustom, SIGNAL(toggled(bool)), SLOT(onElementTypeToggled(bool)));
+	connect(rbRect, SIGNAL(toggled(bool)),
+		SLOT(onElementTypeToggled(bool)));
+	connect(rbEllipse, SIGNAL(toggled(bool)),
+		SLOT(onElementTypeToggled(bool)));
+	connect(rbCross, SIGNAL(toggled(bool)),
+		SLOT(onElementTypeToggled(bool)));
+	connect(rbCustom, SIGNAL(toggled(bool)),
+		SLOT(onElementTypeToggled(bool)));
 
 	// Rozmiar elementu strukturalnego
-	connect(cbSquare, SIGNAL(stateChanged(int)), SLOT(onElementSizeRatioChanged(int)));
-	connect(hsXElementSize, SIGNAL(valueChanged(int)), SLOT(onElementSizeChanged(int)));
-	connect(hsYElementSize, SIGNAL(valueChanged(int)), SLOT(onElementSizeChanged(int)));
-	connect(dialRotation, SIGNAL(valueChanged(int)), SLOT(onElementRotationChanged(int)));
-	connect(pbResetRotation, SIGNAL(pressed()), SLOT(onElementRotationResetPressed()));
+	connect(cbSquare, SIGNAL(stateChanged(int)),
+		SLOT(onElementSizeRatioChanged(int)));
+	connect(hsXElementSize, SIGNAL(valueChanged(int)),
+		SLOT(onElementSizeChanged(int)));
+	connect(hsYElementSize, SIGNAL(valueChanged(int)),
+		SLOT(onElementSizeChanged(int)));
+	connect(dialRotation, SIGNAL(valueChanged(int)),
+		SLOT(onElementRotationChanged(int)));
+	connect(pbResetRotation, SIGNAL(clicked()),
+		SLOT(onElementRotationResetPressed()));
 
-	connect(cbAutoTrigger, SIGNAL(stateChanged(int)), gC, SLOT(onAutoTriggerChanged(int)));
-	connect(cbInvert, SIGNAL(stateChanged(int)), gC, SLOT(onInvertChanged(int)));
-	connect(cmbBayer, SIGNAL(currentIndexChanged(int)), gC, SLOT(onBayerIndexChanged(int)));
-	connect(pbShowSE, SIGNAL(pressed()), gC, SLOT(onStructuringElementPreviewPressed()));
-	connect(pbRun, SIGNAL(pressed()), gC, SLOT(onRecompute()));
+	connect(cbAutoTrigger, SIGNAL(stateChanged(int)), 
+		gC, SLOT(onAutoTriggerChanged(int)));
+	connect(cbInvert, SIGNAL(stateChanged(int)),
+		gC, SLOT(onInvertChanged(int)));
+	connect(cmbBayer, SIGNAL(currentIndexChanged(int)),
+		gC, SLOT(onBayerIndexChanged(int)));
+	connect(pbShowSE, SIGNAL(clicked()),
+		gC, SLOT(onStructuringElementPreviewPressed()));
+	connect(pbRun, SIGNAL(clicked()), 
+		gC, SLOT(onRecompute()));
 
 	// Wartosci domyslne
 	rbNone->toggle();

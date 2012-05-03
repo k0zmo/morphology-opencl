@@ -36,7 +36,10 @@ bool CapThread::openCamera(int camId)
 		channels = dummy.channels();
 		depth = dummy.depth();
 
-		qDebug() << width << "x" << height << "x" << channels << depth;
+		qDebug() << "Frame parameters:" << 
+			width << "x" << 
+			height << "x" << 
+			channels << depth;
 
 		return true;
 	}
@@ -73,8 +76,9 @@ void CapThread::run()
 		// Nie wiem czy to do konca jest poprawne
 		if(frame.channels() != 1)
 		{
-			int code = (frame.channels() == 3) ? 
-				CV_BGR2GRAY : CV_BGRA2GRAY;
+			int code = (frame.channels() == 3)
+				? CV_BGR2GRAY
+				: CV_BGRA2GRAY;
 			cvtColor(frame, frame, code);
 		}
 

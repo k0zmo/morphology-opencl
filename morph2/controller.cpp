@@ -14,8 +14,8 @@
 #include "oclthread.h"
 #include "capthread.h"
 
-#define USE_GLWIDGET 1
-#define DISABLE_OPENCL 0
+#define DISABLE_OPENGL 0
+#define DISABLE_OPENCL 1
 
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;
@@ -122,7 +122,7 @@ void Controller::start()
 	conf.loadConfiguration("./settings.cfg");
 	QString defImage(conf.defaultImage);
 
-	// Wczytaj domyslny obraz (jesli wyspecyfikowano)
+	// Okno dla domyslnego obrazu (jesli nie wyspecyfikowano)
 	if(defImage.isEmpty())
 	{
 		defImage = QFileDialog::getOpenFileName(this, QString(), ".",
@@ -138,16 +138,20 @@ void Controller::start()
 	openFile(defImage);
 
 	mw = new MainWidget(this);
-	connect(mw, SIGNAL(recomputeNeeded()), SLOT(onRecompute()));
-	connect(mw, SIGNAL(structuringElementChanged()), SLOT(onStructuringElementChanged()));
+	connect(mw, SIGNAL(recomputeNeeded()), 
+		SLOT(onRecompute()));
+	connect(mw, SIGNAL(structuringElementChanged()),
+		SLOT(onStructuringElementChanged()));
+
 	gridLayout->addWidget(mw, 0, 1, 1, 1);
 
+#if DISABLE_OPENGL == 0
 	// Utworz dzielony kontekst/widget 
 	shareWidget = new GLDummyWidget(this);
 	shareWidget->resize(0, 0);
 	shareWidget->updateGL();
 	shareWidget->initializeWithNewSurface();
-	//shareWidget->hide();
+#endif
 
 	// Utworz kontrolke do podgladu obrazu
 	preview = new PreviewProxy(this);
@@ -159,8 +163,10 @@ void Controller::start()
 
 	// Uruchom procedure inicjalizacyjna okno podgladu
 	// gdy bedzie gotowe - uruchomi cala reszte
-	connect(preview, SIGNAL(initialized(bool)), SLOT(onPreviewInitialized(bool)));
-#if USE_GLWIDGET == 0
+	connect(preview, SIGNAL(initialized(bool)), 
+		SLOT(onPreviewInitialized(bool)));
+
+#if DISABLE_OPENGL == 1
 	preview->initSoftware();
 #else
 	preview->initHardware(shareWidget);
@@ -454,29 +460,29 @@ void Controller::onOpenCLTriggered(bool state)
 
 void Controller::onPickMethodTriggerd()
 {
-	QMessageBox msgBox;
-	QPushButton* buffer1D = msgBox.addButton("Buffer1D", QMessageBox::AcceptRole);
-	QPushButton* buffer2D = msgBox.addButton("Buffer2D", QMessageBox::AcceptRole);
-	QPushButton* cancel = msgBox.addButton(QMessageBox::Cancel);
+	//QMessageBox msgBox;
+	//QPushButton* buffer1D = msgBox.addButton("Buffer1D", QMessageBox::AcceptRole);
+	//QPushButton* buffer2D = msgBox.addButton("Buffer2D", QMessageBox::AcceptRole);
+	//QPushButton* cancel = msgBox.addButton(QMessageBox::Cancel);
 
-	msgBox.setWindowTitle("Morph OpenCL");
-	msgBox.setText("Choose different method:");
-	msgBox.setDefaultButton(cancel);
-	msgBox.exec();
+	//msgBox.setWindowTitle("Morph OpenCL");
+	//msgBox.setText("Choose different method:");
+	//msgBox.setDefaultButton(cancel);
+	//msgBox.exec();
 
-//	EOpenCLMethod method;
+	//EOpenCLMethod method;
 
-//	// Jaki "silnik" wybrano
-//	if(msgBox.clickedButton() == buffer1D)
-//		method = OM_Buffer1D;
-//	else if(msgBox.clickedButton() == buffer2D)
-//		method = OM_Buffer2D;
-//	else
-//		return;
+	//// Jaki "silnik" wybrano
+	//if(msgBox.clickedButton() == buffer1D)
+	//	method = OM_Buffer1D;
+	//else if(msgBox.clickedButton() == buffer2D)
+	//	method = OM_Buffer2D;
+	//else
+	//	return;
 
 	// Reinicjalizuj modul OpenCLa z wybranym silnikiem
-//	delete ocl;
-//	initializeOpenCL(method);
+	//delete ocl;
+	//initializeOpenCL(method);
 }
 
 void Controller::onSettingsTriggered()
@@ -605,7 +611,7 @@ void Controller::onStructuringElementModified(const cv::Mat& _customSe)
 	resizeCustomSe = true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+ // ____________________________________________________________________________
 
 void Controller::openFile(const QString& filename)
 {
@@ -654,16 +660,19 @@ void Controller::showStats(int iters, double elapsed)
 	statusBarLabel->setText(txt);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+ // ____________________________________________________________________________
 
 void Controller::initializeOpenCL()
 {
 	// Czy oclThread bedzie dzielic zasoby OpenGL'a
 	// z kontrolka do wyswietlania gotowych tekstur (gl/cl interop)
 	bool useHardware = preview->useHardware();
+	useHardware &= conf.glInterop;
+
 	GLDummyWidget* glw = nullptr;
 	if (useHardware)
 	{
+		printf("Trying to enable OpenCL/OpenGL interop\n");
 		glw = new GLDummyWidget(this, shareWidget);
 		glw->resize(0, 0);
 		glw->initializeWithSharedSurface(shareWidget->surface());
@@ -699,6 +708,9 @@ void Controller::initializeOpenCL()
 
 		return;
 	}
+
+	// MOZE SIE ZDARZYC TAK, ZE CLTHREAD MA AKTYWNY KONTEKST I NADEJDZIE 
+	// ONPROCESSINGDONE (TO Z PREVIEWINITIALIZED) - MOZNA BY TO ZMIENIC
 	 
 	clThread->choose(platformId, deviceId);
 	clThread->start(QThread::HighPriority);

@@ -90,6 +90,8 @@ void PreviewLabel::mousePressEvent(QMouseEvent* evt)
 	setPreviewImage(se);
 }
 
+// _____________________________________________________________________________
+
 StructuringElementPreview::StructuringElementPreview(QWidget* parent)
 	: QDialog(parent)
 {

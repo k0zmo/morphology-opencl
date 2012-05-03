@@ -44,6 +44,8 @@ PlatformDevicesMap oclThread::queryPlatforms()
 		success = false;
 	};
 
+	// Gdybysmy chcieli pobrac wszystkie platformy ktore moga dzielic 
+	// zasoby z aktualnym kontekstem OpenGL'a to trzebaby wywolac tutaj ta funkcje
 	//if(shareWidget)
 	//	shareWidget->makeCurrent();
 
@@ -76,12 +78,31 @@ void oclThread::initContext()
 	{
 		// createContextGL oczekuje aktywnego kontekstu
 		// Moze pozniej to zmienie (bedzie oczekiwac tych wartosci w argumentach funkcji)
+		qDebug() << "(i) Przed makeCurrent";
 		shareWidget->makeCurrent();
+		qDebug() << "(i) Po makeCurrent";
 
-		//qDebug() << "initContext" << wglGetCurrentDC() << wglGetCurrentContext();
+		HDC dc = wglGetCurrentDC();
+		HGLRC rc = wglGetCurrentContext();
 
-		c.createContextGL(platformId);
-		shareWidget->doneCurrent();
+		//qDebug() << "currentDC:" << dc << 
+		//	"currentContext:" << rc;
+
+		// TODO: for glx
+		// TODO: albo przeniesc to do createContextGL
+		if(!dc || !rc)
+		{
+			c.createContext(platformId);
+			shareWidget = nullptr;
+		}
+		else
+		{
+			c.createContextGL(platformId);
+
+			qDebug() << "(i) Przed doneCurrent";
+			shareWidget->doneCurrent();
+			qDebug() << "(i) Po doneCurrent";
+		}
 	}
 	else
 	{
@@ -95,15 +116,16 @@ void oclThread::initContext()
 	c.setWorkgroupSize(conf.workgroupSizeX,
 		conf.workgroupSizeY);
 
-	QString erode = "erode_c4";
-	QString dilate = "dilate_c4";
-	QString gradient = "gradient_c4";
-
+	// Bloczek z filtracja bayera
 	bayerFilter = new oclBayerFilter(&c);
+
+	// Bloczek z operacjami morfologicznymi
 	morphFilter = new oclMorphFilter(&c,
 		conf.erode_2d.toStdString().c_str(),
 		conf.dilate_2d.toStdString().c_str(),
 		conf.gradient_2d.toStdString().c_str());
+
+	// Bloczek z operacjami morfologicznymi typu hit-miss
 	hitmissFilter = new oclMorphHitMissFilter(&c,
 		conf.atomicCounters);
 }
@@ -120,6 +142,17 @@ void oclThread::run()
 	emit openCLInitialized(success);
 	if(!success)
 		return;
+
+	// Czasem sie zdarza ze implementacja CPU zglasza obsluge cl/gl interop
+	// Jednak nie jest to prawda :)
+	bool glInterop = shareWidget != nullptr;
+	oclDeviceDesc ddesc = c.deviceDescription();
+	if(ddesc.deviceType != CL_DEVICE_TYPE_GPU)
+		glInterop = false;
+
+	printf("GL/CL Interop: %s\n", glInterop 
+		? "yes" 
+		: "no");
 
 	while(true)
 	{
@@ -146,7 +179,7 @@ void oclThread::run()
 				/*.iters = */ 0,
 				/*.delapsed = */ 0.0,
 				/*.dst = */ item.src,
-				/*.glsize = */ cv::Size(0, 0)
+				/*.glsize = */ cv::Size(0, 0) // <- bez interopu
 			};
 			emit processingDone(pitem);
 			continue;
@@ -155,31 +188,12 @@ void oclThread::run()
 		ProcessedItem pitem = {
 			/*.iters = */ 1,
 			/*.delapsed = */ 0.0,
-			// Tworzymy obraz wynikowy (alokacja miejsca)
-			/*.dst = */ cv::Mat(item.src.size(),
-				CV_MAKETYPE(item.src.depth(), item.src.channels())),
+			/*.dst = */ cv::Mat(),
 			/*glsize = */ cv::Size(0, 0)
 		};
 
-		//ProcessedItem pitem = {
-		//	/*.iters = */ 1,
-		//	/*.delapsed = */ 0.0,
-		//	/*.dst = */ cv::Mat(),
-		//	/*glsize = */ item.src.size()
-		//};
-
-		//shareWidget->makeCurrent();
-		//glBindTexture(GL_TEXTURE_2D, 1);
-		//GLint p;
-		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &p);
-		//qDebug() << p;
-		//shareWidget->doneCurrent();
-
-		//glWidget->makeCurrent();
-		//((DummyGLWidget*)glWidget)->resizeSurface(
-		//	pitem.glsize.width, pitem.glsize.height);
-
 		// Zaneguj obraz
+		// TODO: Bloczek do negowania
 		if(item.negate)
 		{
 			ElapsedTimer t;
@@ -188,8 +202,24 @@ void oclThread::run()
 			cv::Mat tmp(item.src.size(), item.src.depth(), item.src.channels());
 			cvu::negate(item.src, tmp);
 			item.src = tmp;
-
+			
 			pitem.delapsed += t.elapsed();
+
+			// Czy jest to ostatni 'bloczek'
+			if (item.bc == cvu::BC_None &&
+				item.op == cvu::MO_None)
+			{
+				pitem.dst = item.src;
+				emit processingDone(pitem);
+				continue;
+			}
+		}
+
+		if(glInterop) 
+		{
+			pitem.glsize = item.src.size();
+			shareWidget->makeCurrent();
+			shareWidget->resizeSurface(pitem.glsize.width, pitem.glsize.height);
 		}
 		
 		oclImage2DHolder holder = c.copyImageToDevice(item.src, ReadOnly);
@@ -202,24 +232,42 @@ void oclThread::run()
 		// Filtr Bayer'a
 		if(item.bc != cvu::BC_None)
 		{
-
 			bayerFilter->setBayerFilter(item.bc);
 			bayerFilter->setSourceImage(holder);
-			pitem.delapsed += bayerFilter->run();
-			holder = oclImage2DHolder(bayerFilter->outputDeviceImage());
+
+			// Czy filtr bayera jest ostatnim 'bloczkiem'
+			if(glInterop && item.op == cvu::MO_None)
+			{
+				oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
+				bayerFilter->setOutputDeviceImage(output);
+				pitem.delapsed += bayerFilter->run();
+			}
+			else
+			{
+				pitem.delapsed += bayerFilter->run();
+				holder = oclImage2DHolder(bayerFilter->outputDeviceImage());
+			}
 		}
 
 		// Operacja morfologiczna/hitmiss
 		if(item.op != cvu::MO_None)
 		{
-			if (item.op == cvu::MO_Outline ||
-				item.op == cvu::MO_Skeleton ||
-				item.op == cvu::MO_Skeleton_ZhangSuen)
+			if(isHitMiss(item.op))
 			{
 				hitmissFilter->setHitMissOperation(item.op);
 				hitmissFilter->setSourceImage(holder);
-				pitem.delapsed += hitmissFilter->run();
-				holder = oclImage2DHolder(morphFilter->outputDeviceImage());
+
+				if(glInterop)
+				{
+					oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
+					hitmissFilter->setOutputDeviceImage(output);
+					pitem.delapsed += hitmissFilter->run();
+				}
+				else
+				{
+					pitem.delapsed += hitmissFilter->run();
+					holder = oclImage2DHolder(morphFilter->outputDeviceImage());
+				}
 			}
 			else
 			{
@@ -227,19 +275,32 @@ void oclThread::run()
 				morphFilter->setStructuringElement(item.se);
 				morphFilter->setSourceImage(holder);
 
-				//oclImage2DHolder output = c.createDeviceImageGL(surface, WriteOnly);
-				//morphFilter->setOutputDeviceImage(output);
-
-				pitem.delapsed += morphFilter->run();
-				holder = oclImage2DHolder(morphFilter->outputDeviceImage());
+				if(glInterop)
+				{
+					oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
+					morphFilter->setOutputDeviceImage(output);
+					pitem.delapsed += morphFilter->run();
+				}
+				else
+				{
+					pitem.delapsed += morphFilter->run();
+					holder = oclImage2DHolder(morphFilter->outputDeviceImage());
+				}
 			}
 		}
-		
-		pitem.dst = c.readImageFromDevice(holder);
-		qDebug("Transfering output image from the device took %.05lf ms\n",
-			c.oclElapsedEvent(holder.evt));
 
-		//pitem.delapsed += c.oclElapsedEvent(holder.evt);
+		if(!glInterop)
+		{
+			// Jesli nie dzielimy zasobow, trzeba je teraz sciagnac
+			pitem.dst = c.readImageFromDevice(holder);
+			qDebug("Transfering output image from the device took %.05lf ms\n",
+				c.oclElapsedEvent(holder.evt));
+			pitem.delapsed += c.oclElapsedEvent(holder.evt);
+		}
+		else
+		{
+			shareWidget->doneCurrent();
+		}
 
 		emit processingDone(pitem);
 	}
@@ -248,6 +309,4 @@ void oclThread::run()
 	delete bayerFilter;
 	delete morphFilter;
 	delete hitmissFilter;
-
-	//if(glWidget) glWidget->deleteLater();
 }
