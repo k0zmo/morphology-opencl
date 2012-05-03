@@ -162,7 +162,7 @@ private:
 	// Lista pobranych platform
 	std::vector<cl::Platform> pls;
 	// Lista zcache'owanych programow
-	std::map<std::string, std::map<std::string, cl::Program>> programs;
+	std::map<std::string, std::map<std::string, cl::Program> > programs;
 	// Utworzony kontekst
 	cl::Context ctx;
 	// Wybrane urzadzenie

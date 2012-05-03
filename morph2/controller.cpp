@@ -40,17 +40,26 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	setupUi(this);
 
 	// Menu (File)
-	connect(actionCameraInput, SIGNAL(triggered(bool)), SLOT(onFromCameraTriggered(bool)));
-	connect(actionOpen, SIGNAL(triggered()), SLOT(onOpenFileTriggered()));
-	connect(actionSave, SIGNAL(triggered()), SLOT(onSaveFileTriggered()));
-	connect(actionOpenSE, SIGNAL(triggered()), SLOT(onOpenStructuringElementTriggered()));
-	connect(actionSaveSE, SIGNAL(triggered()), SLOT(onSaveStructuringElementTriggered()));
-	connect(actionExit, SIGNAL(triggered()), SLOT(close()));
+	connect(actionCameraInput, SIGNAL(triggered(bool)),
+		SLOT(onFromCameraTriggered(bool)));
+	connect(actionOpen, SIGNAL(triggered()),
+		SLOT(onOpenFileTriggered()));
+	connect(actionSave, SIGNAL(triggered()),
+		SLOT(onSaveFileTriggered()));
+	connect(actionOpenSE, SIGNAL(triggered()),
+		SLOT(onOpenStructuringElementTriggered()));
+	connect(actionSaveSE, SIGNAL(triggered()),
+		SLOT(onSaveStructuringElementTriggered()));
+	connect(actionExit, SIGNAL(triggered()),
+		SLOT(close()));
 
 	// Menu (Settings)
-	connect(actionOpenCL, SIGNAL(triggered(bool)), SLOT(onOpenCLTriggered(bool)));
-	connect(actionPickMethod, SIGNAL(triggered()), SLOT(onPickMethodTriggerd()));
-	connect(actionSettings, SIGNAL(triggered()), SLOT(onSettingsTriggered()));
+	connect(actionOpenCL, SIGNAL(triggered(bool)),
+		SLOT(onOpenCLTriggered(bool)));
+	connect(actionPickMethod, SIGNAL(triggered())
+		, SLOT(onPickMethodTriggerd()));
+	connect(actionSettings, SIGNAL(triggered()),
+		SLOT(onSettingsTriggered()));
 
 	// Pasek stanu
 	procQueueLabel = new QLabel(this);
@@ -680,7 +689,17 @@ void Controller::initializeOpenCL()
 		platformId = picker.platform();
 		deviceId = picker.device();
 	}
+	else
+	{
+		delete clThread;
+		delete glw;
+		
+		clThread = 0;
+		glw = 0;
 
+		return;
+	}
+	 
 	clThread->choose(platformId, deviceId);
 	clThread->start(QThread::HighPriority);
 

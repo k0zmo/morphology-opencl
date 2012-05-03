@@ -10,6 +10,11 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	, deviceId(0)
 {
 	setupUi(this);
+	Q_ASSERT(buttonBox->button(QDialogButtonBox::Ok));
+	Q_ASSERT(buttonBox->button(QDialogButtonBox::Cancel));
+
+	buttonBox->button(QDialogButtonBox::Ok)->setText("Choose");
+	buttonBox->button(QDialogButtonBox::Cancel)->setText("No OpenCL");
 
 	QList<QTreeWidgetItem*> items;
 
@@ -66,8 +71,8 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
 
-	connect(pushButton, SIGNAL(pressed()),
-		SLOT(onChoosePressed()));
+	connect(buttonBox, SIGNAL(accepted()), SLOT(accept()));
+	connect(buttonBox, SIGNAL(rejected()), SLOT(reject()));
 }
 
 oclPicker::~oclPicker()
@@ -77,7 +82,7 @@ oclPicker::~oclPicker()
 void oclPicker::onItemSelectionChanged()
 {
 	QList<QTreeWidgetItem*> selected = treeWidget->selectedItems();
-	pushButton->setEnabled(false);
+	buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
 
 	if(selected.isEmpty())
 	{
@@ -104,12 +109,12 @@ void oclPicker::onItemSelectionChanged()
 		if(i != devToDesc.end())
 		{
 			textEdit->setPlainText(i.value());
-			pushButton->setEnabled(true);
+			buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
 		}
 	}
 }
 
-void oclPicker::onChoosePressed()
+void oclPicker::accept()
 {
 	QList<QTreeWidgetItem*> selected = treeWidget->selectedItems();
 

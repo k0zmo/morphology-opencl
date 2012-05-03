@@ -19,7 +19,7 @@ public:
 
 private slots:
 	void onItemSelectionChanged();
-	void onChoosePressed();
+	void accept();
 
 private:
 	QMap<QString, QString> devToDesc;
