@@ -6,36 +6,35 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>757</width>
-    <height>334</height>
+    <width>624</width>
+    <height>265</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Pick an OpenCL device</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QTreeWidget" name="treeWidget">
-       <column>
-        <property name="text">
-         <string>Available devices</string>
-        </property>
-       </column>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTextEdit" name="textEdit">
-       <property name="documentTitle">
-        <string>Device properties</string>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QTreeWidget" name="treeWidget">
+      <column>
+       <property name="text">
+        <string>Available devices</string>
        </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+      </column>
+     </widget>
+     <widget class="QTextEdit" name="textEdit">
+      <property name="documentTitle">
+       <string>Device properties</string>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
