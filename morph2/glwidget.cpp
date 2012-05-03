@@ -6,12 +6,13 @@ GLDummyWidget::GLDummyWidget(QWidget* parent,
 	, d_surface(0)
 	, d_width(-1)
 	, d_height(-1)
+	, deleteTexUponDestruction(false)
 {
 }
 
 GLDummyWidget::~GLDummyWidget()
 {
-	if(d_surface)
+	if(d_surface && deleteTexUponDestruction)
 		glDeleteTextures(1, &d_surface);
 }
 
@@ -28,9 +29,13 @@ void GLDummyWidget::initializeWithNewSurface(int initWidth, int initHeight)
 
 	d_width = initWidth;
 	d_height = initHeight;
+	deleteTexUponDestruction = true;
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, d_width, d_height,
 		0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+	GLenum err = glGetError();
+	if(err) printf("OpenGL Error: 0x0%x\n", err);
 }
 
 void GLDummyWidget::initializeWithSharedSurface(GLuint surface)
@@ -41,11 +46,13 @@ void GLDummyWidget::initializeWithSharedSurface(GLuint surface)
 	d_surface = surface;
 	d_width = -1;
 	d_height = -1;
+	deleteTexUponDestruction = false;
 }
 
 void GLDummyWidget::setSurfaceData(const cv::Mat& cvSurface)
 {
 	createSurface_impl(cvSurface.cols, cvSurface.rows, cvSurface.data);
+	cv::imwrite("test.png", cvSurface);
 }
 
 GLuint GLDummyWidget::resizeSurface(int w, int h)
@@ -74,8 +81,13 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 			d_height, GL_RED, GL_UNSIGNED_BYTE, data);
 	}
 
+	GLenum err = glGetError();
+	if(err) printf("OpenGL Error: 0x0%x\n", err);
+
 	emit surfaceChanged();
 }
+
+// _____________________________________________________________________________
 
 GLWidget::GLWidget(QWidget* parent, 
 	const QGLWidget* shareWidget)
@@ -187,6 +199,9 @@ void GLWidget::initializeGL()
 	d_prog->bindAttributeLocation("in_pos", 0);
 	d_prog->bindAttributeLocation("in_texCoord", 1);
 
+	err = glGetError();
+	if(err) printf("OpenGL Error: 0x0%x\n", err);
+
 	printf(" * Done initializing OpenGL\n");
 	emit initialized();
 }
@@ -195,10 +210,20 @@ void GLWidget::paintGL()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// Draw full screen quad
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, d_surface);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	if(d_surface != 0)
+	{
+		// Draw full screen quad
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, d_surface);
+
+		//GLint w, h;
+		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+
+		//qDebug() << "Texture to be drawn:" << w << h;
+
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+	}
 
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);

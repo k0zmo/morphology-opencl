@@ -34,6 +34,7 @@ private:
 	GLuint d_surface;
 	int d_width;
 	int d_height;
+	bool deleteTexUponDestruction;
 
 private:
 	void createSurface_impl(int w, int h, const void* data);
