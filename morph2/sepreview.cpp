@@ -40,6 +40,9 @@ void PreviewLabel::setPreviewImage(const cv::Mat& se_)
 			cv::drawContours(se, hull, i, cv::Scalar(2), 3, CV_AA);
 	}
 
+	pixSize = QSizeF((double)se.cols / se_.cols,
+			(double)se.rows / se_.rows);
+
 	// Konwersja cv::Mat -> QImage (QPixmap)
 	QImage img(reinterpret_cast<const quint8*>(se.data),
 		se.cols, se.rows, se.step, 
@@ -71,6 +74,8 @@ void PreviewLabel::mousePressEvent(QMouseEvent* evt)
 
 	if(x >= se.cols || y >= se.rows)
 		return;
+
+	qDebug() << evt->button();
 
 	switch(evt->button())
 	{

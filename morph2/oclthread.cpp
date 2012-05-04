@@ -6,6 +6,10 @@
 
 #include <QDebug>
 
+#ifdef Q_WS_X11
+#	include <GL/glx.h>
+#endif
+
 oclThread::oclThread(BlockingQueue<ProcessingItem>& queue,
 	const Configuration& conf, GLDummyWidget* shareWidget)
 	: QThread(nullptr)
@@ -82,8 +86,13 @@ void oclThread::initContext()
 		shareWidget->makeCurrent();
 		qDebug() << "(i) Po makeCurrent";
 
+#ifdef Q_WS_WIN32
 		HDC dc = wglGetCurrentDC();
 		HGLRC rc = wglGetCurrentContext();
+#else
+		Display* dc = glXGetCurrentDisplay();
+		GLXContext rc = glXGetCurrentContext();
+#endif
 
 		//qDebug() << "currentDC:" << dc << 
 		//	"currentContext:" << rc;

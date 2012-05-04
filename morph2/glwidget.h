@@ -27,9 +27,6 @@ public:
 
 	GLuint surface() const { return d_surface; }
 
-signals:
-	void surfaceChanged();
-
 private:
 	GLuint d_surface;
 	int d_width;
@@ -38,6 +35,7 @@ private:
 
 private:
 	void createSurface_impl(int w, int h, const void* data);
+	void initialize_impl();
 };
 
 class GLWidget : public QGLWidget

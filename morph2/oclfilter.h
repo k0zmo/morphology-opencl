@@ -31,6 +31,6 @@ protected:
 
 	const oclImage2DHolder* src;
 	oclImage2DHolder dst;
-	bool ownsOutput;
 	cv::Rect roi;
+	bool ownsOutput;
 };

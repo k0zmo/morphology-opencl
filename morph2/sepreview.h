@@ -16,8 +16,8 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* evt);
 
 private:
-	QSizeF pixSize;
 	cv::Mat se;
+	QSizeF pixSize;
 
 signals:
 	void structuringElementModified(const cv::Mat& se);

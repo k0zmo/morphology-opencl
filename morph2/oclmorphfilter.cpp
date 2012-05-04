@@ -8,7 +8,7 @@ oclMorphFilter::oclMorphFilter(oclContext* ctx,
 {
 	// Wczytaj program
 	cl::Program program = ctx->createProgram(
-		"kernels-buffer2D/morph.cl", "-Ikernels-buffer2D/");
+		"kernels/2d/morph.cl", "-Ikernels/2d/");
 
 	// I wyciagnij z niego kernele
 	kernelErode = ctx->retrieveKernel(program, erode);

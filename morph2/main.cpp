@@ -6,7 +6,7 @@
 #include "controller.h"
 
 #ifdef _WIN32
-#define setenv _putenv_s
+#define setenv(name, value, replace) _putenv_s(name, value)
 #endif
 
 int main(int argc, char *argv[])
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 		QString env = s.value("gui/qtcurvestyle").toString();
 		QByteArray data = env.toAscii();
 
-		setenv("QTCURVE_CONFIG_FILE", data.constData());
+		setenv("QTCURVE_CONFIG_FILE", data.constData(), 1);
 
 		QStyle* style = QStyleFactory::create("QtCurve");
 		if(style)

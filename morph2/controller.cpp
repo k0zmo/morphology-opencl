@@ -14,7 +14,7 @@
 #include "oclthread.h"
 #include "capthread.h"
 
-#define DISABLE_OPENGL 0
+#define DISABLE_OPENGL 1
 #define DISABLE_OPENCL 1
 
 template<>
@@ -308,8 +308,6 @@ void Controller::onOpenFileTriggered()
 		// jesli wybrane wczesniej bylo None to nie zostal
 		// wyemitowany zaden sygnal
 		onRecompute();
-
-	mw->resize(1, 1);
 }
 
 void Controller::onSaveFileTriggered()

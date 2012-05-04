@@ -34,6 +34,8 @@ void GLDummyWidget::initializeWithNewSurface(int initWidth, int initHeight)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, d_width, d_height,
 		0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
+	initialize_impl();
+
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);
 }
@@ -47,12 +49,13 @@ void GLDummyWidget::initializeWithSharedSurface(GLuint surface)
 	d_width = -1;
 	d_height = -1;
 	deleteTexUponDestruction = false;
+
+	initialize_impl();
 }
 
 void GLDummyWidget::setSurfaceData(const cv::Mat& cvSurface)
 {
 	createSurface_impl(cvSurface.cols, cvSurface.rows, cvSurface.data);
-	cv::imwrite("test.png", cvSurface);
 }
 
 GLuint GLDummyWidget::resizeSurface(int w, int h)
@@ -63,7 +66,12 @@ GLuint GLDummyWidget::resizeSurface(int w, int h)
 
 void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 {
+	if(!d_surface)
+		return;
+
 	makeCurrent();
+
+	glBindTexture(GL_TEXTURE_2D, d_surface);
 
 	// Nastapila zmiana rozmiaru - alokujemy pamiec od nowa
 	if(d_width != w || d_height != h)
@@ -84,8 +92,15 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);
 
-	emit surfaceChanged();
+	doneCurrent();
 }
+
+void GLDummyWidget::initialize_impl()
+{
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+}
+
 
 // _____________________________________________________________________________
 
@@ -93,8 +108,8 @@ GLWidget::GLWidget(QWidget* parent,
 	const QGLWidget* shareWidget)
 	: QGLWidget(parent, shareWidget)
 	, d_vboQuad(0)
-	, d_prog(nullptr)
 	, d_surface(0)
+	, d_prog(nullptr)
 	, d_init(false)
 {
 }
@@ -170,14 +185,14 @@ void GLWidget::initializeGL()
 	d_prog = new QGLShaderProgram(this);
 
 	if(!d_prog->addShaderFromSourceFile
-		(QGLShader::Vertex, QLatin1String("gl/vertex.glsl")))
+		(QGLShader::Vertex, QLatin1String("shaders/vertex.glsl")))
 	{
 		emit error(d_prog->log());
 		return;
 	}
 
 	if(!d_prog->addShaderFromSourceFile
-		(QGLShader::Fragment, QLatin1String("gl/fragment.glsl")))
+		(QGLShader::Fragment, QLatin1String("shaders/fragment.glsl")))
 	{
 		emit error(d_prog->log());
 		return;
@@ -216,10 +231,10 @@ void GLWidget::paintGL()
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, d_surface);
 
-		//GLint w, h;
-		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
-		//glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
-
+		// Jesli tego nie wywolam to tekstura po zmianie rozmiaru sie nie odswiezy :<
+		GLint w, h;
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
 		//qDebug() << "Texture to be drawn:" << w << h;
 
 		glDrawArrays(GL_TRIANGLES, 0, 3);

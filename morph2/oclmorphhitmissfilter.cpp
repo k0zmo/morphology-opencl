@@ -9,7 +9,7 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 	: oclFilter(ctx)
 	, hmOp(cvu::MO_None)
 {
-	std::string opts = "-Ikernels-buffer2D/";
+	std::string opts = "-Ikernels/2d/";
 	if(atomicCounters)
 	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
@@ -18,7 +18,7 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 
 	// Wczytaj program
 	cl::Program program = ctx->createProgram(
-		"kernels-buffer2D/hitmiss.cl", opts.c_str());
+		"kernels/2d/hitmiss.cl", opts.c_str());
 
 	// I wyciagnij z niego kernele
 	kernelOutline = ctx->retrieveKernel(program, "outline");

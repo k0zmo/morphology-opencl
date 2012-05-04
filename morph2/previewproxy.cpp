@@ -25,18 +25,18 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 		if(!d_hardware || !d_shareWidget)
 			return;
 
+		d_shareWidget->setSurfaceData(image);
+
 		cv::Size ms(maxImgSize.width(), maxImgSize.height());
 		auto coeffs = cvu::scaleCoeffs(image.size(), ms);
 
 		double fx = coeffs.first;
 		double fy = coeffs.second;
 
-		QSize surfaceSize(image.cols * fx, image.rows * fy);
+		QSize surfaceSize(image.cols * fx, image.rows * fy);		
 
 		d_hardware->setMinimumSize(surfaceSize);
 		d_hardware->setMaximumSize(surfaceSize);
-
-		d_shareWidget->setSurfaceData(image);
 		d_hardware->updateGL();
 	}
 	else
@@ -103,7 +103,6 @@ void PreviewProxy::initHardware(GLDummyWidget* shareWidget)
 	d_hardware->setSurface(shareWidget->surface());
 	d_shareWidget = shareWidget;
 
-	//connect(shareWidget, SIGNAL(surfaceChanged()), hardware, SLOT(updateGL()));
 	connect(d_hardware, SIGNAL(error(QString)),
 		SLOT(onGLWidgetError(QString)));
 	connect(d_hardware, SIGNAL(initialized()),

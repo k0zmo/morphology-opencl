@@ -7,7 +7,7 @@ oclBayerFilter::oclBayerFilter(
 {
 	// Wczytaj program
 	cl::Program programBayer = ctx->createProgram(
-		"kernels-buffer2D/bayer.cl", "-Ikernels-buffer2D/ -DGRAYSCALE");
+		"kernels/2d/bayer.cl", "-Ikernels/2d/ -DGRAYSCALE");
 
 	// I wyciagnij z niego kernele
 	kernels[cvu::BC_RedGreen  - 1] = ctx->retrieveKernel(
