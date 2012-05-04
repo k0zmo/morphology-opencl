@@ -101,7 +101,6 @@ void GLDummyWidget::initialize_impl()
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 }
 
-
 // _____________________________________________________________________________
 
 GLWidget::GLWidget(QWidget* parent, 

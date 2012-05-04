@@ -14,8 +14,8 @@
 #include "oclthread.h"
 #include "capthread.h"
 
-#define DISABLE_OPENGL 1
-#define DISABLE_OPENCL 1
+#define DISABLE_OPENGL 0
+#define DISABLE_OPENCL 0
 
 template<>
 Controller* Singleton<Controller>::msSingleton = nullptr;

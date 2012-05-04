@@ -108,7 +108,7 @@ void PreviewProxy::initHardware(GLDummyWidget* shareWidget)
 	connect(d_hardware, SIGNAL(initialized()),
 		SLOT(onGLWidgetInitialized()));
 
-	d_layout->addWidget(d_hardware);
+ 	d_layout->addWidget(d_hardware);
 	d_hardware->updateGL();
 }
 
@@ -123,7 +123,9 @@ void PreviewProxy::onGLWidgetError(const QString& msg)
 		msg + "\nSwitching back to software mode.");
 
 	d_hardware->hide();
-	d_hardware->deleteLater();
+
+	// crashuje
+	//d_hardware->deleteLater();
 
 	initSoftware();
 }
