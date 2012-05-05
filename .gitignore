@@ -10,6 +10,7 @@ morph-cl/ProfilerOutput
 gauss/Debug
 gauss/Release
 bin32/profiler/*.txt
+bin32/styles
 
 ipch
 
@@ -20,6 +21,7 @@ ipch
 *.sdf
 *.suo
 *.dll
+*.pro.user
 *moc_*
 *ui_*
 *.o
