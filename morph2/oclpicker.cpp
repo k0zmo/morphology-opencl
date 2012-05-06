@@ -3,6 +3,29 @@
 #include <QMessageBox>
 #include <QDebug>
 
+static QString q_deviceTypeToString(QCLDevice::DeviceTypes type)
+{
+	if(type & QCLDevice::GPU)
+		return "GPU";
+	if(type & QCLDevice::CPU)
+		return "CPU";
+	if(type & QCLDevice::Accelerator)
+		return "Accelerator";
+
+	return "Undefined";
+}
+
+static QString q_cacheTypeToString(QCLDevice::CacheType type)
+{
+	switch(type)
+	{
+	case QCLDevice::NoCache: return "No cache";
+	case QCLDevice::ReadOnlyCache: return "Read-only cache";
+	case QCLDevice::ReadWriteCache: return "Read-Write cache";
+	default: return "Undefined";
+	}
+}
+
 oclPicker::oclPicker(const PlatformDevicesMap& map,
 	QWidget* parent)
 	: QDialog(parent)
@@ -18,46 +41,71 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	QList<QTreeWidgetItem*> items;
 
-	QMapIterator<oclPlatformDesc, QList<oclDeviceDesc> > i(map);
+	QMapIterator<QCLPlatform, QList<QCLDevice> > i(map);
 	while(i.hasNext())
 	{
 		i.next();
 
-		QString cbText = QString("[%1] %2 %3")
-				.arg(i.key().id)
-				.arg(QString::fromStdString(i.key().name))
-				.arg(QString::fromStdString(i.key().version));
+		QCLPlatform p = i.key();
+
+		QString cbText = QString("%1 %2 (%3)")
+				.arg(p.name())
+				.arg(p.version())
+				.arg(p.vendor());
 
 		QTreeWidgetItem* pl = new QTreeWidgetItem((QTreeWidget*)0, QStringList(cbText));
 		items.append(pl);
 
 		auto& devlist = i.value();
-		foreach(oclDeviceDesc desc, devlist)
+		foreach(QCLDevice dev, devlist)
 		{
-			QTreeWidgetItem* dev = new QTreeWidgetItem(pl,
-				QStringList(QString::fromStdString(desc.name)));
-			items.append(dev);
+			QTreeWidgetItem* devItem = new QTreeWidgetItem(pl,
+				QStringList(dev.name()));
+			items.append(devItem);
+
+			QCLDevice::DeviceTypes deviceType = dev.deviceType();
+			int computeUnits = dev.computeUnits();
+			int clockFrequency = dev.clockFrequency();
+			bool hasImage2D = dev.hasImage2D();
+			quint64 maximumAllocationSize = dev.maximumAllocationSize();
+			quint64 globalMemorySize = dev.globalMemorySize();
+			QCLDevice::CacheType globalMemoryCacheType = dev.globalMemoryCacheType();
+			quint64 globalMemoryCacheSize = dev.globalMemoryCacheSize();
+			int globalMemoryCacheLineSize = dev.globalMemoryCacheLineSize();
+			quint64 localMemorySize = dev.localMemorySize();
+			bool isLocalMemorySeparate = dev.isLocalMemorySeparate();
+			quint64 maximumConstantBufferSize = dev.maximumConstantBufferSize();
 
 			QString description = QString(
-				"Images supported: %1\n"
+				"Device type: %1\n"
 				"Compute units: %2\n"
 				"Clock frequency: %3 MHz\n"
-				"Constant buffer size: %4 B (%5 kB)\n"
-				"Memory object allocation: %6 B (%7 MB)\n"
-				"Local memory size: %8 B (%9 kB)\n"
-				"Local memory type: %10\n")
-					.arg(desc.imagesSupported ? "yes" : "no")
-					.arg(desc.maxComputeUnits)
-					.arg(desc.maxClockFreq)
-					.arg(desc.maxConstantBufferSize)
-					.arg(desc.maxConstantBufferSize >> 10)
-					.arg(desc.maxMemAllocSize)
-					.arg(desc.maxMemAllocSize >> 20)
-					.arg(desc.localMemSize)
-					.arg(desc.localMemSize >> 10)
-					.arg((desc.localMemType == CL_LOCAL) ? "local" : "global");
-
-			devToDesc.insert(QString::fromStdString(desc.name), description);
+				"Images supported: %4\n"
+				"Maximum allocation size: %5 B (%6 MB)\n"
+				"Global memory size: %7 B (%8 MB)\n"
+				"Global memory cache type: %9\n"
+				"Global memory cache size: %10 B\n"
+				"Global memory cache line size: %11\n"
+				"Local memory size: %12 B (%13 kB)\n"
+				"Local memory type: %14\n"
+				"Constant buffer size: %15 B (%16 kB)\n")
+					.arg(q_deviceTypeToString(deviceType))
+					.arg(computeUnits)
+					.arg(clockFrequency)
+					.arg(hasImage2D ? "yes" : "no")
+					.arg(maximumAllocationSize)
+					.arg(maximumAllocationSize >> 20)
+					.arg(globalMemorySize)
+					.arg(globalMemorySize >> 20)
+					.arg(q_cacheTypeToString(globalMemoryCacheType))
+					.arg(globalMemoryCacheSize)
+					.arg(globalMemoryCacheLineSize)
+					.arg(localMemorySize)
+					.arg(localMemorySize >> 10)
+					.arg(isLocalMemorySeparate ? "on-chip" : "global")
+					.arg(maximumConstantBufferSize)
+					.arg(maximumConstantBufferSize >> 10);
+			devToDesc.insert(dev.name(), description);
 		}
 	}
 

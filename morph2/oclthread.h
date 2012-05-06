@@ -7,18 +7,15 @@
 #include "blockingqueue.h"
 #include "configuration.h"
 
-#include "oclcontext.h"
-#include "oclfilter.h"
-#include "oclbayerfilter.h"
-#include "oclmorphfilter.h"
-#include "oclmorphhitmissfilter.h"
-
+#include <QCLPlatform>
+#include <QCLDevice>
+class QCLContext;
 class GLDummyWidget;
 
 // Mapa pobranych danych o platformach i ich urzadzeniach
-typedef QMap<oclPlatformDesc, QList<oclDeviceDesc> > PlatformDevicesMap;
-inline bool operator<(const oclPlatformDesc& p1, const oclPlatformDesc& p2)
-{ return p1.id < p2.id; }
+typedef QMap<QCLPlatform, QList<QCLDevice> > PlatformDevicesMap;
+inline bool operator<(const QCLPlatform& p1, const QCLPlatform& p2)
+{ return p1.platformId() < p2.platformId(); }
 
 class oclThread : public QThread
 {
@@ -45,13 +42,8 @@ private:
 
 	Configuration conf;
 
-	oclContext c;
-	oclBayerFilter* bayerFilter;
-	oclMorphFilter* morphFilter;
-	oclMorphHitMissFilter* hitmissFilter;
-
 private:
-	void initContext();
+	void initContext(QCLContext& ctx);
 
 signals:
 	void processingDone(const ProcessedItem& item);

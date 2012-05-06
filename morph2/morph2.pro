@@ -1,5 +1,5 @@
 QT += core gui opengl
-CONFIG += debug_and_release warn_on precompile_header
+CONFIG += debug_and_release warn_on precompile_header console
 
 TARGET = morph2
 TEMPLATE = app
@@ -13,11 +13,6 @@ SOURCES += \
 	glwidget.cpp \
 	main.cpp \
 	morphop.cpp \
-	oclbayerfilter.cpp \
-	oclcontext.cpp \
-	oclfilter.cpp \
-	oclmorphfilter.cpp \
-	oclmorphhitmissfilter.cpp \
 	procthread.cpp \
 	sepreview.cpp \
 	settings.cpp \
@@ -26,7 +21,8 @@ SOURCES += \
 	oclpicker.cpp \
 	mainwidget.cpp \
 	previewproxy.cpp \
-	glew.cpp
+	glew.cpp \
+    oclbayerfilter.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -37,11 +33,6 @@ HEADERS  += \
 	elapsedtimer.h \
 	glwidget.h \
 	morphop.h \
-	oclbayerfilter.h \
-	oclcontext.h \
-	oclfilter.h \
-	oclmorphfilter.h \
-	oclmorphhitmissfilter.h \
 	procthread.h \
 	sepreview.h \
 	settings.h \
@@ -49,7 +40,8 @@ HEADERS  += \
 	oclthread.h \
 	oclpicker.h \
 	mainwidget.h \
-	previewproxy.h
+	previewproxy.h \
+    oclbayerfilter.h
 
 FORMS += \
 	sepreview.ui \
@@ -63,3 +55,6 @@ PRECOMPILED_HEADER = precompiled.h
 
 QMAKE_CXXFLAGS += -std=c++0x -fopenmp
 LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
+
+LIBS += -lQtOpenCL
+INCLUDEPATH += /usr/include/QtOpenCL
