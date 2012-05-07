@@ -187,12 +187,12 @@ void Controller::onPreviewInitialized(bool success)
 		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
+	onRecompute();
+	show();
+
 #if DISABLE_OPENCL == 0
 	initializeOpenCL();
 #endif
-
-	onRecompute();
-	show();
 }
 
 void Controller::onRecompute()
@@ -662,10 +662,54 @@ void Controller::showStats(int iters, double elapsed)
 
 void Controller::initializeOpenCL()
 {
+	// Odpal watek przetwarzajacy obraz z wykorzystaniem OpenCLa
+	clThread = new oclThread(clQueue, conf);
+
+	connect(clThread, SIGNAL(processingDone(ProcessedItem)),
+		SLOT(onProcessingDone(ProcessedItem)));
+	connect(clThread, SIGNAL(openCLInitialized(bool)),
+		SLOT(onOpenCLInitialized(bool)));
+
+	PlatformDevicesMap map = clThread->queryPlatforms();
+	if(map.isEmpty())
+	{
+		QMessageBox::information(this, "Morph OpenCL", 
+			"No OpenCL platforms detected, proceeding with OpenCL turned off");
+		
+		delete clThread;
+		clThread = 0;
+
+		return;
+	}
+
+	oclPicker picker(map);
+
+	// Wartosci domyslne
+	int platformId = 0;
+	int deviceId = 0;
+	bool tryInterop = false;
+
+	if(picker.exec() == QDialog::Accepted)
+	{
+		platformId = picker.platform();
+		deviceId = picker.device();
+		tryInterop = picker.tryInterop();
+	}
+	else
+	{
+		delete clThread;
+		clThread = 0;
+
+		return;
+	}
+
+	// MOZE SIE ZDARZYC TAK, ZE CLTHREAD MA AKTYWNY KONTEKST I NADEJDZIE 
+	// ONPROCESSINGDONE (TO Z PREVIEWINITIALIZED) - MOZNA BY TO ZMIENIC
+
 	// Czy oclThread bedzie dzielic zasoby OpenGL'a
 	// z kontrolka do wyswietlania gotowych tekstur (gl/cl interop)
 	bool useHardware = preview->useHardware();
-	useHardware &= conf.glInterop;
+	useHardware &= tryInterop;
 
 	GLDummyWidget* glw = nullptr;
 	if (useHardware)
@@ -675,41 +719,8 @@ void Controller::initializeOpenCL()
 		glw->resize(0, 0);
 		glw->initializeWithSharedSurface(shareWidget->surface());
 	}
-
-	// Odpal watek przetwarzajacy obraz z wykorzystaniem OpenCLa
-	clThread = new oclThread(clQueue, conf, glw);
-
-	connect(clThread, SIGNAL(processingDone(ProcessedItem)),
-		SLOT(onProcessingDone(ProcessedItem)));
-	connect(clThread, SIGNAL(openCLInitialized(bool)),
-		SLOT(onOpenCLInitialized(bool)));
-
-	PlatformDevicesMap map = clThread->queryPlatforms();
-	oclPicker picker(map);
-
-	// Wartosci domyslne
-	int platformId = 0;
-	int deviceId = 0;
-
-	if(picker.exec() == QDialog::Accepted)
-	{
-		platformId = picker.platform();
-		deviceId = picker.device();
-	}
-	else
-	{
-		delete clThread;
-		delete glw;
-		
-		clThread = 0;
-		glw = 0;
-
-		return;
-	}
-
-	// MOZE SIE ZDARZYC TAK, ZE CLTHREAD MA AKTYWNY KONTEKST I NADEJDZIE 
-	// ONPROCESSINGDONE (TO Z PREVIEWINITIALIZED) - MOZNA BY TO ZMIENIC
-	 
+	
+	clThread->setSharedWidget(glw);
 	clThread->choose(platformId, deviceId);
 	clThread->start(QThread::HighPriority);
 

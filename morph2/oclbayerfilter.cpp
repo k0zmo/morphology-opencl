@@ -5,9 +5,11 @@ oclBayerFilter::oclBayerFilter(
 	: oclFilter(ctx)
 	, kernel(nullptr)
 {
+	printf("\n*---- Bayer filter initialization ----*\n");
+
 	// Wczytaj program
 	cl::Program programBayer = ctx->createProgram(
-		"kernels/2d/bayer.cl", "-Ikernels/2d/ -DGRAYSCALE");
+		"kernels/2d/bayer.cl", "-Ikernels/2d/");
 
 	// I wyciagnij z niego kernele
 	kernels[cvu::BC_RedGreen  - 1] = ctx->retrieveKernel(

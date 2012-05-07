@@ -3,11 +3,23 @@
 #include <QMessageBox>
 #include <QDebug>
 
+QString q_deviceTypeToString(cl_device_type type)
+{
+	if(type & CL_DEVICE_TYPE_CPU)
+		return "CPU";
+	if(type & CL_DEVICE_TYPE_GPU)
+		return "GPU";
+	if(type & CL_DEVICE_TYPE_ACCELERATOR)
+		return "Accelerator";
+	return "Undefined";
+}
+
 oclPicker::oclPicker(const PlatformDevicesMap& map,
 	QWidget* parent)
 	: QDialog(parent)
 	, platformId(0)
 	, deviceId(0)
+	, interop(false)
 {
 	setupUi(this);
 	Q_ASSERT(buttonBox->button(QDialogButtonBox::Ok));
@@ -15,6 +27,14 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	buttonBox->button(QDialogButtonBox::Ok)->setText("Choose");
 	buttonBox->button(QDialogButtonBox::Cancel)->setText("No OpenCL");
+
+	connect(buttonBox, SIGNAL(accepted()), 
+		SLOT(accept()));
+	connect(buttonBox, SIGNAL(rejected()),
+		SLOT(reject()));
+
+	splitter->setStretchFactor(0, 7);
+	splitter->setStretchFactor(1, 3);
 
 	QList<QTreeWidgetItem*> items;
 
@@ -36,16 +56,19 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		{
 			QTreeWidgetItem* dev = new QTreeWidgetItem(pl,
 				QStringList(QString::fromStdString(desc.name)));
+			dev->setData(0, Qt::UserRole, (int) desc.deviceType);
 			items.append(dev);
 
 			QString description = QString(
-				"Images supported: %1\n"
-				"Compute units: %2\n"
-				"Clock frequency: %3 MHz\n"
-				"Constant buffer size: %4 B (%5 kB)\n"
-				"Memory object allocation: %6 B (%7 MB)\n"
-				"Local memory size: %8 B (%9 kB)\n"
-				"Local memory type: %10\n")
+				"Devic type: %1\n"
+				"Images supported: %2\n"
+				"Compute units: %3\n"
+				"Clock frequency: %4 MHz\n"
+				"Constant buffer size: %5 B (%6 kB)\n"
+				"Memory object allocation: %7 B (%8 MB)\n"
+				"Local memory size: %9 B (%10 kB)\n"
+				"Local memory type: %11\n")
+					.arg(q_deviceTypeToString(desc.deviceType))
 					.arg(desc.imagesSupported ? "yes" : "no")
 					.arg(desc.maxComputeUnits)
 					.arg(desc.maxClockFreq)
@@ -70,10 +93,8 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
-	connect(buttonBox, SIGNAL(accepted()), 
-		SLOT(accept()));
-	connect(buttonBox, SIGNAL(rejected()),
-		SLOT(reject()));
+	connect(tryInteropCheckBox, SIGNAL(toggled(bool)),
+		SLOT(onTryInteropToggled(bool)));
 }
 
 oclPicker::~oclPicker()
@@ -136,6 +157,50 @@ void oclPicker::accept()
 
 	platformId = treeWidget->indexOfTopLevelItem(parent);
 	deviceId = parent->indexOfChild(item);
+	interop = tryInteropCheckBox->isChecked();
 
 	QDialog::accept();
+}
+
+void oclPicker::onTryInteropToggled(bool checked)
+{
+	QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
+	QTreeWidgetItem* selected = nullptr;
+	if(!selectedItems.isEmpty())
+		selected = selectedItems[0];
+	bool forceRefresh = false;
+
+	int platformsCount = treeWidget->topLevelItemCount();
+
+	for(int i = 0; i < platformsCount; ++i)
+	{
+		QTreeWidgetItem* pl = treeWidget->topLevelItem(i);
+		int devicesCount = pl->childCount();
+		for(int j = 0; j < devicesCount; ++j)
+		{
+			QTreeWidgetItem* dev = pl->child(j);
+			cl_device_type deviceType = static_cast<cl_device_type>
+				(dev->data(0, Qt::UserRole).toInt());
+			
+			if(checked)
+			{
+				bool toHide = deviceType != CL_DEVICE_TYPE_GPU;
+				if(toHide && (dev == selected))
+					forceRefresh = true;
+				dev->setHidden(toHide);
+			}
+			else
+			{
+				dev->setHidden(false);
+			}				
+		}
+	}
+
+	if(forceRefresh)
+	{
+		// Zalozenie jest takie ze jakas platforma istnieje
+		// Oto dba Controller
+		treeWidget->setItemSelected(selected, false);
+		treeWidget->setItemSelected(treeWidget->topLevelItem(0), true);		
+	}
 }

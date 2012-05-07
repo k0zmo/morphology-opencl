@@ -25,7 +25,9 @@ void PreviewProxy::setPreviewImage(const cv::Mat& image,
 		if(!d_hardware || !d_shareWidget)
 			return;
 
+		d_shareWidget->makeCurrent();
 		d_shareWidget->setSurfaceData(image);
+		// d_shareWidget->doneCurrent(); <- chyba nie trzeba
 
 		cv::Size ms(maxImgSize.width(), maxImgSize.height());
 		auto coeffs = cvu::scaleCoeffs(image.size(), ms);

@@ -30,6 +30,12 @@ oclThread::~oclThread()
 {
 }
 
+void oclThread::setSharedWidget(GLDummyWidget* shareWidget)
+{
+	if(!isRunning())
+		this->shareWidget = shareWidget;
+}
+
 void oclThread::stop()
 {
 	QMutexLocker locker(&stopMutex);

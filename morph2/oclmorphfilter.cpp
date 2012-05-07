@@ -6,6 +6,8 @@ oclMorphFilter::oclMorphFilter(oclContext* ctx,
 	: oclFilter(ctx)
 	, morphOp(cvu::MO_None)
 {
+	printf("\n*---- Morphology filter initialization ----*\n");
+
 	// Wczytaj program
 	cl::Program program = ctx->createProgram(
 		"kernels/2d/morph.cl", "-Ikernels/2d/");

@@ -181,20 +181,7 @@
         <property name="margin">
          <number>8</number>
         </property>
-        <item row="3" column="0">
-         <widget class="QLabel" name="workgroupSizeYLabel">
-          <property name="text">
-           <string>Workgroup size Y</string>
-          </property>
-          <property name="buddy">
-           <cstring>workgroupSizeYComboBox</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QCheckBox" name="useAtomicCountersCheckBox"/>
-        </item>
-        <item row="2" column="1">
+        <item row="1" column="1">
          <widget class="QComboBox" name="workgroupSizeXComboBox">
           <item>
            <property name="text">
@@ -228,10 +215,20 @@
           </item>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QCheckBox" name="openGInteropCheckBox"/>
+        <item row="2" column="0">
+         <widget class="QLabel" name="workgroupSizeYLabel">
+          <property name="text">
+           <string>Workgroup size Y</string>
+          </property>
+          <property name="buddy">
+           <cstring>workgroupSizeYComboBox</cstring>
+          </property>
+         </widget>
         </item>
-        <item row="3" column="1">
+        <item row="0" column="1">
+         <widget class="QCheckBox" name="useAtomicCountersCheckBox"/>
+        </item>
+        <item row="2" column="1">
          <widget class="QComboBox" name="workgroupSizeYComboBox">
           <item>
            <property name="text">
@@ -275,7 +272,7 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="1" column="0">
          <widget class="QLabel" name="workgroupSizeXLabel">
           <property name="text">
            <string>Workgroup size X</string>
@@ -285,17 +282,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="openGInteropLabel">
-          <property name="text">
-           <string>OpenGL Interop</string>
-          </property>
-          <property name="buddy">
-           <cstring>openGInteropCheckBox</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0">
+        <item row="3" column="0">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -651,7 +638,6 @@
   <tabstop>maxImageHeightLineEdit</tabstop>
   <tabstop>defaultImageLineEdit</tabstop>
   <tabstop>useAtomicCountersCheckBox</tabstop>
-  <tabstop>openGInteropCheckBox</tabstop>
   <tabstop>workgroupSizeXComboBox</tabstop>
   <tabstop>workgroupSizeYComboBox</tabstop>
   <tabstop>erodeKernelComboBox</tabstop>

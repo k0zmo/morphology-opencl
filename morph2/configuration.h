@@ -11,7 +11,6 @@ struct Configuration
 
 	// Sekcja [opencl]
 	bool atomicCounters;
-	bool glInterop;
 	int workgroupSizeX;
 	int workgroupSizeY;
 

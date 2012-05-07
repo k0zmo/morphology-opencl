@@ -14,7 +14,6 @@ void Configuration::loadConfiguration(const QString& filename)
 
 	// Sekcja [opencl]
 	atomicCounters = s.value("opencl/atomiccounters").toBool();
-	glInterop = s.value("opencl/glinterop").toBool();
 	workgroupSizeX = s.value("opencl/workgroupsizex").toInt();
 	workgroupSizeY = s.value("opencl/workgroupsizey").toInt();
 
@@ -43,7 +42,6 @@ void Configuration::saveConfiguration(const QString& filename)
 
 	// Sekcja [opencl]
 	s.setValue("opencl/atomiccounters", atomicCounters);
-	s.setValue("opencl/glinterop", glInterop);
 	s.setValue("opencl/workgroupsizex", workgroupSizeX);
 	s.setValue("opencl/workgroupsizey", workgroupSizeY);
 
