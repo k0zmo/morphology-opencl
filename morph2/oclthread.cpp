@@ -54,11 +54,6 @@ PlatformDevicesMap oclThread::queryPlatforms()
 		success = false;
 	};
 
-	// Gdybysmy chcieli pobrac wszystkie platformy ktore moga dzielic 
-	// zasoby z aktualnym kontekstem OpenGL'a to trzebaby wywolac tutaj ta funkcje
-	//if(shareWidget)
-	//	shareWidget->makeCurrent();
-
 	c.retrievePlatforms(pl);
 
 	// Pobierz wszystkie urzadzenia z danej platformy
@@ -87,10 +82,10 @@ void oclThread::initContext()
 	if(shareWidget)
 	{
 		// createContextGL oczekuje aktywnego kontekstu
-		// Moze pozniej to zmienie (bedzie oczekiwac tych wartosci w argumentach funkcji)
-		qDebug() << "(i) Przed makeCurrent";
+		// oclThread ma kontekst na wylacznosc dlatego
+		// nie potrzebne sa zadne doneCurrent i pozniejsze makeCurrent
+		// (o ile nikt nie zawola gdzies doneCurrent)
 		shareWidget->makeCurrent();
-		qDebug() << "(i) Po makeCurrent";
 
 #ifdef Q_WS_WIN32
 		HDC dc = wglGetCurrentDC();
@@ -100,11 +95,6 @@ void oclThread::initContext()
 		GLXContext rc = glXGetCurrentContext();
 #endif
 
-		//qDebug() << "currentDC:" << dc << 
-		//	"currentContext:" << rc;
-
-		// TODO: for glx
-		// TODO: albo przeniesc to do createContextGL
 		if(!dc || !rc)
 		{
 			c.createContext(platformId);
@@ -113,10 +103,6 @@ void oclThread::initContext()
 		else
 		{
 			c.createContextGL(platformId);
-
-			qDebug() << "(i) Przed doneCurrent";
-			shareWidget->doneCurrent();
-			qDebug() << "(i) Po doneCurrent";
 		}
 	}
 	else
@@ -183,6 +169,8 @@ void oclThread::run()
 		qDebug() << endl << "New processing job (OpenCL):" << "\n\toperation:" <<
 			item.op << "\n\tbayer code:" << item.bc <<
 			"\n\tnegate:" << item.negate << endl;
+		#else
+		qDebug();
 		#endif
 
 		// Brak operacji, zwroc obraz zrodlowy
@@ -233,14 +221,13 @@ void oclThread::run()
 		if(glInterop) 
 		{
 			pitem.glsize = item.src.size();
-			shareWidget->makeCurrent();
 			shareWidget->resizeSurface(pitem.glsize.width, pitem.glsize.height);
 		}
 		
 		oclImage2DHolder holder = c.copyImageToDevice(item.src, ReadOnly);
 
 		// Tego tez mozemy liczyc czas
-		qDebug("Transfering source image to the device took %.05lf ms\n", 
+		qDebug("Transfering source image to the device took %.05lf ms", 
 			c.oclElapsedEvent(holder.evt));
 		pitem.delapsed += c.oclElapsedEvent(holder.evt);
 			
@@ -308,13 +295,9 @@ void oclThread::run()
 		{
 			// Jesli nie dzielimy zasobow, trzeba je teraz sciagnac
 			pitem.dst = c.readImageFromDevice(holder);
-			qDebug("Transfering output image from the device took %.05lf ms\n",
+			qDebug("Transfering output image from the device took %.05lf ms",
 				c.oclElapsedEvent(holder.evt));
 			pitem.delapsed += c.oclElapsedEvent(holder.evt);
-		}
-		else
-		{
-			shareWidget->doneCurrent();
 		}
 
 		emit processingDone(pitem);
