@@ -187,12 +187,13 @@ void Controller::onPreviewInitialized(bool success)
 		SLOT(onProcessingDone(ProcessedItem)));
 	procThread->start(QThread::HighPriority);
 
-	onRecompute();
 	show();
-
+	
 #if DISABLE_OPENCL == 0
 	initializeOpenCL();
 #endif
+
+	onRecompute();
 }
 
 void Controller::onRecompute()
@@ -702,9 +703,6 @@ void Controller::initializeOpenCL()
 
 		return;
 	}
-
-	// MOZE SIE ZDARZYC TAK, ZE CLTHREAD MA AKTYWNY KONTEKST I NADEJDZIE 
-	// ONPROCESSINGDONE (TO Z PREVIEWINITIALIZED) - MOZNA BY TO ZMIENIC
 
 	// Czy oclThread bedzie dzielic zasoby OpenGL'a
 	// z kontrolka do wyswietlania gotowych tekstur (gl/cl interop)

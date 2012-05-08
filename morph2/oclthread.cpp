@@ -144,16 +144,10 @@ void oclThread::run()
 	if(!success)
 		return;
 
-	// Czasem sie zdarza ze implementacja CPU zglasza obsluge cl/gl interop
-	// Jednak nie jest to prawda :)
 	bool glInterop = shareWidget != nullptr;
-	oclDeviceDesc ddesc = c.deviceDescription();
-	if(ddesc.deviceType != CL_DEVICE_TYPE_GPU)
-		glInterop = false;
 
 	printf("GL/CL Interop: %s\n", glInterop 
-		? "yes" 
-		: "no");
+		? "yes" : "no");
 
 	while(true)
 	{

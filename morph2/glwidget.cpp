@@ -69,9 +69,6 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 	if(!d_surface)
 		return;
 
-	//qDebug() << "         <" << __FUNCTION__ ">";
-	//makeCurrent();
-
 	glBindTexture(GL_TEXTURE_2D, d_surface);
 
 	// Nastapila zmiana rozmiaru - alokujemy pamiec od nowa
@@ -92,9 +89,6 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);
-
-	//qDebug() << "         </" << __FUNCTION__ ">";
-	//doneCurrent();
 }
 
 void GLDummyWidget::initialize_impl()

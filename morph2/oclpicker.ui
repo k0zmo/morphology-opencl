@@ -24,7 +24,7 @@
    <item row="1" column="0">
     <widget class="QCheckBox" name="tryInteropCheckBox">
      <property name="text">
-      <string>Try CL/GL Interop</string>
+      <string>CL/GL Interop</string>
      </property>
     </widget>
    </item>
