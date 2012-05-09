@@ -56,7 +56,7 @@ PlatformDevicesMap oclThread::queryPlatforms()
 	return plToDevs;
 }
 
-void oclThread::initContext(QCLContext& ctx)
+void oclThread::initContext(QCLContext* ctx)
 {
 	// TODO: reuse from queryPlatforms
 	QList<QCLPlatform> pls = QCLPlatform::platforms();
@@ -79,10 +79,47 @@ void oclThread::initContext(QCLContext& ctx)
 	QCLDevice dev = devs[deviceId];
 	QList<QCLDevice> devList;
 	devList << dev;
-	ctx.create(devList);
+	ctx->create(devList);
 
-	QCLCommandQueue cq = ctx.createCommandQueue(CL_QUEUE_PROFILING_ENABLE);
-	ctx.setCommandQueue(cq);
+	QCLCommandQueue cq = ctx->createCommandQueue(CL_QUEUE_PROFILING_ENABLE);
+	ctx->setCommandQueue(cq);
+}
+
+void oclThread::initContextWithGL(QCLContextGL* ctx)
+{
+	// TODO: reuse from queryPlatforms
+	QList<QCLPlatform> pls = QCLPlatform::platforms();
+
+	if(platformId >= pls.count())
+	{
+		success = false;
+		return;
+	}
+
+	// TODO: Trzeba zmodyfikowac zrodla QCLContextGL
+	QCLPlatform pl = pls[platformId];
+	//QList<QCLDevice> devs = QCLDevice::devices(QCLDevice::GPU, pl);
+
+	//if(deviceId >= devs.count())
+	//{
+	//	success = false;
+	//	return;
+	//}
+	
+	//QCLDevice dev = devs[deviceId];
+	//QList<QCLDevice> devList;
+	//devList << dev;
+	//ctx->create(devList);
+
+	Q_ASSERT(shareWidget);
+
+	shareWidget->makeCurrent();
+	ctx->create(pl);
+
+	qDebug() << ctx->defaultDevice().name();
+
+	QCLCommandQueue cq = ctx->createCommandQueue(CL_QUEUE_PROFILING_ENABLE);
+	ctx->setCommandQueue(cq);
 }
 
 void oclThread::choose(int platformId_, int deviceId_)
@@ -93,28 +130,44 @@ void oclThread::choose(int platformId_, int deviceId_)
 
 void oclThread::run()
 {
-	QCLContext ctx;
-	initContext(ctx);
+	QCLContext* ctx;
+	QCLContextGL* ctxg = nullptr;
+	if(shareWidget)
+	{
+		ctx = new QCLContextGL;
+		ctxg = static_cast<QCLContextGL*>(ctx);
+		initContextWithGL(ctxg);
+	}
+	else
+	{
+		ctx = new QCLContext;
+		initContext(ctx);
+	}
+	
 
-	oclBayerFilter bayerFilter(&ctx);
-	success = ctx.lastError() == CL_SUCCESS;
+	oclBayerFilter bayerFilter(ctx);
+	success = ctx->lastError() == CL_SUCCESS;
 
 	oclMorphFilter morphFilter
-		(&ctx, conf.erode_2d.toAscii().constData(),
+		(ctx, conf.erode_2d.toAscii().constData(),
 		 conf.dilate_2d.toAscii().constData(), 
 		 conf.gradient_2d.toAscii().constData());
-	success = ctx.lastError() == CL_SUCCESS;
+	success = ctx->lastError() == CL_SUCCESS;
 
 	oclMorphHitMissFilter hitmissFilter
-		(&ctx, conf.atomicCounters);
+		(ctx, conf.atomicCounters);
+	success = ctx->lastError() == CL_SUCCESS;
 
 	emit openCLInitialized(success);
 	if(!success)
 		return;
 
-	//	bool glInterop = shareWidget != nullptr;
-	//	printf("GL/CL Interop: %s\n", glInterop
-	//		? "yes" : "no");
+	bool glInterop = shareWidget != nullptr;
+	if(ctxg) glInterop &= ctxg->supportsObjectSharing();
+	else glInterop = false;
+
+	printf("GL/CL Interop: %s\n", glInterop
+		? "yes" : "no");
 
 	while(true)
 	{
@@ -173,8 +226,14 @@ void oclThread::run()
 			}
 		}
 
+		if(glInterop) 
+		{
+			pitem.glsize = item.src.size();
+			shareWidget->resizeSurface(pitem.glsize.width, pitem.glsize.height);
+		}
+
 		// Utworz obraz na urzadzeniu
-		QCLImage2D holder = ctx.createImage2DDevice
+		QCLImage2D holder = ctx->createImage2DDevice
 				(oclUtils::morphImageFormat(), 
 				 QSize(item.src.cols, item.src.rows),
 				 QCLMemoryObject::ReadOnly);
@@ -197,8 +256,19 @@ void oclThread::run()
 			bayerFilter.setBayerFilter(item.bc);
 			bayerFilter.setSourceImage(holder);
 
-			pitem.delapsed += bayerFilter.run();
-			holder = bayerFilter.outputDeviceImage();
+			// Czy filtr bayera jest ostatnim 'bloczkiem'
+			if(glInterop && item.op == cvu::MO_None)
+			{
+				QCLImage2D output = ctxg->createTexture2D
+					(shareWidget->surface(), QCLMemoryObject::WriteOnly);
+				bayerFilter.setOutputDeviceImage(output);
+				pitem.delapsed += bayerFilter.run();
+			}
+			else
+			{
+				pitem.delapsed += bayerFilter.run();
+				holder = bayerFilter.outputDeviceImage();
+			}
 		}
 
 		// Operacja morfologiczna/hitmiss
@@ -211,6 +281,19 @@ void oclThread::run()
 
 				pitem.delapsed += hitmissFilter.run();
 				holder = hitmissFilter.outputDeviceImage();
+
+				if(glInterop)
+				{
+					QCLImage2D output = ctxg->createTexture2D
+						(shareWidget->surface(), QCLMemoryObject::WriteOnly);
+					hitmissFilter.setOutputDeviceImage(output);
+					pitem.delapsed += hitmissFilter.run();
+				}
+				else
+				{
+					pitem.delapsed += hitmissFilter.run();
+					holder = hitmissFilter.outputDeviceImage();
+				}
 			}
 			else
 			{
@@ -218,119 +301,43 @@ void oclThread::run()
 				morphFilter.setStructuringElement(item.se);
 				morphFilter.setSourceImage(holder);
 
-				pitem.delapsed += morphFilter.run();
-				holder = morphFilter.outputDeviceImage();
+				if(glInterop)
+				{
+					QCLImage2D output = ctxg->createTexture2D
+						(shareWidget->surface(), QCLMemoryObject::WriteOnly);
+					morphFilter.setOutputDeviceImage(output);
+					pitem.delapsed += morphFilter.run();
+				}
+				else
+				{
+					pitem.delapsed += morphFilter.run();
+					holder = morphFilter.outputDeviceImage();
+				}
 			}
 		}
-	
-		int format = CV_8U;
-		pitem.dst = cv::Mat
+
+		if(!glInterop)
+		{
+			// Jesli nie dzielimy zasobow, trzeba je teraz sciagnac
+			int format = CV_8U;
+			pitem.dst = cv::Mat
 				(cv::Size(holder.width(), holder.height()),
-				 format, cv::Scalar(1));
-		
-		evt = holder.readAsync
+				format, cv::Scalar(1));
+
+			evt = holder.readAsync
 				(pitem.dst.ptr<uchar>()/* + 1 + pitem.dst.cols*/,
-				 //QRect(1, 1, pitem.dst.cols-2, pitem.dst.rows-2),
-				 QRect(0, 0, pitem.dst.cols, pitem.dst.rows),
-				 QCLEventList(), pitem.dst.cols);
-		evt.waitForFinished();
-		
-		elapsed = oclUtils::eventDuration(evt);
-		qDebug("Transfering output image from the device took %.05lf ms", elapsed);
-		pitem.delapsed += elapsed;
+				//QRect(1, 1, pitem.dst.cols-2, pitem.dst.rows-2),
+				QRect(0, 0, pitem.dst.cols, pitem.dst.rows),
+				QCLEventList(), pitem.dst.cols);
+			evt.waitForFinished();
+
+			elapsed = oclUtils::eventDuration(evt);
+			qDebug("Transfering output image from the device took %.05lf ms", elapsed);
+			pitem.delapsed += elapsed;
+		}
 		
 		emit processingDone(pitem);
 	}
 
-//	while(true)
-//	{
-//		if(glInterop)
-//		{
-//			pitem.glsize = item.src.size();
-//			shareWidget->makeCurrent();
-//			shareWidget->resizeSurface(pitem.glsize.width, pitem.glsize.height);
-//		}
-		
-//		oclImage2DHolder holder = c.copyImageToDevice(item.src, ReadOnly);
-
-//		// Tego tez mozemy liczyc czas
-//		qDebug("Transfering source image to the device took %.05lf ms\n",
-//			c.oclElapsedEvent(holder.evt));
-//		pitem.delapsed += c.oclElapsedEvent(holder.evt);
-			
-//		// Filtr Bayer'a
-//		if(item.bc != cvu::BC_None)
-//		{
-//			bayerFilter->setBayerFilter(item.bc);
-//			bayerFilter->setSourceImage(holder);
-
-//			// Czy filtr bayera jest ostatnim 'bloczkiem'
-//			if(glInterop && item.op == cvu::MO_None)
-//			{
-//				oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
-//				bayerFilter->setOutputDeviceImage(output);
-//				pitem.delapsed += bayerFilter->run();
-//			}
-//			else
-//			{
-//				pitem.delapsed += bayerFilter->run();
-//				holder = oclImage2DHolder(bayerFilter->outputDeviceImage());
-//			}
-//		}
-
-//		// Operacja morfologiczna/hitmiss
-//		if(item.op != cvu::MO_None)
-//		{
-//			if(isHitMiss(item.op))
-//			{
-//				hitmissFilter->setHitMissOperation(item.op);
-//				hitmissFilter->setSourceImage(holder);
-
-//				if(glInterop)
-//				{
-//					oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
-//					hitmissFilter->setOutputDeviceImage(output);
-//					pitem.delapsed += hitmissFilter->run();
-//				}
-//				else
-//				{
-//					pitem.delapsed += hitmissFilter->run();
-//					holder = oclImage2DHolder(morphFilter->outputDeviceImage());
-//				}
-//			}
-//			else
-//			{
-//				morphFilter->setMorphologyOperation(item.op);
-//				morphFilter->setStructuringElement(item.se);
-//				morphFilter->setSourceImage(holder);
-
-//				if(glInterop)
-//				{
-//					oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
-//					morphFilter->setOutputDeviceImage(output);
-//					pitem.delapsed += morphFilter->run();
-//				}
-//				else
-//				{
-//					pitem.delapsed += morphFilter->run();
-//					holder = oclImage2DHolder(morphFilter->outputDeviceImage());
-//				}
-//			}
-//		}
-
-//		if(!glInterop)
-//		{
-//			// Jesli nie dzielimy zasobow, trzeba je teraz sciagnac
-//			pitem.dst = c.readImageFromDevice(holder);
-//			qDebug("Transfering output image from the device took %.05lf ms\n",
-//				c.oclElapsedEvent(holder.evt));
-//			pitem.delapsed += c.oclElapsedEvent(holder.evt);
-//		}
-//		else
-//		{
-//			shareWidget->doneCurrent();
-//		}
-
-//		emit processingDone(pitem);
-//	}
+	delete ctx;
 }

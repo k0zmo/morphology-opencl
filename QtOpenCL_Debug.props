@@ -8,7 +8,7 @@
       <AdditionalIncludeDirectories>D:\Programowanie\Projects\qt-opencl\include\Qt;D:\Programowanie\Projects\qt-opencl\include\QtOpenCL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>D:\Programowanie\Projects\qt-opencl\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\Programowanie\Projects\qt-opencl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>QtOpenCLd.lib;QtOpenCLGLd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

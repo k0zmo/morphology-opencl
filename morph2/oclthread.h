@@ -10,6 +10,7 @@
 #include <QCLPlatform>
 #include <QCLDevice>
 class QCLContext;
+class QCLContextGL;
 class GLDummyWidget;
 
 // Mapa pobranych danych o platformach i ich urzadzeniach
@@ -43,7 +44,8 @@ private:
 	Configuration conf;
 
 private:
-	void initContext(QCLContext& ctx);
+	void initContext(QCLContext* ctx);
+	void initContextWithGL(QCLContextGL* ctx);
 
 signals:
 	void processingDone(const ProcessedItem& item);
