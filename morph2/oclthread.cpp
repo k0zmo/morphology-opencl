@@ -143,24 +143,45 @@ void oclThread::run()
 		ctx = new QCLContext;
 		initContext(ctx);
 	}
-	
 
+	cl_int err = ctx->lastError();
+	if(!success || err != CL_SUCCESS)
+	{
+		emit openCLInitialized(false);
+		return;
+	}
+
+	// Blok filtracji bayera
 	oclBayerFilter bayerFilter(ctx);
 	success = ctx->lastError() == CL_SUCCESS;
+	if(!success)
+	{
+		emit openCLInitialized(false);
+		return;
+	}
 
+	// Blok filtracji morfologicznej
 	oclMorphFilter morphFilter
 		(ctx, conf.erode_2d.toAscii().constData(),
 		 conf.dilate_2d.toAscii().constData(), 
 		 conf.gradient_2d.toAscii().constData());
-	success = ctx->lastError() == CL_SUCCESS;
+	if(!success)
+	{
+		emit openCLInitialized(false);
+		return;
+	}
 
+	// Blok filtracji morfologicznej typu Hit-Miss
 	oclMorphHitMissFilter hitmissFilter
 		(ctx, conf.atomicCounters);
-	success = ctx->lastError() == CL_SUCCESS;
-
-	emit openCLInitialized(success);
 	if(!success)
+	{
+		emit openCLInitialized(false);
 		return;
+	}
+
+	// Udalo nam sie ruszyc z OpenCLem
+	emit openCLInitialized(true);
 
 	bool glInterop = shareWidget != nullptr;
 	if(ctxg) glInterop &= ctxg->supportsObjectSharing();
