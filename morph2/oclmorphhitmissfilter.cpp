@@ -32,6 +32,20 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 			QString kernelName = QString("skeleton_iter") + QString::number(i+1);
 			kernelSkeleton_iter[i] = program.createKernel(kernelName);
 		}
+
+		// Licznik atomowy (ew. zwyczajny bufor)
+		static cl_uint d_init = 0;
+		atomicCounter = d_ctx->createBufferDevice
+			(sizeof(cl_uint), QCLMemoryObject::ReadWrite);
+		zeroAtomicCounter(atomicCounter);
+
+		// Tablica LUT dla operacji szkieletyzacji Zhanga-Suena
+		zhLut = d_ctx->createBufferDevice
+			(sizeof(cvu::skeletonZHLutTable), QCLMemoryObject::ReadWrite);
+		QCLEvent evt = zhLut.writeAsync
+			(0, cvu::skeletonZHLutTable, 
+			sizeof(cvu::skeletonZHLutTable));
+		evt.waitForFinished();
 	}
 }
 
@@ -135,19 +149,7 @@ double oclMorphHitMissFilter::run()
 			elapsed += copyImage2D(*d_src, tmp);
 
 			// Licznik atomowy (ew. zwyczajny bufor)
-			static cl_uint d_init = 0;
-			QCLBuffer atomicCounter = d_ctx->createBufferDevice
-				(sizeof(cl_uint), QCLMemoryObject::ReadWrite);
 			elapsed += zeroAtomicCounter(atomicCounter);
-
-			// Tablica LUT dla operacji szkieletyzacji Zhanga-Suena
-			QCLBuffer zhLut = d_ctx->createBufferDevice
-				(sizeof(cvu::skeletonZHLutTable), QCLMemoryObject::ReadWrite);
-			QCLEvent evt = zhLut.writeAsync
-				(0, cvu::skeletonZHLutTable, 
-				sizeof(cvu::skeletonZHLutTable));
-			evt.waitForFinished();
-			elapsed += oclUtils::eventDuration(evt);
 
 			do
 			{

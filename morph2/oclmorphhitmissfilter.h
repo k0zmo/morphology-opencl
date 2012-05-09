@@ -22,6 +22,9 @@ private:
 
 	cvu::EMorphOperation hmOp;
 
+	QCLBuffer atomicCounter;
+	QCLBuffer zhLut;
+
 private:
 	qreal runHitMissKernel(QCLKernel* kernel,
 		const QCLImage2D& source, QCLImage2D& output,
