@@ -1,22 +1,23 @@
 #include "oclmorphfilter.h"
+#include "oclutils.h"
 
-oclMorphFilter::oclMorphFilter(oclContext* ctx,
+oclMorphFilter::oclMorphFilter(QCLContext* ctx,
 	const char* erode, const char* dilate,
 	const char* gradient)
 	: oclFilter(ctx)
 	, morphOp(cvu::MO_None)
 {
 	// Wczytaj program
-	cl::Program program = ctx->createProgram(
-		"kernels/2d/morph.cl", "-Ikernels/2d/");
-
-	// I wyciagnij z niego kernele
-	kernelErode = ctx->retrieveKernel(program, erode);
-	kernelDilate = ctx->retrieveKernel(program, dilate);
-	kernelGradient = ctx->retrieveKernel(program, gradient);
-	kernelSubtract = ctx->retrieveKernel(program, "subtract");
-
-	structuringElement.size = 0;
+	QCLProgram program = ctx->createProgramFromSourceFile("kernels/2d/morph.cl");
+	if(program.isNull() ||
+		program.build(QList<QCLDevice>(), "-Ikernels/2d/"))
+	{
+		// I wyciagnij z niego kernele
+		kernelErode = program.createKernel(erode);
+		kernelDilate = program.createKernel(dilate);
+		kernelGradient = program.createKernel(gradient);
+		kernelSubtract = program.createKernel("subtract");
+	}
 }
 
 void oclMorphFilter::setMorphologyOperation(
@@ -30,78 +31,85 @@ void oclMorphFilter::setMorphologyOperation(
 	}
 }
 
-double oclMorphFilter::run()
+qreal oclMorphFilter::run()
 {
-	if(!src)
+	if(!d_src)
 		return 0.0;
 
-	if (morphOp == cvu::MO_None ||
-		structuringElement.size == 0)
+	// Passthrough
+	if(morphOp == cvu::MO_None ||
+	   structuringElement.isNull())
 	{
-		// Passthrough
-		if(!ownsOutput)
-		{
-			// TODO: copy contents of src to dst
-		}
-		else
-		{
-			dst = *src;
-		}
+		// TODO
+		//if(!ownsOutput)
+		d_dst = *d_src;
 		return 0.0;
 	}
 
-	double elapsed = 0.0;
+	qreal elapsed = 0.0;
 	prepareDestinationHolder();
+
+	cl_int error = d_ctx->lastError();
 
 	switch(morphOp)
 	{
 	case cvu::MO_Erode:
-		elapsed += runMorphologyKernel(&kernelErode, *src, dst);
+		elapsed += runMorphologyKernel(&kernelErode, *d_src, d_dst);
 		break;
 	case cvu::MO_Dilate:
-		elapsed += runMorphologyKernel(&kernelDilate, *src, dst);
+		elapsed += runMorphologyKernel(&kernelDilate, *d_src, d_dst);
 		break;
 	case cvu::MO_Open:
 		{
-			auto tmp = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
-			elapsed += runMorphologyKernel(&kernelErode, *src, tmp);
-			elapsed += runMorphologyKernel(&kernelDilate, tmp, dst);
+			auto tmp = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), 
+				QSize(d_src->width(), d_src->height()), 
+				QCLMemoryObject::ReadWrite);
+
+			elapsed += runMorphologyKernel(&kernelErode, *d_src, tmp);
+			elapsed += runMorphologyKernel(&kernelDilate, tmp, d_dst);
 		}
 		break;
 	case cvu::MO_Close:
 		{
-			auto tmp = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
-			elapsed += runMorphologyKernel(&kernelDilate, *src, tmp);
-			elapsed += runMorphologyKernel(&kernelErode, tmp, dst);
+			auto tmp = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), 
+				 QSize(d_src->width(), d_src->height()), 
+				 QCLMemoryObject::ReadWrite);
+
+			elapsed += runMorphologyKernel(&kernelDilate, *d_src, tmp);
+			elapsed += runMorphologyKernel(&kernelErode, tmp, d_dst);
 		}
 		break;
 	case cvu::MO_Gradient:
-		elapsed += runMorphologyKernel(&kernelGradient, *src, dst);
+		elapsed += runMorphologyKernel(&kernelGradient, *d_src, d_dst);
 		break;
 	case cvu::MO_TopHat:
 		{
-			auto tmp1 = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
-			auto tmp2 = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
+			QSize tmpSize(d_src->width(), d_src->height());
 
-			elapsed += runMorphologyKernel(&kernelErode, *src, tmp1);
+			auto tmp1 = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), tmpSize, QCLMemoryObject::ReadWrite);
+			auto tmp2 = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), tmpSize, QCLMemoryObject::ReadWrite);
+
+			elapsed += runMorphologyKernel(&kernelErode, *d_src, tmp1);
 			elapsed += runMorphologyKernel(&kernelDilate, tmp1, tmp2);
-			elapsed += runSubtractKernel(*src, tmp2, dst);
+			elapsed += runSubtractKernel(*d_src, tmp2, d_dst);
 		}
 		break;
 	case cvu::MO_BlackHat:
 		{
-			auto tmp1 = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
-			auto tmp2 = ctx->createDeviceImage(src->width,
-				src->height, ReadWrite);
+			QSize tmpSize(d_src->width(), d_src->height());
 
-			elapsed += runMorphologyKernel(&kernelDilate, *src, tmp1);
+			auto tmp1 = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), tmpSize, QCLMemoryObject::ReadWrite);
+			auto tmp2 = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), tmpSize, QCLMemoryObject::ReadWrite);
+
+			elapsed += runMorphologyKernel(&kernelDilate, *d_src, tmp1);
 			elapsed += runMorphologyKernel(&kernelErode, tmp1, tmp2);
-			elapsed += runSubtractKernel(tmp2, *src, dst);
+			elapsed += runSubtractKernel(tmp2, *d_src, d_dst);
 		}
 		break;
 	default: break;
@@ -149,75 +157,66 @@ void oclMorphFilter::setStructuringElement(
 	printf("Structuring element size (number of 'white' pixels): %d (%dx%d) - %lu B\n",
 		csize, 2*seRadiusX+1, 2*seRadiusY+1, sizeof(cl_int2) * csize);
 
-	cl_ulong limit = ctx->deviceDescription().maxConstantBufferSize;
 	size_t bmuSize = sizeof(cl_int2) * csize;
-
+	cl_ulong limit = d_ctx->defaultDevice().maximumConstantBufferSize();
+	
 	if(bmuSize > limit)
 	{
-		static char tmpBuf[256];
-		snprintf(tmpBuf, sizeof(tmpBuf), "Structuring element is too big:"
+		printf("Structuring element is too big:"
 			"%lu B out of available %lu B.", bmuSize, limit);
-		oclContext::oclError(tmpBuf, CL_OUT_OF_RESOURCES);
+		//static char tmpBuf[256];
+		//snprintf(tmpBuf, sizeof(tmpBuf), "Structuring element is too big:"
+		//	"%lu B out of available %lu B.", bmuSize, limit);
+		// TODO:
+		//oclContext::oclError(tmpBuf, CL_OUT_OF_RESOURCES);
 	}
 	else
 	{
-		structuringElement = ctx->copyDataToDevice(coords.data(), bmuSize, ReadOnly);
+		structuringElement = d_ctx->createBufferDevice
+			(bmuSize, QCLMemoryObject::ReadOnly);
+		QCLEvent evt = structuringElement.writeAsync(0, coords.data(), bmuSize);
+		evt.waitForFinished();
+
 		printf("Transfering structuring element to device took %.5lf ms\n",
-			ctx->oclElapsedEvent(structuringElement.evt));
+			(evt.finishTime() - evt.runTime()) / 1000000.0f);
 	}
 }
 
-double oclMorphFilter::runMorphologyKernel(
-	cl::Kernel* kernel,
-	const oclImage2DHolder& source,
-	oclImage2DHolder& output)
+qreal oclMorphFilter::runMorphologyKernel(
+	QCLKernel* kernel,
+	const QCLImage2D& source,
+	QCLImage2D& output)
 {
-	cl_int err;
-	err  = kernel->setArg(0, source.img);
-	err |= kernel->setArg(1, output.img);
-	err |= kernel->setArg(2, structuringElement.buf);
-	err |= kernel->setArg(3, structuringElement.size / static_cast<int>(sizeof(cl_int2)));
+	kernel->setArg(0, source);
+	kernel->setArg(1, output);
+	kernel->setArg(2, structuringElement);
+	kernel->setArg(3, structuringElement.size() / sizeof(cl_int2));
 
-	if(!oclContext::oclError("Error while setting kernel arguments", err))
-		return 0.0;
+	kernel->setLocalWorkSize(localWorkSize());
+	kernel->setGlobalWorkOffset(computeOffset(0, 0));
+	kernel->setGlobalWorkSize(computeGlobal(0, 0));
 
-	cl::NDRange offset(computeOffset(0, 0));
-	cl::NDRange gridDim(computeGlobal(0, 0));
+	QCLEvent evt = kernel->run();
+	evt.waitForFinished();
 
-	cl::Event evt;
-	err = ctx->commandQueue().enqueueNDRangeKernel(
-		*kernel, offset, gridDim, ctx->workgroupSize(),
-		nullptr, &evt);
-	evt.wait();
-
-	oclContext::oclError("Error while executing kernel over ND range!", err);
-
-	return oclContext::oclElapsedEvent(evt);
+	return oclUtils::eventDuration(evt);
 }
 
-double oclMorphFilter::runSubtractKernel(
-	const oclImage2DHolder& sourceA,
-	const oclImage2DHolder& sourceB,
-	oclImage2DHolder& output)
+qreal oclMorphFilter::runSubtractKernel(
+	const QCLImage2D& sourceA,
+	const QCLImage2D& sourceB,
+	QCLImage2D& output)
 {
-	cl_int err;
-	err  = kernelSubtract.setArg(0, sourceA.img);
-	err  = kernelSubtract.setArg(1, sourceB.img);
-	err |= kernelSubtract.setArg(2, output.img);
+	kernelSubtract.setArg(0, sourceA);
+	kernelSubtract.setArg(1, sourceB);
+	kernelSubtract.setArg(2, output);
 
-	if(!oclContext::oclError("Error while setting kernel arguments", err))
-		return 0.0;
+	kernelSubtract.setLocalWorkSize(localWorkSize());
+	kernelSubtract.setGlobalWorkOffset(computeOffset(0, 0));
+	kernelSubtract.setGlobalWorkSize(computeGlobal(0, 0));
 
-	cl::NDRange offset(computeOffset(0, 0));
-	cl::NDRange gridDim(computeGlobal(0, 0));
+	QCLEvent evt = kernelSubtract.run();
+	evt.waitForFinished();
 
-	cl::Event evt;
-	err = ctx->commandQueue().enqueueNDRangeKernel(
-		kernelSubtract, offset, gridDim, ctx->workgroupSize(),
-		nullptr, &evt);
-	evt.wait();
-
-	oclContext::oclError("Error while executing kernel over ND range!", err);
-
-	return oclContext::oclElapsedEvent(evt);
+	return oclUtils::eventDuration(evt);
 }

@@ -1,15 +1,16 @@
 #include "oclmorphhitmissfilter.h"
+#include "oclutils.h"
 
 #ifdef _MSC_VER
 	#define snprintf _snprintf
 #endif
 
 oclMorphHitMissFilter::oclMorphHitMissFilter(
-	oclContext* ctx, bool atomicCounters)
+	QCLContext* ctx, bool atomicCounters)
 	: oclFilter(ctx)
 	, hmOp(cvu::MO_None)
 {
-	std::string opts = "-Ikernels/2d/";
+	QString opts = "-Ikernels/2d/";
 	if(atomicCounters)
 	{
 		opts += " -DUSE_ATOMIC_COUNTERS";
@@ -17,19 +18,20 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 	}
 
 	// Wczytaj program
-	cl::Program program = ctx->createProgram(
-		"kernels/2d/hitmiss.cl", opts.c_str());
-
-	// I wyciagnij z niego kernele
-	kernelOutline = ctx->retrieveKernel(program, "outline");
-	kernelSkeleton_pass[0]  = ctx->retrieveKernel(program, "skeletonZhang_pass1");
-	kernelSkeleton_pass[1]  = ctx->retrieveKernel(program, "skeletonZhang_pass2");
-
-	for(int i = 0; i < 8; ++i)
+	QCLProgram program = ctx->createProgramFromSourceFile("kernels/2d/hitmiss.cl");
+	if(program.isNull() ||
+		program.build(QList<QCLDevice>(), "-Ikernels/2d/"))
 	{
-		char kernelName[128];
-		snprintf(kernelName, sizeof(kernelName), "skeleton_iter%d", i+1);
-		kernelSkeleton_iter[i] = ctx->retrieveKernel(program, kernelName);
+		// I wyciagnij z niego kernele
+		kernelOutline = program.createKernel("outline");
+		kernelSkeleton_pass[0] = program.createKernel("skeletonZhang_pass1");
+		kernelSkeleton_pass[1] = program.createKernel("skeletonZhang_pass2");
+
+		for(int i = 0; i < 8; ++i)
+		{
+			QString kernelName = QString("skeleton_iter") + QString::number(i+1);
+			kernelSkeleton_iter[i] = program.createKernel(kernelName);
+		}
 	}
 }
 
@@ -46,20 +48,14 @@ void oclMorphHitMissFilter::setHitMissOperation(
 
 double oclMorphHitMissFilter::run()
 {
-	if(!src)
+	if(!d_src)
 		return 0.0;
 
 	if(hmOp == cvu::MO_None)
 	{
 		// Passthrough
-		if(!ownsOutput)
-		{
-
-		}
-		else
-		{
-			dst = *src;
-		}		
+		//if(!ownsOutput)
+		d_dst = *d_src;	
 		return 0.0;
 	}
 
@@ -70,28 +66,30 @@ double oclMorphHitMissFilter::run()
 
 	// Kazda z operacji hit-miss wymaga by wyjscie bylo rowne zrodlu na poczatku
 	// - jest tak poniewaz HM zapisuje tylko te piksele ktore modyfikuje
-	ctx->copyDeviceImage(*src, dst);
-	elapsed += oclContext::oclElapsedEvent(dst.evt);
+	elapsed += copyImage2D(*d_src, d_dst);
 
 	switch(hmOp)
 	{
 	case cvu::MO_Outline:
-		elapsed += runHitMissKernel(&kernelOutline, *src, dst);
+		elapsed += runHitMissKernel(&kernelOutline, *d_src, d_dst);
 		break;
 	case cvu::MO_Skeleton:
 		{
 			iters = 0;
-			auto tmp = ctx->createDeviceImage(
-				src->width, src->height, ReadWrite);
+
+			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
+			auto tmp = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), 
+				 QSize(d_src->width(), d_src->height()),
+				 QCLMemoryObject::ReadWrite);
 
 			// Skopiuj obraz zrodlowy do dodatkowego tymczasowego
-			ctx->copyDeviceImage(*src, tmp);
-			elapsed += oclContext::oclElapsedEvent(tmp.evt);
+			elapsed += copyImage2D(*d_src, tmp);
 
 			// Licznik atomowy (ew. zwyczajny bufor)
-			static cl_uint d_init = 0;
-			auto atomicCounter = ctx->copyDataToDevice(&d_init, sizeof(cl_uint), ReadWrite);
-			elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
+			QCLBuffer atomicCounter = d_ctx->createBufferDevice
+				(sizeof(cl_uint), QCLMemoryObject::ReadWrite);
+			elapsed += zeroAtomicCounter(atomicCounter);
 
 			do
 			{
@@ -101,17 +99,15 @@ double oclMorphHitMissFilter::run()
 				for(int i = 0; i < 8; ++i)
 				{
 					elapsed += runHitMissKernel(&kernelSkeleton_iter[i],
-						tmp, dst, &atomicCounter);
+						tmp, d_dst, &atomicCounter);
 
 					// Kopiowanie obrazu
-					ctx->copyDeviceImage(dst, tmp);
-					elapsed += oclContext::oclElapsedEvent(tmp.evt);
+					elapsed += copyImage2D(d_dst, tmp);
 				}
 
 				// Sprawdz ile pikseli zostalo zmodyfikowanych
 				cl_uint diff;
-				ctx->readAtomicCounter<cl_uint>(atomicCounter, &diff);
-				elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
+				elapsed += readAtomicCounter(atomicCounter, diff);
 
 				printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
@@ -119,9 +115,7 @@ double oclMorphHitMissFilter::run()
 				if(diff == 0)
 					break;
 
-				ctx->zeroAtomicCounter<cl_uint>(atomicCounter);
-				elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
-
+				elapsed += zeroAtomicCounter(atomicCounter);
 			} while (true);
 
 			printf("\n");
@@ -132,43 +126,46 @@ double oclMorphHitMissFilter::run()
 			iters = 0;
 
 			// Potrzebowac bedziemy dodatkowego bufora tymczasowego
-			auto tmp = ctx->createDeviceImage(
-				src->width, src->height, ReadWrite);
+			auto tmp = d_ctx->createImage2DDevice
+				(oclUtils::morphImageFormat(), 
+				QSize(d_src->width(), d_src->height()),
+				QCLMemoryObject::ReadWrite);
 
-			// Skopiuj obraz zrodlowy do wyjsciowego
-			ctx->copyDeviceImage(*src, dst);
-			elapsed += oclContext::oclElapsedEvent(dst.evt);
+			// Skopiuj obraz zrodlowy do dodatkowego tymczasowego
+			elapsed += copyImage2D(*d_src, tmp);
 
 			// Licznik atomowy (ew. zwyczajny bufor)
 			static cl_uint d_init = 0;
-			auto atomicCounter = ctx->copyDataToDevice(&d_init, sizeof(cl_uint), ReadWrite);
-			elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
+			QCLBuffer atomicCounter = d_ctx->createBufferDevice
+				(sizeof(cl_uint), QCLMemoryObject::ReadWrite);
+			elapsed += zeroAtomicCounter(atomicCounter);
 
 			// Tablica LUT dla operacji szkieletyzacji Zhanga-Suena
-			auto zhLut = ctx->copyDataToDevice(cvu::skeletonZHLutTable,
-				sizeof(cvu::skeletonZHLutTable), ReadOnly);
-			elapsed += oclContext::oclElapsedEvent(zhLut.evt);
+			QCLBuffer zhLut = d_ctx->createBufferDevice
+				(sizeof(cvu::skeletonZHLutTable), QCLMemoryObject::ReadWrite);
+			QCLEvent evt = zhLut.writeAsync
+				(0, cvu::skeletonZHLutTable, 
+				sizeof(cvu::skeletonZHLutTable));
+			evt.waitForFinished();
+			elapsed += oclUtils::eventDuration(evt);
 
 			do
 			{
 				iters++;
 
 				// odd pass
-				ctx->copyDeviceImage(dst, tmp);
-				elapsed += oclContext::oclElapsedEvent(tmp.evt);
-				elapsed += runHitMissKernel(&kernelSkeleton_pass[0],
-					tmp, dst, &zhLut, &atomicCounter);
+				elapsed += copyImage2D(d_dst, tmp);
+				elapsed += runHitMissKernel(&kernelSkeleton_pass[1],
+					tmp, d_dst, &zhLut, &atomicCounter);
 
 				// even pass
-				ctx->copyDeviceImage(dst, tmp);
-				elapsed += oclContext::oclElapsedEvent(tmp.evt);
-				elapsed += runHitMissKernel(&kernelSkeleton_pass[1],
-					tmp, dst, &zhLut, &atomicCounter);
+				elapsed += copyImage2D(d_dst, tmp);
+				elapsed += runHitMissKernel(&kernelSkeleton_pass[0],
+					tmp, d_dst, &zhLut, &atomicCounter);
 
 				// Sprawdz ile pikseli zostalo zmodyfikowanych
 				cl_uint diff;
-				ctx->readAtomicCounter<cl_uint>(atomicCounter, &diff);
-				elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
+				elapsed += readAtomicCounter(atomicCounter, diff);
 
 				printf("Iteration: %3d, pixel changed: %5d\r", iters, diff);
 
@@ -176,8 +173,7 @@ double oclMorphHitMissFilter::run()
 				if(diff == 0)
 					break;
 
-				ctx->zeroAtomicCounter<cl_uint>(atomicCounter);
-				elapsed += oclContext::oclElapsedEvent(atomicCounter.evt);
+				elapsed += zeroAtomicCounter(atomicCounter);
 
 			} while (true);
 
@@ -191,33 +187,49 @@ double oclMorphHitMissFilter::run()
 	return elapsed;
 }
 
-double oclMorphHitMissFilter::runHitMissKernel(
-	cl::Kernel* kernel,
-	const oclImage2DHolder& source, oclImage2DHolder& output,
-	const oclBufferHolder* lut,
-	oclBufferHolder* atomicCounter)
+qreal oclMorphHitMissFilter::runHitMissKernel(
+	QCLKernel* kernel,
+	const QCLImage2D& source, QCLImage2D& output,
+	const QCLBuffer* lut,
+	QCLBuffer* atomicCounter)
 {
-	cl_int err;
-	err  = kernel->setArg(0, source.img);
-	err |= kernel->setArg(1, output.img);
+	kernel->setArg(0, source);
+	kernel->setArg(1, output);
 
-	if(lut) err |= kernel->setArg(2, lut->buf);
-	if(atomicCounter && lut) err |= kernel->setArg(3, atomicCounter->buf);
-	else if (atomicCounter) err |= kernel->setArg(2, atomicCounter->buf);
+	if(lut) kernel->setArg(2, *lut);
+	if(atomicCounter && lut) kernel->setArg(3, *atomicCounter);
+	else if (atomicCounter) kernel->setArg(2, *atomicCounter);
 
-	if(!oclContext::oclError("Error while setting kernel arguments", err))
-		return 0.0;
+	kernel->setLocalWorkSize(localWorkSize());
+	kernel->setGlobalWorkOffset(computeOffset(1, 1));
+	kernel->setGlobalWorkSize(computeGlobal(1, 1));
 
-	cl::NDRange offset(computeOffset(1, 1));
-	cl::NDRange gridDim(computeGlobal(1, 1));
+	QCLEvent evt = kernel->run();
+	evt.waitForFinished();
 
-	cl::Event evt;
-	err = ctx->commandQueue().enqueueNDRangeKernel(
-		*kernel, offset, gridDim, ctx->workgroupSize(),
-		nullptr, &evt);
-	evt.wait();
+	return oclUtils::eventDuration(evt);
+}
 
-	oclContext::oclError("Error while executing kernel over ND range!", err);
+qreal oclMorphHitMissFilter::readAtomicCounter(QCLBuffer& buf, cl_uint& dst)
+{
+	QCLEvent evt = buf.readAsync(0, &dst, sizeof(cl_uint));
+	evt.waitForFinished();
+	return oclUtils::eventDuration(evt);
+}
 
-	return oclContext::oclElapsedEvent(evt);
+qreal oclMorphHitMissFilter::zeroAtomicCounter(QCLBuffer& buf)
+{
+	static int init = 0;
+	QCLEvent evt = buf.writeAsync(0, &init, sizeof(cl_uint));
+	evt.waitForFinished();
+	return oclUtils::eventDuration(evt);
+}
+
+qreal oclMorphHitMissFilter::copyImage2D(const QCLImage2D& src, QCLImage2D& dst)
+{
+	QCLEvent evt = const_cast<QCLImage2D&>(src).copyToAsync
+		(QRect(0, 0, src.width(), src.height()),
+		dst, QPoint(0, 0));
+	evt.waitForFinished();
+	return oclUtils::eventDuration(evt);
 }

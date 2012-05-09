@@ -1,12 +1,13 @@
 #include "glwidget.h"
 
-#include <Qt/QtOpenCL>
+#include <QtOpenCL>
 
 //#include "oclcontext.h"
-//#include "oclfilter.h"
+#include "oclfilter.h"
 #include "oclbayerfilter.h"
-//#include "oclmorphfilter.h"
-//#include "oclmorphhitmissfilter.h"
+#include "oclmorphfilter.h"
+#include "oclutils.h"
+#include "oclmorphhitmissfilter.h"
 
 #include "oclthread.h"
 #include "cvutils.h"
@@ -17,12 +18,6 @@
 #ifdef Q_WS_X11
 #	include <GL/glx.h>
 #endif
-
-qreal eventDuration(const QCLEvent& evt)
-{
-	qreal runDuration = (evt.finishTime() - evt.runTime()) / 1000000.0f;
-	return runDuration;
-}
 
 oclThread::oclThread(BlockingQueue<ProcessingItem>& queue,
 	const Configuration& conf, GLDummyWidget* shareWidget)
@@ -88,66 +83,6 @@ void oclThread::initContext(QCLContext& ctx)
 
 	QCLCommandQueue cq = ctx.createCommandQueue(CL_QUEUE_PROFILING_ENABLE);
 	ctx.setCommandQueue(cq);
-
-//	if(shareWidget)
-//	{
-//		// createContextGL oczekuje aktywnego kontekstu
-//		// Moze pozniej to zmienie (bedzie oczekiwac tych wartosci w argumentach funkcji)
-//		qDebug() << "(i) Przed makeCurrent";
-//		shareWidget->makeCurrent();
-//		qDebug() << "(i) Po makeCurrent";
-
-//#ifdef Q_WS_WIN32
-//		HDC dc = wglGetCurrentDC();
-//		HGLRC rc = wglGetCurrentContext();
-//#else
-//		Display* dc = glXGetCurrentDisplay();
-//		GLXContext rc = glXGetCurrentContext();
-//#endif
-
-//		//qDebug() << "currentDC:" << dc <<
-//		//	"currentContext:" << rc;
-
-//		// TODO: for glx
-//		// TODO: albo przeniesc to do createContextGL
-//		if(!dc || !rc)
-//		{
-//			c.createContext(platformId);
-//			shareWidget = nullptr;
-//		}
-//		else
-//		{
-//			c.createContextGL(platformId);
-
-//			qDebug() << "(i) Przed doneCurrent";
-//			shareWidget->doneCurrent();
-//			qDebug() << "(i) Po doneCurrent";
-//		}
-//	}
-//	else
-//	{
-//		c.createContext(platformId);
-//	}
-
-//	// wybor urzadzenia
-//	c.chooseDevice(deviceId);
-
-//	c.createCommandQueue(true);
-//	c.setWorkgroupSize(conf.workgroupSizeX,
-//		conf.workgroupSizeY);
-
-//	// Bloczek z filtracja bayera
-//	bayerFilter = new oclBayerFilter(&c);
-
-//	// Bloczek z operacjami morfologicznymi
-//	morphFilter = new oclMorphFilter(&c,
-//		conf.erode_2d.toStdString().c_str(),
-//		conf.dilate_2d.toStdString().c_str(),
-//		conf.gradient_2d.toStdString().c_str());
-
-//	// Bloczek z operacjami morfologicznymi typu hit-miss
-//	hitmissFilter = new oclMorphHitMissFilter(&c,
-//		conf.atomicCounters);
 }
 
 void oclThread::choose(int platformId_, int deviceId_)
@@ -164,9 +99,22 @@ void oclThread::run()
 	oclBayerFilter bayerFilter(&ctx);
 	success = ctx.lastError() == CL_SUCCESS;
 
+	oclMorphFilter morphFilter
+		(&ctx, conf.erode_2d.toAscii().constData(),
+		 conf.dilate_2d.toAscii().constData(), 
+		 conf.gradient_2d.toAscii().constData());
+	success = ctx.lastError() == CL_SUCCESS;
+
+	oclMorphHitMissFilter hitmissFilter
+		(&ctx, conf.atomicCounters);
+
 	emit openCLInitialized(success);
 	if(!success)
 		return;
+
+	//	bool glInterop = shareWidget != nullptr;
+	//	printf("GL/CL Interop: %s\n", glInterop
+	//		? "yes" : "no");
 
 	while(true)
 	{
@@ -184,27 +132,23 @@ void oclThread::run()
 			"\n\tnegate:" << item.negate << endl;
 		#endif
 
+		ProcessedItem pitem = {
+			/*.iters = */ 1,
+			/*.delapsed = */ 0.0,
+			/*.dst = */ cv::Mat(),
+			/*.glsize = */ cv::Size(0, 0)// <- bez interopu
+		};
+
 		// Brak operacji, zwroc obraz zrodlowy
 		if(!item.negate &&
 			item.bc == cvu::BC_None &&
 			item.op == cvu::MO_None)
 		{
-			ProcessedItem pitem = {
-				/*.iters = */ 0,
-				/*.delapsed = */ 0.0,
-				/*.dst = */ item.src,
-				/*.glsize = */ cv::Size(0, 0) // <- bez interopu
-			};
+			pitem.iters = 0;
+			pitem.dst = item.src;
 			emit processingDone(pitem);
 			continue;
 		}
-
-		ProcessedItem pitem = {
-			/*.iters = */ 1,
-			/*.delapsed = */ 0.0,
-			/*.dst = */ cv::Mat(),
-			/*glsize = */ cv::Size(0, 0)
-		};
 
 		// Zaneguj obraz
 		// TODO: Bloczek do negowania
@@ -231,9 +175,10 @@ void oclThread::run()
 
 		// Utworz obraz na urzadzeniu
 		QCLImage2D holder = ctx.createImage2DDevice
-				(morphImageFormat(), QSize(item.src.cols, item.src.rows),
+				(oclUtils::morphImageFormat(), 
+				 QSize(item.src.cols, item.src.rows),
 				 QCLMemoryObject::ReadOnly);
-
+		
 		// Skopiuj do niego dane
 		QCLEvent evt = holder.writeAsync
 				(const_cast<uchar*>(item.src.ptr<uchar>()),
@@ -241,133 +186,64 @@ void oclThread::run()
 				 QCLEventList(), 0);
 		evt.waitForFinished();
 
-		//qDebug() << evt;
-
 		// Tego tez mozemy liczyc czas
-		qreal elapsed = eventDuration(evt);
+		qreal elapsed = oclUtils::eventDuration(evt);
 		qDebug("\nTransfering source image to the device took %.05lf ms", elapsed);
 		pitem.delapsed += elapsed;
-
+		
 		// Filtr Bayer'a
-		//if(item.bc != cvu::BC_None)
+		if(item.bc != cvu::BC_None)
 		{
-			bayerFilter.setBayerFilter(cvu::BC_None /*item.bc*/);
+			bayerFilter.setBayerFilter(item.bc);
 			bayerFilter.setSourceImage(holder);
 
-//			// Czy filtr bayera jest ostatnim 'bloczkiem'
-//			if(glInterop && item.op == cvu::MO_None)
-//			{
-//				oclImage2DHolder output = c.createDeviceImageGL(shareWidget->surface(), WriteOnly);
-//				bayerFilter->setOutputDeviceImage(output);
-//				pitem.delapsed += bayerFilter->run();
-//			}
-//			else
+			pitem.delapsed += bayerFilter.run();
+			holder = bayerFilter.outputDeviceImage();
+		}
+
+		// Operacja morfologiczna/hitmiss
+		if(item.op != cvu::MO_None)
+		{	
+			if(isHitMiss(item.op))
 			{
-				QCLEvent evt = bayerFilter.run();
-				pitem.delapsed += eventDuration(evt);
-				holder = bayerFilter.outputDeviceImage();
+				hitmissFilter.setHitMissOperation(item.op);
+				hitmissFilter.setSourceImage(holder);
+
+				pitem.delapsed += hitmissFilter.run();
+				holder = hitmissFilter.outputDeviceImage();
+			}
+			else
+			{
+				morphFilter.setMorphologyOperation(item.op);
+				morphFilter.setStructuringElement(item.se);
+				morphFilter.setSourceImage(holder);
+
+				pitem.delapsed += morphFilter.run();
+				holder = morphFilter.outputDeviceImage();
 			}
 		}
-
-//		if(!glInterop)
-		{
-			// Jesli nie dzielimy zasobow, trzeba je teraz sciagnac
-
-			// TODO:
-			int format = CV_8U;
-			pitem.dst = cv::Mat(cv::Size(holder.width(), holder.height()),
-					format, cv::Scalar(1));
-
-			QCLEvent evt = holder.readAsync
-					(pitem.dst.ptr<uchar>(),
-					 QRect(0, 0, pitem.dst.cols, pitem.dst.rows),
-					 QCLEventList(), 0);
-			evt.waitForFinished();
-
-			qreal elapsed = eventDuration(evt);
-			qDebug("Transfering output image from the device took %.05lf ms", elapsed);
-			pitem.delapsed += elapsed;
-		}
-//		else
-//		{
-//			shareWidget->doneCurrent();
-//		}
-
+	
+		int format = CV_8U;
+		pitem.dst = cv::Mat
+				(cv::Size(holder.width(), holder.height()),
+				 format, cv::Scalar(1));
+		
+		evt = holder.readAsync
+				(pitem.dst.ptr<uchar>()/* + 1 + pitem.dst.cols*/,
+				 //QRect(1, 1, pitem.dst.cols-2, pitem.dst.rows-2),
+				 QRect(0, 0, pitem.dst.cols, pitem.dst.rows),
+				 QCLEventList(), pitem.dst.cols);
+		evt.waitForFinished();
+		
+		elapsed = oclUtils::eventDuration(evt);
+		qDebug("Transfering output image from the device took %.05lf ms", elapsed);
+		pitem.delapsed += elapsed;
+		
 		emit processingDone(pitem);
 	}
 
-//	// Czasem sie zdarza ze implementacja CPU zglasza obsluge cl/gl interop
-//	// Jednak nie jest to prawda :)
-//	bool glInterop = shareWidget != nullptr;
-//	oclDeviceDesc ddesc = c.deviceDescription();
-//	if(ddesc.deviceType != CL_DEVICE_TYPE_GPU)
-//		glInterop = false;
-
-//	printf("GL/CL Interop: %s\n", glInterop
-//		? "yes"
-//		: "no");
-
 //	while(true)
 //	{
-//		ProcessingItem item = queue.dequeue();
-
-//		{
-//			QMutexLocker locker(&stopMutex);
-//			if(stopped)
-//				break;
-//		}
-
-//		#ifdef _DEBUG
-//		qDebug() << endl << "New processing job (OpenCL):" << "\n\toperation:" <<
-//			item.op << "\n\tbayer code:" << item.bc <<
-//			"\n\tnegate:" << item.negate << endl;
-//		#endif
-
-//		// Brak operacji, zwroc obraz zrodlowy
-//		if(!item.negate &&
-//			item.bc == cvu::BC_None &&
-//			item.op == cvu::MO_None)
-//		{
-//			ProcessedItem pitem = {
-//				/*.iters = */ 0,
-//				/*.delapsed = */ 0.0,
-//				/*.dst = */ item.src,
-//				/*.glsize = */ cv::Size(0, 0) // <- bez interopu
-//			};
-//			emit processingDone(pitem);
-//			continue;
-//		}
-
-//		ProcessedItem pitem = {
-//			/*.iters = */ 1,
-//			/*.delapsed = */ 0.0,
-//			/*.dst = */ cv::Mat(),
-//			/*glsize = */ cv::Size(0, 0)
-//		};
-
-//		// Zaneguj obraz
-//		// TODO: Bloczek do negowania
-//		if(item.negate)
-//		{
-//			ElapsedTimer t;
-//			t.start();
-
-//			cv::Mat tmp(item.src.size(), item.src.depth(), item.src.channels());
-//			cvu::negate(item.src, tmp);
-//			item.src = tmp;
-			
-//			pitem.delapsed += t.elapsed();
-
-//			// Czy jest to ostatni 'bloczek'
-//			if (item.bc == cvu::BC_None &&
-//				item.op == cvu::MO_None)
-//			{
-//				pitem.dst = item.src;
-//				emit processingDone(pitem);
-//				continue;
-//			}
-//		}
-
 //		if(glInterop)
 //		{
 //			pitem.glsize = item.src.size();
@@ -457,9 +333,4 @@ void oclThread::run()
 
 //		emit processingDone(pitem);
 //	}
-
-//	// cleanup
-//	delete bayerFilter;
-//	delete morphFilter;
-//	delete hitmissFilter;
 }

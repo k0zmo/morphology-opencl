@@ -121,18 +121,6 @@
     <ClCompile Include="oclbayerfilter.cpp">
       <Filter>_Model\ocl</Filter>
     </ClCompile>
-    <ClCompile Include="oclmorphhitmissfilter.cpp">
-      <Filter>_Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclcontext.cpp">
-      <Filter>_Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclfilter.cpp">
-      <Filter>_Model\ocl</Filter>
-    </ClCompile>
-    <ClCompile Include="oclmorphfilter.cpp">
-      <Filter>_Model\ocl</Filter>
-    </ClCompile>
     <ClCompile Include="glwidget.cpp">
       <Filter>_View</Filter>
     </ClCompile>
@@ -154,6 +142,18 @@
     <ClCompile Include="glew.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="precompiled.cpp" />
+    <ClCompile Include="oclfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclmorphfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclutils.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
+    <ClCompile Include="oclmorphhitmissfilter.cpp">
+      <Filter>_Model\ocl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cvutils.h">
@@ -183,18 +183,6 @@
     <ClInclude Include="oclbayerfilter.h">
       <Filter>_Model\ocl</Filter>
     </ClInclude>
-    <ClInclude Include="oclcontext.h">
-      <Filter>_Model\ocl</Filter>
-    </ClInclude>
-    <ClInclude Include="oclfilter.h">
-      <Filter>_Model\ocl</Filter>
-    </ClInclude>
-    <ClInclude Include="oclmorphfilter.h">
-      <Filter>_Model\ocl</Filter>
-    </ClInclude>
-    <ClInclude Include="oclmorphhitmissfilter.h">
-      <Filter>_Model\ocl</Filter>
-    </ClInclude>
     <ClInclude Include="ui_oclpicker.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
@@ -205,6 +193,18 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="precompiled.h" />
+    <ClInclude Include="oclfilter.h">
+      <Filter>_Model\ocl</Filter>
+    </ClInclude>
+    <ClInclude Include="oclmorphfilter.h">
+      <Filter>_Model\ocl</Filter>
+    </ClInclude>
+    <ClInclude Include="oclutils.h">
+      <Filter>_Model\ocl</Filter>
+    </ClInclude>
+    <ClInclude Include="oclmorphhitmissfilter.h">
+      <Filter>_Model\ocl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sepreview.ui">

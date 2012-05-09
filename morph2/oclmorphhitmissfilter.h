@@ -5,26 +5,31 @@
 
 class oclMorphHitMissFilter : public oclFilter
 {
+	Q_DISABLE_COPY(oclMorphHitMissFilter)
 public:
-	oclMorphHitMissFilter(oclContext* ctx, bool atomicCounters);
+	oclMorphHitMissFilter(QCLContext* ctx, bool atomicCounters);
 
 	void setHitMissOperation(cvu::EMorphOperation op);
 	cvu::EMorphOperation hitMissOperation() const
 	{ return hmOp; }
 
-	virtual double run();
-
+	virtual qreal run();
+	
 private:
-	cl::Kernel kernelOutline;
-	cl::Kernel kernelSkeleton_pass[2];
-	cl::Kernel kernelSkeleton_iter[8];
+	QCLKernel kernelOutline;
+	QCLKernel kernelSkeleton_pass[2];
+	QCLKernel kernelSkeleton_iter[8];
 
 	cvu::EMorphOperation hmOp;
 
 private:
-	double runHitMissKernel(cl::Kernel* kernel,
-		const oclImage2DHolder& source, oclImage2DHolder& output,
-		const oclBufferHolder* lut = nullptr,
-		oclBufferHolder* atomicCounter = nullptr);
+	qreal runHitMissKernel(QCLKernel* kernel,
+		const QCLImage2D& source, QCLImage2D& output,
+		const QCLBuffer* lut = nullptr,
+		QCLBuffer* atomicCounter = nullptr);
+
+	qreal copyImage2D(const QCLImage2D& src, QCLImage2D& dst);
+	qreal readAtomicCounter(QCLBuffer& buf, cl_uint& dst);
+	qreal zeroAtomicCounter(QCLBuffer& buf);
 };
 

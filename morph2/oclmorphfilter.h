@@ -5,8 +5,9 @@
 
 class oclMorphFilter : public oclFilter
 {
+	Q_DISABLE_COPY(oclMorphFilter)
 public:
-	oclMorphFilter(oclContext* ctx,
+	oclMorphFilter(QCLContext* ctx,
 		const char *erode, const char *dilate,
 		const char *gradient);
 
@@ -14,17 +15,17 @@ public:
 	cvu::EMorphOperation morphologyOperation() const
 	{ return morphOp; }
 
-	virtual double run();
+	virtual qreal run();
 
 	void setStructuringElement(const cv::Mat& selement);
 
 private:
-	cl::Kernel kernelErode;
-	cl::Kernel kernelDilate;
-	cl::Kernel kernelGradient;
-	cl::Kernel kernelSubtract;
+	QCLKernel kernelErode;
+	QCLKernel kernelDilate;
+	QCLKernel kernelGradient;
+	QCLKernel kernelSubtract;
 
-	oclBufferHolder structuringElement;
+	QCLBuffer structuringElement;
 	int seRadiusX;
 	int seRadiusY;
 
@@ -32,12 +33,12 @@ private:
 
 private:
 
-	double runMorphologyKernel(cl::Kernel* kernel,
-		const oclImage2DHolder& source,
-		oclImage2DHolder& output);
+	qreal runMorphologyKernel(QCLKernel* kernel,
+		const QCLImage2D& source,
+		QCLImage2D& output);
 	
-	double runSubtractKernel(
-		const oclImage2DHolder& sourceA,
-		const oclImage2DHolder& sourceB,
-		oclImage2DHolder& output);
+	qreal runSubtractKernel(
+		const QCLImage2D& sourceA,
+		const QCLImage2D& sourceB,
+		QCLImage2D& output);
 };

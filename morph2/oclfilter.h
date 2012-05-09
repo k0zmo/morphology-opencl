@@ -1,36 +1,44 @@
 #pragma once
 
-#include "oclcontext.h"
 #include "cvutils.h"
+
+#include <QCLContext>
+#include <QCLEvent>
 
 class oclFilter
 {
+	Q_DISABLE_COPY(oclFilter)
 public:
-	oclFilter(oclContext* ctx);
+	oclFilter(QCLContext* ctx);
 	virtual ~oclFilter();
-	
-	virtual double run() = 0;
+
+	virtual qreal run() = 0;
+
+	void setSourceImage(const QCLImage2D& src);
+		//const QRect& roi = cvu::WholeImage);
+
+	void setOutputDeviceImage(const QCLImage2D& img);
+	void unsetOutputDeviceImage() { ownsOutput = true; }
+
+	QCLImage2D outputDeviceImage() const { return d_dst; }
+
+	QCLWorkSize localWorkSize() const { return d_localSize; }
+	void setLocalWorkSize(const QCLWorkSize& local) { d_localSize = local; }
+
+protected:
+	QCLWorkSize computeOffset(int minBorderX, int minBorderY);
+	QCLWorkSize computeGlobal(int minBorderX, int minBorderY);
 
 	void prepareDestinationHolder();
 	void finishUpDestinationHolder();
 
-	virtual void setSourceImage(const oclImage2DHolder& src,
-		const cv::Rect& roi = cvu::WholeImage);
-
-	void setOutputDeviceImage(const oclImage2DHolder& img);
-	void unsetOutputDeviceImage() { ownsOutput = true; }
-
-	oclImage2DHolder outputDeviceImage() const { return dst; }
-
 protected:
-	cl::NDRange computeOffset(int minBorderX, int minBorderY);
-	cl::NDRange computeGlobal(int minBorderX, int minBorderY);
+	QCLContext* d_ctx;
+	QCLWorkSize d_localSize;
 
-protected:
-	oclContext* ctx;
+	const QCLImage2D* d_src;
+	QCLImage2D d_dst;
 
-	const oclImage2DHolder* src;
-	oclImage2DHolder dst;
-	cv::Rect roi;
+//	//QRect roi;
 	bool ownsOutput;
 };

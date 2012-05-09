@@ -48,10 +48,9 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 		QCLPlatform p = i.key();
 
-		QString cbText = QString("%1 %2 (%3)")
+		QString cbText = QString("%1 %2")
 				.arg(p.name())
-				.arg(p.version())
-				.arg(p.vendor());
+				.arg(p.version());
 
 		QTreeWidgetItem* pl = new QTreeWidgetItem((QTreeWidget*)0, QStringList(cbText));
 		items.append(pl);
