@@ -3,7 +3,6 @@
 #include <QDialog>
 
 #include "ui_oclpicker.h"
-#include "oclcontext.h"
 #include "oclthread.h"
 
 class oclPicker : public QDialog, Ui::oclPicker

@@ -67,11 +67,14 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		auto& devlist = i.value();
 		foreach(QCLDevice dev, devlist)
 		{
+			QCLDevice::DeviceTypes deviceType = dev.deviceType();
+			bool isGpu = deviceType & QCLDevice::GPU;
+
 			QTreeWidgetItem* devItem = new QTreeWidgetItem(pl,
 				QStringList(dev.name()));
+			devItem->setData(0, Qt::UserRole, isGpu);
 			items.append(devItem);
-
-			QCLDevice::DeviceTypes deviceType = dev.deviceType();
+			
 			int computeUnits = dev.computeUnits();
 			int clockFrequency = dev.clockFrequency();
 			bool hasImage2D = dev.hasImage2D();
@@ -212,12 +215,11 @@ void oclPicker::onTryInteropToggled(bool checked)
 		for(int j = 0; j < devicesCount; ++j)
 		{
 			QTreeWidgetItem* dev = pl->child(j);
-			cl_device_type deviceType = static_cast<cl_device_type>
-				(dev->data(0, Qt::UserRole).toInt());
+			bool isGpu = dev->data(0, Qt::UserRole).toBool();
 			
 			if(checked)
 			{
-				bool toHide = deviceType != CL_DEVICE_TYPE_GPU;
+				bool toHide = !isGpu;
 				if(toHide && (dev == selected))
 					forceRefresh = true;
 				dev->setHidden(toHide);
