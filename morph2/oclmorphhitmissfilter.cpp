@@ -158,13 +158,13 @@ double oclMorphHitMissFilter::run()
 				// odd pass
 				ctx->copyDeviceImage(dst, tmp);
 				elapsed += oclContext::oclElapsedEvent(tmp.evt);
-				elapsed += runHitMissKernel(&kernelSkeleton_pass[0],
+				elapsed += runHitMissKernel(&kernelSkeleton_pass[1],
 					tmp, dst, &zhLut, &atomicCounter);
 
 				// even pass
 				ctx->copyDeviceImage(dst, tmp);
 				elapsed += oclContext::oclElapsedEvent(tmp.evt);
-				elapsed += runHitMissKernel(&kernelSkeleton_pass[1],
+				elapsed += runHitMissKernel(&kernelSkeleton_pass[0],
 					tmp, dst, &zhLut, &atomicCounter);
 
 				// Sprawdz ile pikseli zostalo zmodyfikowanych
