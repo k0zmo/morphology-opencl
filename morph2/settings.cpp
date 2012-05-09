@@ -25,8 +25,6 @@ void Settings::setConfigurationModel(const Configuration& conf)
 
 	// Sekcja OpenCL
 	useAtomicCountersCheckBox->setChecked(conf.atomicCounters);
-	openGInteropCheckBox->setChecked(conf.glInterop);
-
 	setComboBoxIndex(workgroupSizeXComboBox, QString::number(conf.workgroupSizeX));
 	setComboBoxIndex(workgroupSizeYComboBox, QString::number(conf.workgroupSizeY));
 
@@ -55,7 +53,6 @@ Configuration Settings::configurationModel() const
 
 	// Sekcja [opencl]
 	conf.atomicCounters = useAtomicCountersCheckBox->isChecked();
-	conf.glInterop = openGInteropCheckBox->isChecked();
 	conf.workgroupSizeX = workgroupSizeXComboBox->currentText().toInt();
 	conf.workgroupSizeY = workgroupSizeYComboBox->currentText().toInt();
 

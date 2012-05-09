@@ -16,14 +16,17 @@ public:
 
 	int platform() const { return platformId; }
 	int device() const { return deviceId; }
+	bool tryInterop() const { return interop; }
 
 private slots:
 	void onItemSelectionChanged();
 	void accept();
+	void onTryInteropToggled(bool checked);
 
 private:
 	QMap<QString, QString> devToDesc;
 	int platformId;
 	int deviceId;
+	bool interop;
 };
 

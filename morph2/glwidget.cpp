@@ -69,8 +69,6 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 	if(!d_surface)
 		return;
 
-	makeCurrent();
-
 	glBindTexture(GL_TEXTURE_2D, d_surface);
 
 	// Nastapila zmiana rozmiaru - alokujemy pamiec od nowa
@@ -91,8 +89,6 @@ void GLDummyWidget::createSurface_impl(int w, int h, const void* data)
 
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);
-
-	doneCurrent();
 }
 
 void GLDummyWidget::initialize_impl()
@@ -222,7 +218,9 @@ void GLWidget::initializeGL()
 
 void GLWidget::paintGL()
 {
-	glClear(GL_COLOR_BUFFER_BIT);
+	//qDebug() << "         <" << __FUNCTION__ ">";
+
+	glClear(GL_COLOR_BUFFER_BIT);	
 
 	if(d_surface != 0)
 	{
@@ -234,6 +232,7 @@ void GLWidget::paintGL()
 		GLint w, h;
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+
 		//qDebug() << "Texture to be drawn:" << w << h;
 
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -241,12 +240,19 @@ void GLWidget::paintGL()
 
 	GLenum err = glGetError();
 	if(err) printf("OpenGL Error: 0x0%x\n", err);
+
+	//qDebug() << "         </" << __FUNCTION__ ">";
 }
 
 void GLWidget::resizeGL(int width, int height)
 {
+	//qDebug() << "         <" << __FUNCTION__ ">";
+
 	// no need for calling makeCurrent as it is already done by Qt
-	if(height == 0)
-		height = 1;
 	glViewport(0, 0, width, height);
+
+	GLenum err = glGetError();
+	if(err) printf("OpenGL Error: 0x0%x\n", err);
+
+	//qDebug() << "         </" << __FUNCTION__ ">";
 }

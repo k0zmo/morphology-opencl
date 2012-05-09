@@ -129,7 +129,7 @@ bool oclContext::createContextGL(size_t platformId)
 #endif
 
 	cl_int err;
-	ctx = cl::Context(CL_DEVICE_TYPE_ALL,
+	ctx = cl::Context(CL_DEVICE_TYPE_GPU,
 		properties, nullptr, nullptr, &err);
 
 	return oclError("Error during creating context", err);
@@ -143,6 +143,12 @@ void oclContext::chooseDevice(size_t deviceId)
 	if(deviceId < devices.size())
 	{
 		device = devices[deviceId];
+		devDesc = populateDescription(device);
+	}
+	else if(!devices.empty())
+	{
+		printf("Using first available device");
+		device = devices[0];
 		devDesc = populateDescription(device);
 	}
 }

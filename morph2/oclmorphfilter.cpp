@@ -7,6 +7,8 @@ oclMorphFilter::oclMorphFilter(QCLContext* ctx,
 	: oclFilter(ctx)
 	, morphOp(cvu::MO_None)
 {
+	printf("\n*---- Morphology filter initialization ----*\n");
+
 	// Wczytaj program
 	QCLProgram program = ctx->createProgramFromSourceFile("kernels/2d/morph.cl");
 	if(program.isNull() ||

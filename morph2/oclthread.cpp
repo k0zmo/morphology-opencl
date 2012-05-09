@@ -36,6 +36,12 @@ oclThread::~oclThread()
 {
 }
 
+void oclThread::setSharedWidget(GLDummyWidget* shareWidget)
+{
+	if(!isRunning())
+		this->shareWidget = shareWidget;
+}
+
 void oclThread::stop()
 {
 	QMutexLocker locker(&stopMutex);
@@ -204,6 +210,8 @@ void oclThread::run()
 		qDebug() << endl << "New processing job (OpenCL):" << "\n\toperation:" <<
 			item.op << "\n\tbayer code:" << item.bc <<
 			"\n\tnegate:" << item.negate << endl;
+		#else
+		qDebug();
 		#endif
 
 		ProcessedItem pitem = {

@@ -31,6 +31,7 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	: QDialog(parent)
 	, platformId(0)
 	, deviceId(0)
+	, interop(false)
 {
 	setupUi(this);
 	Q_ASSERT(buttonBox->button(QDialogButtonBox::Ok));
@@ -38,6 +39,14 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	buttonBox->button(QDialogButtonBox::Ok)->setText("Choose");
 	buttonBox->button(QDialogButtonBox::Cancel)->setText("No OpenCL");
+
+	connect(buttonBox, SIGNAL(accepted()), 
+		SLOT(accept()));
+	connect(buttonBox, SIGNAL(rejected()),
+		SLOT(reject()));
+
+	splitter->setStretchFactor(0, 7);
+	splitter->setStretchFactor(1, 3);
 
 	QList<QTreeWidgetItem*> items;
 
@@ -117,10 +126,8 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
-	connect(buttonBox, SIGNAL(accepted()), 
-		SLOT(accept()));
-	connect(buttonBox, SIGNAL(rejected()),
-		SLOT(reject()));
+	connect(tryInteropCheckBox, SIGNAL(toggled(bool)),
+		SLOT(onTryInteropToggled(bool)));
 }
 
 oclPicker::~oclPicker()
@@ -183,6 +190,50 @@ void oclPicker::accept()
 
 	platformId = treeWidget->indexOfTopLevelItem(parent);
 	deviceId = parent->indexOfChild(item);
+	interop = tryInteropCheckBox->isChecked();
 
 	QDialog::accept();
+}
+
+void oclPicker::onTryInteropToggled(bool checked)
+{
+	QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
+	QTreeWidgetItem* selected = nullptr;
+	if(!selectedItems.isEmpty())
+		selected = selectedItems[0];
+	bool forceRefresh = false;
+
+	int platformsCount = treeWidget->topLevelItemCount();
+
+	for(int i = 0; i < platformsCount; ++i)
+	{
+		QTreeWidgetItem* pl = treeWidget->topLevelItem(i);
+		int devicesCount = pl->childCount();
+		for(int j = 0; j < devicesCount; ++j)
+		{
+			QTreeWidgetItem* dev = pl->child(j);
+			cl_device_type deviceType = static_cast<cl_device_type>
+				(dev->data(0, Qt::UserRole).toInt());
+			
+			if(checked)
+			{
+				bool toHide = deviceType != CL_DEVICE_TYPE_GPU;
+				if(toHide && (dev == selected))
+					forceRefresh = true;
+				dev->setHidden(toHide);
+			}
+			else
+			{
+				dev->setHidden(false);
+			}				
+		}
+	}
+
+	if(forceRefresh)
+	{
+		// Zalozenie jest takie ze jakas platforma istnieje
+		// Oto dba Controller
+		treeWidget->setItemSelected(selected, false);
+		treeWidget->setItemSelected(treeWidget->topLevelItem(0), true);		
+	}
 }

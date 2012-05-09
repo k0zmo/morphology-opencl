@@ -10,6 +10,8 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 	: oclFilter(ctx)
 	, hmOp(cvu::MO_None)
 {
+	printf("\n*---- Morphology Hit-miss filter initialization ----*\n");
+
 	QString opts = "-Ikernels/2d/";
 	if(atomicCounters)
 	{

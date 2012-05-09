@@ -26,6 +26,9 @@ public:
 		const Configuration& conf, GLDummyWidget* shareWidget = nullptr);
 	virtual ~oclThread();
 
+	// Mozna wolac tylko przed start()
+	void setSharedWidget(GLDummyWidget* shareWidget);
+
 	PlatformDevicesMap queryPlatforms();
 	void choose(int platformId, int deviceId);
 	void stop();

@@ -5,6 +5,8 @@ oclBayerFilter::oclBayerFilter(QCLContext* ctx)
 	: oclFilter(ctx)
 	, d_kernel(nullptr)
 {
+	printf("\n*---- Bayer filter initialization ----*\n");
+
 	// Wczytaj program
 	QCLProgram program = ctx->createProgramFromSourceFile("kernels/2d/bayer.cl");
 	if(program.isNull() ||
