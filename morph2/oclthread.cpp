@@ -262,7 +262,7 @@ void oclThread::run()
 				else
 				{
 					pitem.delapsed += hitmissFilter->run();
-					holder = oclImage2DHolder(morphFilter->outputDeviceImage());
+					holder = oclImage2DHolder(hitmissFilter->outputDeviceImage());
 				}
 			}
 			else
