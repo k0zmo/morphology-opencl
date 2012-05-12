@@ -154,6 +154,7 @@
     <ClCompile Include="glew.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="precompiled.cpp" />
+    <ClCompile Include="minidumper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cvutils.h">
@@ -205,6 +206,7 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="precompiled.h" />
+    <ClInclude Include="minidumper.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="sepreview.ui">

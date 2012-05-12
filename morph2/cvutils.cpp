@@ -26,6 +26,21 @@ QImage toQImage(const cv::Mat& image)
 	return QImage();
 }
 
+const char* cvFormatToString(int cvFormat)
+{
+	switch(cvFormat)
+	{
+	case CV_8U:  return "CV_8U";
+	case CV_8S:  return "CV_8S";
+	case CV_16U: return "CV_16U";
+	case CV_16S: return "CV_16S";
+	case CV_32S: return "CV_32S";
+	case CV_32F: return "CV_32F";
+	case CV_64F: return "CV_64F";
+	default: return "CV_USERTYPE";
+	}
+}
+
 void negate(const cv::Mat& src, cv::Mat& dst)
 {
 	//cv::LUT(_src, lut, _dst);

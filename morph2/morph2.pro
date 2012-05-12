@@ -1,7 +1,13 @@
 QT += core gui opengl
 CONFIG += debug_and_release warn_on precompile_header
 
+DEFINES *= _CRT_SECURE_NO_WARNINGS
+
 TARGET = morph2
+CONFIG(debug, debug|release) {
+	TARGET = $$join(TARGET,,,d)
+}
+
 TEMPLATE = app
 DESTDIR = ../bin32
 
@@ -26,7 +32,8 @@ SOURCES += \
 	oclpicker.cpp \
 	mainwidget.cpp \
 	previewproxy.cpp \
-	glew.cpp
+	glew.cpp \
+	minidumper.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -49,7 +56,8 @@ HEADERS  += \
 	oclthread.h \
 	oclpicker.h \
 	mainwidget.h \
-	previewproxy.h
+	previewproxy.h \
+	minidumper.h
 
 FORMS += \
 	sepreview.ui \
@@ -61,5 +69,24 @@ FORMS += \
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
 
-QMAKE_CXXFLAGS += -std=c++0x -fopenmp
-LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
+linux {
+	QMAKE_CXXFLAGS += -std=c++0x -fopenmp
+	LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
+}
+
+win32 {
+	INCLUDEPATH += $$quote($$(AMDAPPSDKROOT))/include
+	INCLUDEPATH += $$quote($$(OPENCVDIR))/include
+
+	LIBS += -L$$quote($$(AMDAPPSDKROOT))/lib/x86/
+	LIBS += -L$$quote($$(OPENCVDIR))/x86/vc10/lib
+
+	CONFIG(debug, debug|release) {
+		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+	}
+	CONFIG(release, debug|release) {
+		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+	}
+
+	LIBS += -lOpenCL
+}
