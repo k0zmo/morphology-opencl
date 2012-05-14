@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressBar>
+#include <QInputDialog>
 
 #include "cvutils.h"
 #include "elapsedtimer.h"
@@ -40,8 +41,11 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 	setupUi(this);
 
 	// Menu (File)
-	connect(actionCameraInput, SIGNAL(triggered(bool)),
+	connect(actionCameraUseOpenCV, SIGNAL(triggered(bool)),
 		SLOT(onFromCameraTriggered(bool)));
+	connect(actionCameraUseSapera, SIGNAL(triggered(bool)),
+		SLOT(onFromCameraTriggered(bool)));
+
 	connect(actionOpen, SIGNAL(triggered()),
 		SLOT(onOpenFileTriggered()));
 	connect(actionSave, SIGNAL(triggered()),
@@ -60,6 +64,10 @@ Controller::Controller(QWidget *parent, Qt::WFlags flags)
 		, SLOT(onPickMethodTriggerd()));
 	connect(actionSettings, SIGNAL(triggered()),
 		SLOT(onSettingsTriggered()));
+		
+#ifdef SAPERA_SUPPORT
+	actionCameraUseSapera->setEnabled(true);
+#endif		
 
 	// Pasek stanu
 	procQueueLabel = new QLabel(this);
@@ -240,20 +248,57 @@ void Controller::onProcessingDone(const ProcessedItem& item)
 
 void Controller::onFromCameraTriggered(bool state)
 {
-	mw->setCameraStatus(state);
-
 	if(state)
 	{
-		capThread = new CapThread(useOpenCL ? 1 : 0, procQueue, clQueue);
-		if(!(cameraConnected = capThread->openCamera(0)))
+#ifdef SAPERA_SUPPORT
+		if(qobject_cast<QAction*>(sender())->objectName() == "actionCameraUseSapera")
+		{
+			QString ccfFile = QFileDialog::getOpenFileName
+				(this, "Open camera configuration file",
+				 QDir::current().path(), "Camera configuration files (*.ccf)");
+
+			if(!ccfFile.isEmpty())
+			{
+				capThread = new CapThread(useOpenCL ? 1 : 0, procQueue, clQueue);
+				cameraConnected = capThread->openCamera(ccfFile);
+			}
+			else
+			{
+				qobject_cast<QAction*>(sender())->setChecked(false);
+				return;
+			}
+		}
+		else
+#endif
+		{
+			bool ok;
+			int camId = QInputDialog::getInt
+				(this, "Morph OpenCL", "Camera Id:",
+				 0, 0, 10, 1, &ok);
+			if(ok)
+			{
+				capThread = new CapThread(useOpenCL ? 1 : 0, procQueue, clQueue);
+				cameraConnected = capThread->openCamera(camId);
+			}
+			else
+			{
+				qobject_cast<QAction*>(sender())->setChecked(false);
+				return;
+			}
+		}
+
+		if(!cameraConnected)
 		{
 			// Wracamy do stanu sprzed wybrania kamery jako wejscia
-			actionCameraInput->setChecked(false);
-			mw->setCameraStatus(false);
+			qobject_cast<QAction*>(sender())->setChecked(false);
+			
+			delete capThread;
+			capThread = 0;
 
 			QMessageBox::critical(mw, "Error", 
 				"Cannot establish connection to selected camera device.", 
 				QMessageBox::Ok);
+			return;
 		}
 		else
 		{
@@ -263,9 +308,11 @@ void Controller::onFromCameraTriggered(bool state)
 
 			capThread->setJobDescription(negateSource, bc, op, se);
 			capThread->start(QThread::LowPriority);
-
-			setEnabledSaveOpenFile(false);
-			mw->setEnabledAutoRecompute(false);
+			
+			if(qobject_cast<QAction*>(sender())->objectName() == "actionCameraUseSapera")
+				actionCameraUseOpenCV->setEnabled(false);
+			else
+				actionCameraUseSapera->setEnabled(false);
 		}
 	}
 	else
@@ -283,12 +330,21 @@ void Controller::onFromCameraTriggered(bool state)
 
 		delete capThread;
 		capThread = 0;
-		cameraConnected = false;
-
-		setEnabledSaveOpenFile(true);
-		mw->setEnabledAutoRecompute(true);
+		cameraConnected = false;		
+	}
+	
+	if(!cameraConnected)
+	{
+		#ifdef SAPERA_SUPPORT
+			actionCameraUseSapera->setEnabled(true);
+		#endif
+		actionCameraUseOpenCV->setEnabled(true);
 	}
 
+	mw->setEnabledAutoRecompute(!cameraConnected);
+	mw->setCameraStatus(cameraConnected);
+	
+	setEnabledSaveOpenFile(!cameraConnected);
 	setCameraStatusBarState(cameraConnected);
 }
 
@@ -726,6 +782,7 @@ void Controller::initializeOpenCL()
 
 	QProgressBar* pb = new QProgressBar(qstatusBar);
 	pb->setObjectName("ProgressBar");
+	pb->setMinimumWidth(300);
 	pb->setRange(0, 0);
 	qstatusBar->insertWidget(2, pb);
 }

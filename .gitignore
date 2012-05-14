@@ -11,7 +11,7 @@ gauss/Debug
 gauss/Release
 bin32/profiler/*.txt
 bin32/styles
-
+Sapera
 ipch
 
 *.exe

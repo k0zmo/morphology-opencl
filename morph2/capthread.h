@@ -8,6 +8,14 @@
 
 #include "blockingqueue.h"
 
+//#define SAPERA_SUPPORT
+
+#ifdef SAPERA_SUPPORT
+class SapAcquisition;
+class SapBuffer;
+class SapAcqToBuf;
+#endif // SAPERA_SUPPORT
+
 class CapThread : public QThread
 {
 	Q_OBJECT
@@ -17,6 +25,10 @@ public:
 		BlockingQueue<ProcessingItem> &clQueue);
 
 	bool openCamera(int camId);
+#ifdef SAPERA_SUPPORT
+	bool openCamera(const QString& ccf);
+#endif // SAPERA_SUPPORT
+	
 	void closeCamera();
 	void stop();
 
@@ -58,4 +70,13 @@ private:
 	int height;
 
 	bool stopped;
+
+	bool useSaperaLib;
+#ifdef SAPERA_SUPPORT
+	SapAcquisition* acq;
+	SapBuffer* buffer;
+	SapAcqToBuf* xfer;
+
+	void freeSapera();
+#endif // SAPERA_SUPPORT	
 };

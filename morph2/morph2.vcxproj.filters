@@ -142,6 +142,7 @@
     <ClCompile Include="glew.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="precompiled.cpp" />
+    <ClCompile Include="minidumper.cpp" />
     <ClCompile Include="oclfilter.cpp">
       <Filter>_Model\ocl</Filter>
     </ClCompile>
@@ -193,6 +194,7 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="precompiled.h" />
+    <ClInclude Include="minidumper.h" />
     <ClInclude Include="oclfilter.h">
       <Filter>_Model\ocl</Filter>
     </ClInclude>

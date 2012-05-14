@@ -5,12 +5,20 @@
 #include <cstdlib>
 #include "controller.h"
 
-#ifdef _WIN32
-#define setenv(name, value, replace) _putenv_s(name, value)
+#ifdef Q_WS_WIN32
+#	define setenv(name, value, replace) _putenv_s(name, value)
 #endif
+
+#include "minidumper.h"
 
 int main(int argc, char *argv[])
 {
+	printf(argv[0]);
+	
+#ifdef Q_WS_WIN32
+	MiniDumper dumper("morph2.exe");
+#endif
+
 	QApplication::setAttribute(Qt::AA_X11InitThreads);
 	QApplication a(argc, argv);
 

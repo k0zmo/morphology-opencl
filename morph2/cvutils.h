@@ -24,6 +24,8 @@ void bayerFilter(const cv::Mat& src, cv::Mat& dst, EBayerCode bc);
 // Obslugiwane formaty: CV_8UC1 oraz CV_8UC3
 QImage toQImage(const cv::Mat& image);
 
+const char* cvFormatToString(int cvFormat);
+
 // Negacja danego obrazu (w miejscu)
 void negate(const cv::Mat& src, cv::Mat& dst);
 

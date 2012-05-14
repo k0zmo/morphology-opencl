@@ -42,14 +42,21 @@
      <x>0</x>
      <y>0</y>
      <width>704</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionCameraInput"/>
+    <widget class="QMenu" name="menuFromCamera">
+     <property name="title">
+      <string>From camera</string>
+     </property>
+     <addaction name="actionCameraUseOpenCV"/>
+     <addaction name="actionCameraUseSapera"/>
+    </widget>
+    <addaction name="menuFromCamera"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="separator"/>
@@ -123,14 +130,6 @@
     <bool>false</bool>
    </property>
   </action>
-  <action name="actionCameraInput">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>From camera</string>
-   </property>
-  </action>
   <action name="actionSaveSE">
    <property name="text">
     <string>Save structuring element</string>
@@ -146,6 +145,25 @@
     <string>Settings</string>
    </property>
   </action>
+  <action name="actionCameraUseSapera">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Use Sapera</string>
+   </property>
+  </action>
+  <action name="actionCameraUseOpenCV">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use OpenCV</string>
+   </property>
+  </action>  
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
