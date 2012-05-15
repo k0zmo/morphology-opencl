@@ -7,8 +7,8 @@
 #include "blockingqueue.h"
 #include "configuration.h"
 
-#include <QCLPlatform>
-#include <QCLDevice>
+#include <qclplatform.h>
+#include <qcldevice.h>
 class QCLContext;
 class QCLContextGL;
 class GLDummyWidget;

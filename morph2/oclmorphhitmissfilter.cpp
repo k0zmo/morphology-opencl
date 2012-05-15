@@ -36,7 +36,6 @@ oclMorphHitMissFilter::oclMorphHitMissFilter(
 		}
 
 		// Licznik atomowy (ew. zwyczajny bufor)
-		static cl_uint d_init = 0;
 		atomicCounter = d_ctx->createBufferDevice
 			(sizeof(cl_uint), QCLMemoryObject::ReadWrite);
 		zeroAtomicCounter(atomicCounter);

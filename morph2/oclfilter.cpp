@@ -1,7 +1,7 @@
 #include "oclfilter.h"
 #include "oclutils.h"
 
-#include <QCLContextGL>
+#include <qclcontextgl.h>
 
 oclFilter::oclFilter(QCLContext* ctx)
 	: d_ctx(ctx)

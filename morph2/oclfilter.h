@@ -2,8 +2,8 @@
 
 #include "cvutils.h"
 
-#include <QCLContext>
-#include <QCLEvent>
+#include <qclcontext.h>
+#include <qclevent.h>
 
 class oclFilter
 {

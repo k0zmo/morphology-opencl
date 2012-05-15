@@ -1,8 +1,8 @@
 #include "glwidget.h"
 
-#include <QtOpenCL>
+#include <qclcontext.h>
+#include <qclcontextgl.h>
 
-//#include "oclcontext.h"
 #include "oclfilter.h"
 #include "oclbayerfilter.h"
 #include "oclmorphfilter.h"

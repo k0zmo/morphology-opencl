@@ -51,8 +51,6 @@ qreal oclMorphFilter::run()
 	qreal elapsed = 0.0;
 	prepareDestinationHolder();
 
-	cl_int error = d_ctx->lastError();
-
 	switch(morphOp)
 	{
 	case cvu::MO_Erode:

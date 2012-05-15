@@ -20,7 +20,6 @@ SOURCES += \
 	main.cpp \
 	morphop.cpp \
 	oclbayerfilter.cpp \
-	oclcontext.cpp \
 	oclfilter.cpp \
 	oclmorphfilter.cpp \
 	oclmorphhitmissfilter.cpp \
@@ -33,7 +32,8 @@ SOURCES += \
 	mainwidget.cpp \
 	previewproxy.cpp \
 	glew.cpp \
-	minidumper.cpp
+	minidumper.cpp \
+    oclutils.cpp
 
 HEADERS  += \
 	blockingqueue.h \
@@ -45,7 +45,6 @@ HEADERS  += \
 	glwidget.h \
 	morphop.h \
 	oclbayerfilter.h \
-	oclcontext.h \
 	oclfilter.h \
 	oclmorphfilter.h \
 	oclmorphhitmissfilter.h \
@@ -57,7 +56,8 @@ HEADERS  += \
 	oclpicker.h \
 	mainwidget.h \
 	previewproxy.h \
-	minidumper.h
+	minidumper.h \
+    oclutils.h
 
 FORMS += \
 	sepreview.ui \
@@ -69,11 +69,13 @@ FORMS += \
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
 
-linux {
+linux-g++ {
 	QMAKE_CXXFLAGS += -std=c++0x -fopenmp
+	LIBS += -L../qt-opencl/lib
+	LIBS += -lQtOpenCL -lQtOpenCLGL
 	LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
+	INCLUDEPATH += ../qt-opencl/src/opencl ../qt-opencl/src/openclgl
 }
-
 win32 {
 	INCLUDEPATH += $$quote($$(AMDAPPSDKROOT))/include
 	INCLUDEPATH += $$quote($$(OPENCVDIR))/include
@@ -83,9 +85,11 @@ win32 {
 
 	CONFIG(debug, debug|release) {
 		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+		LIBS += -lQtOpenCLd -lQtOpenCLGLd
 	}
 	CONFIG(release, debug|release) {
 		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+		LIBS += -lQtOpenCL -lQtOpenCLGL
 	}
 
 	LIBS += -lOpenCL

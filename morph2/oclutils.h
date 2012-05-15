@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QCLEvent>
-#include <QCLImage>
+#include <qclevent.h>
+#include <qclimage.h>
 
 class oclUtils
 {

@@ -1,0 +1,3 @@
+[submodule "qt-opencl"]
+	path = qt-opencl
+	url = git@git.assembla.com:qt-opencl.git

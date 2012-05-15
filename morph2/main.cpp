@@ -13,8 +13,6 @@
 
 int main(int argc, char *argv[])
 {
-	printf(argv[0]);
-	
 #ifdef Q_WS_WIN32
 	MiniDumper dumper("morph2.exe");
 #endif
