@@ -17,6 +17,8 @@ public:
 	int platform() const { return platformId; }
 	int device() const { return deviceId; }
 	bool tryInterop() const { return interop; }
+	void setInteropEnabled(bool state)
+	{ tryInteropCheckBox->setEnabled(state); }
 
 private slots:
 	void onItemSelectionChanged();

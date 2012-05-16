@@ -740,6 +740,9 @@ void Controller::initializeOpenCL()
 	}
 
 	oclPicker picker(map);
+#if DISABLE_OPENGL == 1
+	picker.setInteropEnabled(false);
+#endif
 
 	// Wartosci domyslne
 	int platformId = 0;
