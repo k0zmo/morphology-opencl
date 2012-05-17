@@ -69,9 +69,10 @@ FORMS += \
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
 
-linux {
+unix {
 	QMAKE_CXXFLAGS += -std=c++0x -fopenmp
-	LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
+	LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui
+	LIBS += -lOpenCL -fopenmp
 }
 
 win32 {
@@ -89,4 +90,5 @@ win32 {
 	}
 
 	LIBS += -lOpenCL
+	QMAKE_CXXFLAGS += -openmp
 }
