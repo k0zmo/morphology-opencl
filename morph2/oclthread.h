@@ -18,6 +18,12 @@ typedef QMap<QCLPlatform, QList<QCLDevice> > PlatformDevicesMap;
 inline bool operator<(const QCLPlatform& p1, const QCLPlatform& p2)
 { return p1.platformId() < p2.platformId(); }
 
+enum EOpenCLBackend
+{
+	OB_Images,
+	OB_Buffers
+};
+
 class oclThread : public QThread
 {
 	Q_OBJECT
@@ -28,6 +34,7 @@ public:
 
 	// Mozna wolac tylko przed start()
 	void setSharedWidget(GLDummyWidget* shareWidget);
+	void setOpenCLBackend(EOpenCLBackend backend);
 
 	PlatformDevicesMap queryPlatforms();
 	void choose(int platformId, int deviceId);
@@ -43,12 +50,16 @@ private:
 	int platformId, deviceId;
 	bool stopped;
 	bool success;
+	EOpenCLBackend backend;
 
 	Configuration conf;
 
 private:
 	void initContext(QCLContext* ctx);
 	void initContextWithGL(QCLContextGL* ctx);
+
+	void startWithImages();
+	void startWithBuffers();
 
 signals:
 	void processingDone(const ProcessedItem& item);

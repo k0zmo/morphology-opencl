@@ -14,3 +14,17 @@ private:
 	QCLKernel d_kernels[4];
 	QCLKernel* d_kernel;
 };
+
+class oclBayerFilterBuffer : public oclFilterBuffer
+{
+	Q_DISABLE_COPY(oclBayerFilterBuffer)
+public:
+	oclBayerFilterBuffer(QCLContext* ctx);
+
+	virtual qreal run();
+	void setBayerFilter(cvu::EBayerCode bc);
+private:
+	QCLKernel d_kernels[4];
+	QCLKernel* d_kernel;
+};
+

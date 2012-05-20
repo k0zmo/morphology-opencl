@@ -745,12 +745,20 @@ void Controller::initializeOpenCL()
 	int platformId = 0;
 	int deviceId = 0;
 	bool tryInterop = false;
+	EOpenCLBackend backend = OB_Images;
 
 	if(picker.exec() == QDialog::Accepted)
 	{
 		platformId = picker.platform();
 		deviceId = picker.device();
 		tryInterop = picker.tryInterop();
+		backend = picker.openclBackend();
+
+		qDebug() << "PlatformId:" << platformId;
+		qDebug() << "DeviceId:" << deviceId;
+		qDebug() << "Try Interop:" << tryInterop;
+		qDebug() << "OpenCL Backend:" << 
+			(backend == OB_Images ? "Images" : "Buffers");
 	}
 	else
 	{
@@ -766,14 +774,15 @@ void Controller::initializeOpenCL()
 	useHardware &= tryInterop;
 
 	GLDummyWidget* glw = nullptr;
-	if (useHardware)
+	if(useHardware)
 	{
 		printf("Trying to enable OpenCL/OpenGL interop\n");
 		glw = new GLDummyWidget(this, shareWidget);
 		glw->resize(0, 0);
 		glw->initializeWithSharedSurface(shareWidget->surface());
 	}
-	
+
+	clThread->setOpenCLBackend(backend);
 	clThread->setSharedWidget(glw);
 	clThread->choose(platformId, deviceId);
 	clThread->start(QThread::HighPriority);

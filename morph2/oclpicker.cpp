@@ -32,6 +32,7 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	, platformId(0)
 	, deviceId(0)
 	, interop(false)
+	, backend(OB_Images)
 {
 	setupUi(this);
 	Q_ASSERT(buttonBox->button(QDialogButtonBox::Ok));
@@ -68,16 +69,18 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		foreach(QCLDevice dev, devlist)
 		{
 			QCLDevice::DeviceTypes deviceType = dev.deviceType();
+			bool hasImage2D = dev.hasImage2D();
 			bool isGpu = deviceType & QCLDevice::GPU;
 
 			QTreeWidgetItem* devItem = new QTreeWidgetItem(pl,
 				QStringList(dev.name()));
 			devItem->setData(0, Qt::UserRole, isGpu);
+			devItem->setData(0, Qt::UserRole + 1, hasImage2D);
 			items.append(devItem);
 			
 			int computeUnits = dev.computeUnits();
 			int clockFrequency = dev.clockFrequency();
-			bool hasImage2D = dev.hasImage2D();
+			
 			quint64 maximumAllocationSize = dev.maximumAllocationSize();
 			quint64 globalMemorySize = dev.globalMemorySize();
 			QCLDevice::CacheType globalMemoryCacheType = dev.globalMemoryCacheType();
@@ -91,7 +94,7 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 				"Device type: %1\n"
 				"Compute units: %2\n"
 				"Clock frequency: %3 MHz\n"
-				"Images supported: %4\n"
+				"Images 2D supported: %4\n"
 				"Maximum allocation size: %5 B (%6 MB)\n"
 				"Global memory size: %7 B (%8 MB)\n"
 				"Global memory cache type: %9\n"
@@ -130,11 +133,40 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),
 		SLOT(onItemSelectionChanged()));
 	connect(tryInteropCheckBox, SIGNAL(toggled(bool)),
-		SLOT(onTryInteropToggled(bool)));
+		SLOT(onFilteringChanged()));
+	connect(backendComboBox, SIGNAL(currentIndexChanged(int)),
+		SLOT(onFilteringChanged()));
 }
 
 oclPicker::~oclPicker()
 {
+}
+
+void oclPicker::accept()
+{
+	QList<QTreeWidgetItem*> selected = treeWidget->selectedItems();
+
+	// Nigdy nie powinno wystapic
+	if(selected.isEmpty())
+	{
+		QMessageBox::critical(nullptr, "Morph OpenCL", "Please select a device");
+		return;
+	}
+	else if(!selected[0]->parent())
+	{
+		QMessageBox::critical(nullptr, "Morph OpenCL", "Please select a device, not a platform");
+		return;
+	}
+
+	QTreeWidgetItem* item = selected[0];
+	QTreeWidgetItem* parent = item->parent();
+
+	platformId = treeWidget->indexOfTopLevelItem(parent);
+	deviceId = parent->indexOfChild(item);
+	interop = tryInteropCheckBox->isChecked();
+	backend = static_cast<EOpenCLBackend>(backendComboBox->currentIndex());
+
+	QDialog::accept();
 }
 
 void oclPicker::onItemSelectionChanged()
@@ -172,41 +204,19 @@ void oclPicker::onItemSelectionChanged()
 	}
 }
 
-void oclPicker::accept()
-{
-	QList<QTreeWidgetItem*> selected = treeWidget->selectedItems();
-
-	// Nigdy nie powinno wystapic
-	if(selected.isEmpty())
-	{
-		QMessageBox::critical(nullptr, "Morph OpenCL", "Please select a device");
-		return;
-	}
-	else if(!selected[0]->parent())
-	{
-		QMessageBox::critical(nullptr, "Morph OpenCL", "Please select a device, not a platform");
-		return;
-	}
-
-	QTreeWidgetItem* item = selected[0];
-	QTreeWidgetItem* parent = item->parent();
-
-	platformId = treeWidget->indexOfTopLevelItem(parent);
-	deviceId = parent->indexOfChild(item);
-	interop = tryInteropCheckBox->isChecked();
-
-	QDialog::accept();
-}
-
-void oclPicker::onTryInteropToggled(bool checked)
+void oclPicker::onFilteringChanged()
 {
 	QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
 	QTreeWidgetItem* selected = nullptr;
 	if(!selectedItems.isEmpty())
 		selected = selectedItems[0];
-	bool forceRefresh = false;
 
+	bool forceRefresh = false;
 	int platformsCount = treeWidget->topLevelItemCount();
+
+	auto currentBackend = static_cast<EOpenCLBackend>
+		(backendComboBox->currentIndex());
+	bool currentInterop = tryInteropCheckBox->isChecked();
 
 	for(int i = 0; i < platformsCount; ++i)
 	{
@@ -215,19 +225,19 @@ void oclPicker::onTryInteropToggled(bool checked)
 		for(int j = 0; j < devicesCount; ++j)
 		{
 			QTreeWidgetItem* dev = pl->child(j);
+
 			bool isGpu = dev->data(0, Qt::UserRole).toBool();
-			
-			if(checked)
-			{
-				bool toHide = !isGpu;
-				if(toHide && (dev == selected))
-					forceRefresh = true;
-				dev->setHidden(toHide);
-			}
-			else
-			{
-				dev->setHidden(false);
-			}				
+			bool hasImages = dev->data(0, Qt::UserRole + 1).toBool();
+
+			bool toHide = false;
+			if(currentBackend == OB_Images)
+				toHide |= !hasImages;
+			if(currentInterop)
+				toHide |= !isGpu;
+
+			if(toHide && (dev == selected))
+				forceRefresh = true;
+			dev->setHidden(toHide);	
 		}
 	}
 

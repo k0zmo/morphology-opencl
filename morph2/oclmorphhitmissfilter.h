@@ -30,9 +30,35 @@ private:
 		const QCLImage2D& source, QCLImage2D& output,
 		const QCLBuffer* lut = nullptr,
 		QCLBuffer* atomicCounter = nullptr);
+};
 
-	qreal copyImage2D(const QCLImage2D& src, QCLImage2D& dst);
-	qreal readAtomicCounter(QCLBuffer& buf, cl_uint& dst);
-	qreal zeroAtomicCounter(QCLBuffer& buf);
+class oclMorphHitMissFilterBuffer : public oclFilterBuffer
+{
+	Q_DISABLE_COPY(oclMorphHitMissFilterBuffer)
+public:
+	oclMorphHitMissFilterBuffer(QCLContext* ctx, 
+		bool localMemory, bool atomicCounters);
+
+	void setHitMissOperation(cvu::EMorphOperation op);
+	cvu::EMorphOperation hitMissOperation() const
+	{ return hmOp; }
+
+	virtual qreal run();
+
+private:
+	QCLKernel kernelOutline;
+	QCLKernel kernelSkeleton_pass[2];
+	QCLKernel kernelSkeleton_iter[8];
+
+	cvu::EMorphOperation hmOp;
+
+	QCLBuffer atomicCounter;
+	QCLBuffer zhLut;
+
+private:
+	qreal runHitMissKernel(QCLKernel* kernel,
+		const QCLBuffer& source, QCLBuffer& output,
+		const QCLBuffer* lut = nullptr,
+		QCLBuffer* atomicCounter = nullptr);
 };
 

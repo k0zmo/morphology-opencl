@@ -16,16 +16,20 @@ public:
 	int platform() const { return platformId; }
 	int device() const { return deviceId; }
 	bool tryInterop() const { return interop; }
+	EOpenCLBackend openclBackend() const { return backend; }
 
 private slots:
-	void onItemSelectionChanged();
 	void accept();
-	void onTryInteropToggled(bool checked);
+
+	void onItemSelectionChanged();
+	//void onTryInteropToggled(bool checked);
+	void onFilteringChanged();
 
 private:
 	QMap<QString, QString> devToDesc;
 	int platformId;
 	int deviceId;
 	bool interop;
+	EOpenCLBackend backend;
 };
 

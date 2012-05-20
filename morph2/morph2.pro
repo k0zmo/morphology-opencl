@@ -69,13 +69,14 @@ FORMS += \
 DEFINES += GLEW_STATIC
 PRECOMPILED_HEADER = precompiled.h
 
-linux-g++ {
+unix {
 	QMAKE_CXXFLAGS += -std=c++0x -fopenmp
 	LIBS += -L../qt-opencl/lib
 	LIBS += -lQtOpenCL -lQtOpenCLGL
 	LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui -lOpenCL -fopenmp
-	INCLUDEPATH += ../qt-opencl/src/opencl ../qt-opencl/src/openclgl
+	INCLUDEPATH +=  $$PWD/../qt-opencl/src/opencl $$PWD/../qt-opencl/src/openclgl
 }
+
 win32 {
 	INCLUDEPATH += $$quote($$(AMDAPPSDKROOT))/include
 	INCLUDEPATH += $$quote($$(OPENCVDIR))/include

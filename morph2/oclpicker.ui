@@ -14,21 +14,7 @@
    <string>Pick an OpenCL device</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QCheckBox" name="tryInteropCheckBox">
-     <property name="text">
-      <string>CL/GL Interop</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0" colspan="2">
+   <item row="0" column="0" colspan="5">
     <widget class="QSplitter" name="splitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -48,6 +34,41 @@
        <bool>true</bool>
       </property>
      </widget>
+    </widget>
+   </item>
+   <item row="3" column="4">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QComboBox" name="backendComboBox">
+     <item>
+      <property name="text">
+       <string>Images</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Buffers</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLabel" name="backendLabel">
+     <property name="text">
+      <string>OpenCL Backend:  </string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QCheckBox" name="tryInteropCheckBox">
+     <property name="text">
+      <string>CL/GL Interop</string>
+     </property>
     </widget>
    </item>
   </layout>
