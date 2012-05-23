@@ -128,6 +128,20 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 	treeWidget->insertTopLevelItems(0, items);
 	treeWidget->header()->setStretchLastSection(false);
 	treeWidget->header()->setResizeMode(QHeaderView::ResizeToContents);
+
+	int platformsCount = treeWidget->topLevelItemCount();
+	for(int i = 0; i < platformsCount; ++i)
+	{
+		QTreeWidgetItem* pl = treeWidget->topLevelItem(i);
+		int devicesCount = pl->childCount();
+		for(int j = 0; j < devicesCount; ++j)
+		{
+			QTreeWidgetItem* dev = pl->child(j);
+			bool hasImages = dev->data(0, Qt::UserRole + 1).toBool();
+			dev->setHidden(!hasImages);
+		}
+	}
+
 	treeWidget->expandAll();
 
 	connect(treeWidget, SIGNAL(itemSelectionChanged()),

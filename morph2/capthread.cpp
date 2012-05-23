@@ -3,7 +3,7 @@
 #include <QDebug>
 
 #ifdef SAPERA_SUPPORT
-#	include "sapclassbasic.h"
+#	include "SapClassBasic.h"
 #	ifdef _DEBUG
 #		pragma comment(lib, "SapClassBasicD.lib")
 #	else
