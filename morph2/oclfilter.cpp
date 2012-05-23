@@ -32,15 +32,29 @@ QCLWorkSize oclBaseFilter::computeGlobal(
 	int gx = d_roi.width();
 	int gy = d_roi.height();
 
-	if(minBorderX > d_roi.x())
-		gx -= minBorderX;
-	if(minBorderY > d_roi.y())
-		gy -= minBorderY;
+	// if(minBorderX > d_roi.x())
+		// gx -= minBorderX;
+	// if(minBorderY > d_roi.y())
+		// gy -= minBorderY;
 
-	if(gx >= d_roi.width() + minBorderX)
-		gx -= minBorderX;
-	if(gy >= d_roi.height() + minBorderY)
-		gy -= minBorderY;
+	// if(gx >= d_roi.width() + minBorderX)
+		// gx -= minBorderX;
+	// if(gy >= d_roi.height() + minBorderY)
+		// gy -= minBorderY;
+		
+	int marginLeft = d_roi.x() - minBorderX;
+	int marginTop = d_roi.y() - minBorderY;
+	int marginRight = d_roi.width() + minBorderX;
+	int marginBottom = d_roi.height() + minBorderY;
+		
+	if(marginLeft < 0)
+		gx -= marginLeft;
+	if(marginTop < 0)
+		gy -= marginTop;
+	if(marginRight > d_size.width())
+		gx -= marginRight;
+	if(marginBottom > d_size.height())
+		gy -= marginBottom;
 
 	QCLWorkSize global(gx, gy);
 	return global.roundTo(d_localSize);
