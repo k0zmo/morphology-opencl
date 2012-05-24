@@ -329,9 +329,6 @@ void oclThread::startWithImages()
 				hitmissFilter.setHitMissOperation(item.op);
 				hitmissFilter.setSourceImage(holder);
 
-				pitem.delapsed += hitmissFilter.run();
-				holder = hitmissFilter.outputDeviceImage();
-
 				if(glInterop)
 				{
 					QCLImage2D output = ctxg->createTexture2D
@@ -552,9 +549,6 @@ void oclThread::startWithBuffers()
 			{
 				hitmissFilter.setHitMissOperation(item.op);
 				hitmissFilter.setSourceImage(holder, size, roi);
-
-				pitem.delapsed += hitmissFilter.run();
-				holder = hitmissFilter.outputDeviceImage();
 
 				//	if(glInterop)
 				//	{
