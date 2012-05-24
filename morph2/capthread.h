@@ -76,6 +76,7 @@ private:
 	SapAcquisition* acq;
 	SapBuffer* buffer;
 	SapAcqToBuf* xfer;
+	IplImage * image;
 
 	void freeSapera();
 #endif // SAPERA_SUPPORT	

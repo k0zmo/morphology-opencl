@@ -95,6 +95,14 @@ bool CapThread::openCamera(const QString& ccf)
 		return false;
 	}
 
+	image = cvCreateImage
+		(cvSize(buffer->GetWidth(), 
+		 buffer->GetHeight()), 
+		 IPL_DEPTH_16U, 1);
+	qDebug() << "Buffer size:" << buffer->GetWidth() << buffer->GetHeight();
+	qDebug() << buffer->GetPixelDepth(); // ile bitow na pixel
+	qDebug() << buffer->GetFormat();
+
 	return true;
 }
 
@@ -116,6 +124,10 @@ void CapThread::freeSapera()
 	if (xfer) delete xfer;
 	if (buffer) delete buffer; 
 	if (acq) delete acq; 
+
+	image->imageData = nullptr;
+	cvReleaseImage(&image);
+	image = 0;
 
 	xfer = 0;
 	buffer = 0;
@@ -178,35 +190,7 @@ void CapThread::run()
 			xfer->Wait(1000);
 			void* data;
 			buffer->GetAddress(&data);
-
-			IplImage * image;
-			int color = 1;
-			
-			// Wydaje mi sie ze dla monochrome mozna bezposrednio do IPL_DEPTH_16U 
-
-			if(color == 2)
-			{ 
-				// color
-				image = cvCreateImage
-					(cvSize(buffer->GetWidth(), buffer->GetHeight()), 
-					 IPL_DEPTH_8U, 4);
-			}
-			else
-			{ 
-				// monochrome
-				image = cvCreateImage
-					(cvSize(buffer->GetWidth(), buffer->GetHeight()), 
-					 IPL_DEPTH_16U, 1);
-				//for(int i = 0; i < (image->width * image->height * 2); i += 2)
-				//{
-				//	((char *)data)[i]   = ((char *)data)[i]   << 4;
-				//	((char *)data)[i]  += ((char *)data)[i+1] >> 4 ;
-				//	((char *)data)[i+1] = ((char *)data)[i+1] << 4;
-				//}
-			}
-			char * tmp = image->imageData;
 			image->imageData = static_cast<char*>(data);
-
 			frame = cv::Mat(image);
 		}
 #endif
