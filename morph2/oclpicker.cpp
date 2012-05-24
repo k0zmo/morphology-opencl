@@ -150,6 +150,22 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		SLOT(onFilteringChanged()));
 	connect(backendComboBox, SIGNAL(currentIndexChanged(int)),
 		SLOT(onFilteringChanged()));
+
+	if(treeWidget->topLevelItemCount() > 0)
+	{
+		QTreeWidgetItem* top = treeWidget->topLevelItem(0);
+		int cc = top->childCount();
+		for(int i = 0; i < cc; ++i)
+		{
+			auto child = top->child(i);
+			if(!child->isHidden())
+			{
+				treeWidget->setCurrentItem(child);
+				break;
+			}			
+		}
+		
+	}
 }
 
 oclPicker::~oclPicker()
