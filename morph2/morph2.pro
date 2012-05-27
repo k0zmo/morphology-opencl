@@ -85,11 +85,11 @@ win32 {
 	LIBS += -L$$quote($$(OPENCVDIR))/x86/vc10/lib
 
 	CONFIG(debug, debug|release) {
-		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+		LIBS += -lopencv_core231d -lopencv_imgproc231d -lopencv_highgui231d
 		LIBS += -lQtOpenCLd -lQtOpenCLGLd
 	}
 	CONFIG(release, debug|release) {
-		LIBS += -lopencv_core231d -lopencv_imgproc231 -lopencv_highgui231
+		LIBS += -lopencv_core231 -lopencv_imgproc231 -lopencv_highgui231
 		LIBS += -lQtOpenCL -lQtOpenCLGL
 	}
 
