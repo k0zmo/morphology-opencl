@@ -20,19 +20,9 @@ int main(int argc, char *argv[])
 	QApplication::setAttribute(Qt::AA_X11InitThreads);
 	QApplication a(argc, argv);
 
-	QStringList styles = QStyleFactory::keys();
-	if(styles.contains("QtCurve"))
-	{
-		QSettings s("./settings.cfg", QSettings::IniFormat);
-		QString env = s.value("gui/qtcurvestyle").toString();
-		QByteArray data = env.toAscii();
-
-		setenv("QTCURVE_CONFIG_FILE", data.constData(), 1);
-
-		QStyle* style = QStyleFactory::create("QtCurve");
-		if(style)
-			QApplication::setStyle(style);
-	}
+	QFile f(":/UI/gray.qss");
+	f.open(QFile::ReadOnly);
+	a.setStyleSheet(f.readAll());
 
 	Controller c;
 	c.start();

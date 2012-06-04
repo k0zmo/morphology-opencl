@@ -1,0 +1,15 @@
+<RCC>
+  <qresource prefix="/">
+    <file>UI/unchecked.png</file>
+    <file>UI/checked.png</file>
+    <file>UI/checked_p.png</file>
+    <file>UI/downarrow.png</file>
+    <file>UI/radio_checked.png</file>
+    <file>UI/radio_checked_hover.png</file>
+    <file>UI/radio_pressed.png</file>
+    <file>UI/radio_unchecked.png</file>
+    <file>UI/radio_unchecked_hover.png</file>
+    <file>UI/uparrow.png</file>
+    <file>UI/gray.qss</file>
+  </qresource>
+</RCC>

@@ -32,6 +32,11 @@
     <Filter Include="_Controller">
       <UniqueIdentifier>{9392e72a-edd2-46b8-bb90-def190c73f6b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
+      <Extensions>qrc;*</Extensions>
+      <ParseFiles>false</ParseFiles>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GeneratedFiles\Debug\moc_glwidget.cpp">
@@ -155,6 +160,9 @@
     <ClCompile Include="oclmorphhitmissfilter.cpp">
       <Filter>_Model\ocl</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_morph2.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cvutils.h">
@@ -253,6 +261,9 @@
     </CustomBuild>
     <CustomBuild Include="previewproxy.h">
       <Filter>_View</Filter>
+    </CustomBuild>
+    <CustomBuild Include="morph2.qrc">
+      <Filter>Resource Files</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>
