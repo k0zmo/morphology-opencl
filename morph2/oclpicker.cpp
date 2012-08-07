@@ -166,6 +166,8 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		}
 		
 	}
+
+	treeWidget->header()->setStretchLastSection(true);
 }
 
 oclPicker::~oclPicker()
