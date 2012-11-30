@@ -9,7 +9,7 @@ class oclPicker : public QDialog, Ui::oclPicker
 {
 	Q_OBJECT
 public:
-	explicit oclPicker(const PlatformDevicesMap& map,
+	explicit oclPicker(const PlatformDevicesList& list,
 		QWidget* parent = 0);
 	~oclPicker();
 

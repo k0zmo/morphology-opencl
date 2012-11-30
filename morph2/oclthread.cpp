@@ -55,15 +55,15 @@ void oclThread::stop()
 	stopped = true;
 }
 
-PlatformDevicesMap oclThread::queryPlatforms()
+PlatformDevicesList oclThread::queryPlatforms()
 {
-	PlatformDevicesMap plToDevs;
+	PlatformDevicesList plToDevs;
 
 	QList<QCLPlatform> pls = QCLPlatform::platforms();
 	foreach(QCLPlatform pl, pls)
 	{
 		QList<QCLDevice> devs = QCLDevice::devices(QCLDevice::All, pl);
-		plToDevs.insert(pl, devs);
+		plToDevs.append(qMakePair(pl, devs));
 	}
 
 	return plToDevs;

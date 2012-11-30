@@ -727,8 +727,8 @@ void Controller::initializeOpenCL()
 	connect(clThread, SIGNAL(openCLInitialized(bool)),
 		SLOT(onOpenCLInitialized(bool)));
 
-	PlatformDevicesMap map = clThread->queryPlatforms();
-	if(map.isEmpty())
+	PlatformDevicesList list = clThread->queryPlatforms();
+	if(list.isEmpty())
 	{
 		QMessageBox::information(this, "Morph OpenCL", 
 			"No OpenCL platforms detected, proceeding with OpenCL turned off");
@@ -739,7 +739,7 @@ void Controller::initializeOpenCL()
 		return;
 	}
 
-	oclPicker picker(map);
+	oclPicker picker(list);
 
 	// Wartosci domyslne
 	int platformId = 0;

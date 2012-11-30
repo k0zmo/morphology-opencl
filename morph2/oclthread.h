@@ -13,10 +13,8 @@ class QCLContext;
 class QCLContextGL;
 class GLDummyWidget;
 
-// Mapa pobranych danych o platformach i ich urzadzeniach
-typedef QMap<QCLPlatform, QList<QCLDevice> > PlatformDevicesMap;
-inline bool operator<(const QCLPlatform& p1, const QCLPlatform& p2)
-{ return p1.platformId() < p2.platformId(); }
+// Lista pobranych danych o platformach i ich urzadzeniach
+typedef QList<QPair<QCLPlatform, QList<QCLDevice>>> PlatformDevicesList;
 
 enum EOpenCLBackend
 {
@@ -36,7 +34,7 @@ public:
 	void setSharedWidget(GLDummyWidget* shareWidget);
 	void setOpenCLBackend(EOpenCLBackend backend);
 
-	PlatformDevicesMap queryPlatforms();
+	PlatformDevicesList queryPlatforms();
 	void choose(int platformId, int deviceId);
 	void stop();
 	virtual void run();

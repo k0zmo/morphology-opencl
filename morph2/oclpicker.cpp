@@ -26,7 +26,7 @@ static QString q_cacheTypeToString(QCLDevice::CacheType type)
 	}
 }
 
-oclPicker::oclPicker(const PlatformDevicesMap& map,
+oclPicker::oclPicker(const PlatformDevicesList& list,
 	QWidget* parent)
 	: QDialog(parent)
 	, platformId(0)
@@ -51,12 +51,11 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 
 	QList<QTreeWidgetItem*> items;
 
-	QMapIterator<QCLPlatform, QList<QCLDevice> > i(map);
+	QListIterator<QPair<QCLPlatform, QList<QCLDevice>>> i(list);
 	while(i.hasNext())
 	{
-		i.next();
-
-		QCLPlatform p = i.key();
+		auto pair = i.next();
+		QCLPlatform p = pair.first;
 
 		QString cbText = QString("%1 %2")
 				.arg(p.name())
@@ -65,7 +64,7 @@ oclPicker::oclPicker(const PlatformDevicesMap& map,
 		QTreeWidgetItem* pl = new QTreeWidgetItem((QTreeWidget*)0, QStringList(cbText));
 		items.append(pl);
 
-		auto& devlist = i.value();
+		auto& devlist = pair.second;
 		foreach(QCLDevice dev, devlist)
 		{
 			QCLDevice::DeviceTypes deviceType = dev.deviceType();
